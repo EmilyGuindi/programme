@@ -68,7 +68,7 @@ function Reminders() {
         <Gap h={space.s3} />
         {perm === 'undetermined' ? <Button kind="primary" block label="Autoriser les notifications" onPress={async () => { await askPermission(); refresh(); }} /> : null}
         {perm === 'denied' ? <Button kind="primary" block label="Ouvrir les réglages" onPress={() => Linking.openSettings()} /> : null}
-        {perm === 'granted' ? <Button block label="M'envoyer une notification de test" onPress={async () => { await testNotification(); setMsg('Envoyée : elle arrive dans 5 secondes. Verrouille ton téléphone pour vérifier qu\'elle s\'affiche aussi app fermée, puis touche-la : elle doit ouvrir le check-in.'); }} /> : null}
+        {perm === 'granted' ? <Button block label="M'envoyer une notification de test" onPress={async () => { await testNotification(); setMsg('Envoyée : elle arrive dans 5 secondes. Verrouille ton téléphone pour vérifier qu\'elle s\'affiche aussi app fermée, puis ouvre-la : elle doit t\'amener au check-in.'); }} /> : null}
         {msg ? <T v="small" style={{ marginTop: 8 }}>{msg}</T> : null}
       </Card>
       <Card>

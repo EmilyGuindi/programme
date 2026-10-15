@@ -52,7 +52,7 @@ export async function nextScheduled(): Promise<Date | null> {
 }
 export async function testNotification() {
   await setupChannel();
-  await Notifications.scheduleNotificationAsync({ content: { title: 'Comment tu te sens ce matin ?', body: 'Ceci est un test : touche-moi pour ouvrir le check-in.', data: { url: '/checkin' }, color: '#0047FF' }, trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 5, channelId: CHANNEL } });
+  await Notifications.scheduleNotificationAsync({ content: { title: 'Test réussi', body: 'Tes rappels BYYND sont actifs. Ouvre la notification pour accéder au check-in.', data: { url: '/checkin' }, color: '#0047FF' }, trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 5, channelId: CHANNEL } });
 }
 
 /** Ouvre l'écran ciblé quand on touche une notification (app ouverte, en arrière-plan ou fermée). */
