@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, View } from 'react-native';
 import { ActivityRow, openDay, openPlan, presetFor, TYPE_LABEL } from '@/components/plan-row';
 import { Wordmark } from '@/components/logo';
 import { UpdateBanner } from '@/components/update-banner';
@@ -10,7 +11,17 @@ import { addDays, fmtLong, today } from '@/engine/dates';
 import { update, useApp } from '@/store/store';
 import { space, useTheme } from '@/theme/tokens';
 
+/** Salutation selon l'heure, recalculée à chaque affichage. */
+function greeting(h = new Date().getHours()) {
+  if (h >= 5 && h < 12) return 'Bonjour';
+  if (h >= 12 && h < 18) return 'Bon après-midi';
+  if (h >= 18 && h < 22) return 'Bonsoir';
+  return 'Bonne nuit';
+}
+
 export default function Today() {
+  const [, tick] = useState(0);
+  useEffect(() => { const sub = AppState.addEventListener('change', st => { if (st === 'active') tick(x => x + 1); }); const t = setInterval(() => tick(x => x + 1), 5 * 60 * 1000); return () => { sub.remove(); clearInterval(t); }; }, []);
   const s = useApp(); const { c } = useTheme();
   const d = today(); const a = adapted(s, d); const r = recovery(s, d); const acts = activitiesOn(s, d);
   const shown = a.replaced || a; const tmr = adapted(s, addDays(d, 1)); const done = doneOn(s, d);
@@ -23,7 +34,7 @@ export default function Today() {
       </Row>
       <UpdateBanner />
       <T muted>{fmtLong(d)}</T>
-      <T v="title">{r.level === 'inconnu' ? 'Comment tu te sens ?' : `Bonjour ${s.user.name}`}</T>
+      <T v="title">{r.level === 'inconnu' ? `${greeting()} ${s.user.name}, comment tu te sens ?` : `${greeting()} ${s.user.name}`}</T>
       <Row style={{ marginVertical: space.s3, flexWrap: 'wrap' }}><Pill level={r.level} /><View style={{ flex: 1, minWidth: 160 }}><T v="small" muted>{r.reasons[0]}</T></View></Row>
       {r.level === 'inconnu' ? <><Button kind="primary" block label="Faire mon check-in · 30 s" onPress={() => router.push('/checkin')} /><Gap /></> : null}
       <Coach>{coachLine(s, d)}</Coach>

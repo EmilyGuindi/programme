@@ -21,7 +21,7 @@ export function Symbol({ size = 24, color }: { size?: number; color?: string }) 
 export function AppMark({ size = 32 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 512 512" accessibilityLabel="BYYND">
-      <Rect width={512} height={512} rx={112} fill={brand.blue} />
+      <Rect width={512} height={512} rx={112} fill={brand.ink} />
       <Path d={P1} fill="#FFFFFF" transform="translate(104,112) scale(2.42)" />
       <Path d={P2} fill="#FFFFFF" transform="translate(104,112) scale(2.42)" />
     </Svg>
@@ -37,7 +37,7 @@ export function Wordmark({ height = 18, tagline = false, onDark = false }: { hei
     <View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap }}>
         <Symbol size={sym} color={c.accent} />
-        <Svg width={w} height={height} viewBox={`0 0 ${WORDMARK_W} 100`}><Path d={WORDMARK_D} fill={ink} /></Svg>
+        <Svg width={w} height={height} viewBox={`0 0 ${WORDMARK_W} 100`}><Path d={WORDMARK_D} fill={ink} fillRule="evenodd" /></Svg>
       </View>
       {tagline ? <Text style={{ fontFamily: font.regular, fontSize: height * 0.62, letterSpacing: height * 0.22, color: onDark ? 'rgba(255,255,255,.75)' : c.ink2, marginTop: height * 0.35, marginLeft: sym + gap }}>Go beyond.</Text> : null}
     </View>
