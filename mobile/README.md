@@ -10,3 +10,4 @@ React Native + Expo (SDK 57), TypeScript, Expo Router.
 Build : GitHub Actions → EAS Build (plan gratuit, APK). Aucun secret dans ce dossier.
 
 Dernière mise à jour du pipeline : 2026-10-15.
+Diagnostic EAS ajouté.
