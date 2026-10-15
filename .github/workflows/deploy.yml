@@ -33,9 +33,13 @@ jobs:
           sed -i "s/D1_PLACEHOLDER/$ID/" wrangler.toml
           wrangler d1 execute byynd --remote --file=worker/schema.sql
       - name: Déployer le Worker
-        run: wrangler deploy
+        run: |
+          set -o pipefail
+          wrangler deploy 2>&1 | tee /tmp/deploy.log || { echo "::error title=wrangler deploy::$(tail -c 900 /tmp/deploy.log | tr '\n' ' ')"; exit 1; }
+          URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' /tmp/deploy.log | head -1)
+          echo "::notice title=Adresse BYYND::$URL"
       - name: Clé d'accès de l'app
-        if: ${{ secrets.APP_KEY != '' }}
         env:
           APP_KEY: ${{ secrets.APP_KEY }}
-        run: echo "$APP_KEY" | wrangler secret put APP_KEY
+        run: |
+          if [ -n "$APP_KEY" ]; then echo "$APP_KEY" | wrangler secret put APP_KEY; else echo "::warning::APP_KEY absent : l'API refusera toutes les requêtes"; fi
