@@ -13,9 +13,10 @@ const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(dat
 
 function authed(req, env) {
   const a = req.headers.get("Authorization") || "";
-  const key = a.startsWith("Bearer ") ? a.slice(7) : "";
-  if (!env.APP_KEY || !key || key.length !== env.APP_KEY.length) return false;
-  let diff = 0; for (let i = 0; i < key.length; i++) diff |= key.charCodeAt(i) ^ env.APP_KEY.charCodeAt(i);
+  const key = (a.startsWith("Bearer ") ? a.slice(7) : "").trim();
+  const ref = String(env.APP_KEY || "").trim();
+  if (!ref || !key || key.length !== ref.length) return false;
+  let diff = 0; for (let i = 0; i < key.length; i++) diff |= key.charCodeAt(i) ^ ref.charCodeAt(i);
   return diff === 0;
 }
 

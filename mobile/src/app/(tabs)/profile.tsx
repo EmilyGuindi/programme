@@ -44,8 +44,8 @@ export default function Profile() {
         <T v="h3">Serveur BYYND</T>
         <T v="small" muted style={{ marginVertical: 6 }}>Sauvegarde hors du téléphone et synchro. </T>
         <T v="xs" color={sync.status === 'err' ? c.stop : c.ink2}>{syncText}</T><Gap />
-        <Field label="Adresse"><Input autoCapitalize="none" autoCorrect={false} keyboardType="url" defaultValue={sv.url} placeholder="https://byynd.xxx.workers.dev" onEndEditing={e => setServer({ url: e.nativeEvent.text.trim() })} /></Field>
-        <Field label="Clé d'accès"><Input secureTextEntry autoCapitalize="none" defaultValue={sv.key} placeholder="APP_KEY" onEndEditing={e => setServer({ key: e.nativeEvent.text.trim() })} /></Field>
+        <Field label="Adresse"><Input autoCapitalize="none" autoCorrect={false} keyboardType="url" defaultValue={sv.url} placeholder="https://byynd.emilyguindi.workers.dev" onChangeText={t => setServer({ url: t.trim() })} /></Field>
+        <Field label="Clé d'accès"><Input secureTextEntry autoCapitalize="none" autoCorrect={false} defaultValue={sv.key} placeholder="ta phrase APP_KEY" onChangeText={t => setServer({ key: t.trim() })} /></Field>
         <Row><Button label="Synchroniser" style={{ flex: 1 }} onPress={() => pull()} /><Button label="Tester" onPress={async () => setMsg(await testServer())} /></Row>
         {msg ? <T v="small" style={{ marginTop: 8 }}>{msg}</T> : null}
       </Card>

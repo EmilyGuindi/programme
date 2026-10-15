@@ -59,7 +59,7 @@ jobs:
           STRAVA_VERIFY_TOKEN: ${{ secrets.STRAVA_VERIFY_TOKEN }}
         run: |
           for K in APP_KEY STRAVA_CLIENT_ID STRAVA_CLIENT_SECRET STRAVA_VERIFY_TOKEN; do
-            V="${!K}"; if [ -n "$V" ]; then echo "$V" | wrangler secret put "$K" > /dev/null && echo "$K ok"; else echo "::warning::$K absent"; fi
+            V="${!K}"; if [ -n "$V" ]; then printf '%s' "$V" | wrangler secret put "$K" > /dev/null && echo "$K ok (${#V} caractères)"; else echo "::warning::$K absent"; fi
           done
       - name: Abonnement webhook Strava (création si absent)
         env:
