@@ -1,32 +1,34 @@
 import { router } from 'expo-router';
-import { Card, Row, Screen, T, Tag } from '@/components/ui';
-import { mandatoryStats, runInsight, weightInsight, weightSeries, zones } from '@/engine/coach';
-import { addDays, mmss, today } from '@/engine/dates';
-import { useApp } from '@/store/store';
-import { space } from '@/theme/tokens';
+import type { ComponentType } from 'react';
+import { Pressable, View } from 'react-native';
+import { IlluBody, IlluRegularity, IlluRun, IlluStrength } from '@/components/illustrations';
+import { Screen, T } from '@/components/ui';
+import { radius, space, useTheme } from '@/theme/tokens';
 
-function Answer({ tag, value, unit, text, to }: { tag: string; value: string; unit?: string; text: string; to: string }) {
-  return (
-    <Card onPress={() => router.push({ pathname: '/progress/[view]', params: { view: to } })}>
-      <Row between><Tag>{tag}</Tag><T muted>›</T></Row>
-      <T v="hero" style={{ marginTop: space.s2 }}>{value}{unit ? <T v="h2" muted>{unit}</T> : null}</T>
-      <T v="small" muted>{text}</T>
-    </Card>
-  );
-}
+/** Les chiffres ne s'affichent qu'à la demande : chaque tuile ouvre sa vue détaillée. */
+const TILES: { view: string; title: string; question: string; Illu: ComponentType<{ size?: number }> }[] = [
+  { view: 'regularity', title: 'Régularité', question: 'Est-ce que je suis régulière ?', Illu: IlluRegularity },
+  { view: 'running', title: 'Running', question: 'Est-ce que je cours mieux ?', Illu: IlluRun },
+  { view: 'physique', title: 'Physique', question: 'Comment évolue mon corps ?', Illu: IlluBody },
+  { view: 'strength', title: 'Renforcement', question: 'Est-ce que je deviens plus forte ?', Illu: IlluStrength },
+];
 
 export default function Progress() {
-  const s = useApp(); const d = today();
-  const st = mandatoryStats(s, addDays(d, -20), d); const ms = weightSeries(s); const last = ms[ms.length - 1]; const z = zones(s);
-  const nStr = Object.keys(s.strength).length;
+  const { c } = useTheme();
   return (
     <Screen>
-      <T v="title" style={{ paddingTop: space.s4, paddingBottom: space.s3 }}>Progression</T>
-      <Answer tag="Est-ce que je suis régulière ?" value={`${st.done}`} unit={` / ${st.planned}`} to="regularity"
-        text={`séances obligatoires réalisées sur 3 semaines${st.adaptedN ? `, dont ${st.adaptedN} adaptée${st.adaptedN > 1 ? 's' : ''}` : ''}. Les promenades ne comptent pas.`} />
-      <Answer tag="Est-ce que je progresse physiquement ?" value={last ? last.weight.toFixed(1).replace('.', ',') : '–'} unit=" kg" to="physique" text={weightInsight(s)} />
-      <Answer tag="Est-ce que je cours mieux ?" value={mmss(z.p10)} unit=" /km" to="running" text={`Allure 10 km de référence (${z.src}). Objectif 5'30. ${runInsight(s)}`} />
-      <Answer tag="Renforcement" value={`${nStr}`} unit={` séance${nStr > 1 ? 's' : ''}`} to="strength" text="Meilleures charges par exercice, séance après séance." />
+      <T v="title" style={{ paddingTop: space.s4 }}>Progression</T>
+      <T muted style={{ marginBottom: space.s4 }}>Touche une carte pour voir le détail.</T>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.s3 }}>
+        {TILES.map(({ view, title, question, Illu }) => (
+          <Pressable key={view} accessibilityRole="button" accessibilityLabel={`${title}. ${question}`}
+            onPress={() => router.push({ pathname: '/progress/[view]', params: { view } })}
+            style={({ pressed }) => ({ flexBasis: '47%', flexGrow: 1, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: radius.r2, padding: space.s4, gap: space.s3, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+            <View style={{ backgroundColor: c.accentSoft, borderRadius: radius.r2, alignItems: 'center', justifyContent: 'center', paddingVertical: space.s4 }}><Illu size={64} /></View>
+            <View><T v="label">{title}</T><T v="small" muted>{question}</T></View>
+          </Pressable>
+        ))}
+      </View>
     </Screen>
   );
 }
