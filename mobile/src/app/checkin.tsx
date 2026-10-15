@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Sheet } from '@/components/sheet';
 import { Button, Card, Choices, Field, Gap, Pill, T } from '@/components/ui';
 import { coachLine, recovery } from '@/engine/coach';
@@ -9,6 +9,7 @@ import { update, useApp } from '@/store/store';
 const scale5: [number, string][] = [[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5']];
 
 export default function CheckInScreen() {
+  const { then } = useLocalSearchParams<{ then?: string }>();
   const s = useApp(); const d = today(); const c: CheckIn = s.checkins[d] || {};
   const set = <K extends keyof CheckIn>(k: K, v: CheckIn[K]) => update(st => {
     const ci = (st.checkins[d] = st.checkins[d] || {}); ci[k] = v; ci.at = Date.now();
@@ -34,7 +35,7 @@ export default function CheckInScreen() {
         <Pill level={complete ? r.level : 'inconnu'} /><Gap h={8} />
         <T v="small">{complete ? `${r.reasons[0]} ${coachLine(s, d)}` : 'Réponds aux 5 questions pour obtenir ton état du jour.'}</T>
       </Card>
-      <Button kind="primary" block disabled={!complete} label="Voir ma journée" onPress={() => router.back()} />
+      {then === 'measure' ? <Button kind="primary" block disabled={!complete} label="Continuer : ma pesée" onPress={() => router.replace('/measure')} /> : <Button kind="primary" block disabled={!complete} label="Voir ma journée" onPress={() => router.back()} />}
     </Sheet>
   );
 }

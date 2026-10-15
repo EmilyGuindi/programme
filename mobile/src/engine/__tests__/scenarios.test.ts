@@ -101,3 +101,22 @@ test('synchro : une version plus récente ailleurs ne fait pas disparaître le C
   const m = mergeStates(local, remote);
   assert.ok(doneOn(m, '2026-10-15')); assert.ok(m.measurements.some(x => x.id === 'w2'));
 });
+
+import { planReminders } from '../reminders';
+test('rappels : check-in quotidien à l\'heure choisie, rien si déjà fait', () => {
+  const s = fresh(); const now = new Date(2026, 10, 3, 6, 0);
+  const r = planReminders(s, now, 3); assert.equal(r.filter(x => x.kind !== 'weigh').length, 3); assert.equal(r[0].at.getHours(), 7);
+  s.checkins['2026-11-03'] = { sleep: 'bien', energy: 4, soreness: 'non', pain: 'non', motivation: 4 };
+  assert.ok(!planReminders(s, now, 3).some(x => x.id.endsWith('2026-11-03')));
+});
+test('rappels : pesée le lundi fusionnée avec le check-in, absente si déjà pesée', () => {
+  const s = fresh(); const now = new Date(2026, 10, 8, 20, 0); // dimanche soir
+  const r = planReminders(s, now, 2); const mon = r.find(x => x.id.endsWith('2026-11-09'))!;
+  assert.equal(mon.kind, 'both'); assert.equal(mon.url, '/checkin?then=measure');
+  s.measurements.push({ id: 'x', date: '2026-11-09', weight: 66 });
+  assert.equal(planReminders(s, now, 2).find(x => x.id.endsWith('2026-11-09'))!.kind, 'checkin');
+});
+test('rappels : désactivés = aucun rappel', () => {
+  const s = fresh(); s.user.prefs.notifCheckin = false; s.user.prefs.notifWeigh = false;
+  assert.equal(planReminders(s, new Date(2026, 10, 3, 6, 0)).length, 0);
+});

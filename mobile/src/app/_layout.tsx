@@ -7,7 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { checkForUpdate } from '@/components/update-banner';
-import { loadStore, pull, useReady } from '@/store/store';
+import { listenResponses, setupChannel, syncReminders } from '@/notifications';
+import { loadStore, pull, useApp, useReady } from '@/store/store';
 import { useTheme } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
@@ -18,6 +19,7 @@ export default function RootLayout() {
   const ready = useReady();
   const { c, dark } = useTheme();
   useEffect(() => { if (fontsLoaded && ready) SplashScreen.hideAsync(); }, [fontsLoaded, ready]);
+  useEffect(() => { setupChannel(); return listenResponses(); }, []);
   useEffect(() => { const sub = AppState.addEventListener('change', st => { if (st === 'active') { checkForUpdate(); pull(); } }); return () => sub.remove(); }, []);
   if (!fontsLoaded || !ready) return null;
   const base = dark ? DarkTheme : DefaultTheme;
@@ -26,6 +28,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={theme}>
       <StatusBar style={dark ? 'light' : 'dark'} />
+      <ReminderSync />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.paper } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="checkin" options={sheet} />
@@ -38,7 +41,15 @@ export default function RootLayout() {
         <Stack.Screen name="progress/[view]" />
         <Stack.Screen name="strava" options={sheet} />
         <Stack.Screen name="day/[date]" options={sheet} />
+        <Stack.Screen name="settings/[section]" />
       </Stack>
     </ThemeProvider>
   );
+}
+
+/** Reprogramme les rappels à chaque changement utile (check-in fait, pesée saisie, horaires modifiés). */
+function ReminderSync() {
+  const s = useApp();
+  useEffect(() => { const t = setTimeout(() => syncReminders(s), 800); return () => clearTimeout(t); }, [s]);
+  return null;
 }
