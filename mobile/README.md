@@ -8,3 +8,5 @@ React Native + Expo (SDK 57), TypeScript, Expo Router.
 - `src/app/` : écrans (Expo Router)
 
 Build : GitHub Actions → EAS Build (plan gratuit, APK). Aucun secret dans ce dossier.
+
+Dernière mise à jour du pipeline : 2026-10-15.
