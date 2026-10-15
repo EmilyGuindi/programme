@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: android-build
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -56,6 +60,14 @@ jobs:
           MSG=$(git log -1 --pretty=%s)
           npx --yes eas-cli@latest update --channel preview --platform android --message "$MSG" --non-interactive 2>&1 | tee /tmp/upd.log || { echo "::error title=eas update::$(tail -c 900 /tmp/upd.log | tr '\n' ' ')"; exit 1; }
           echo "::notice title=Mise à jour publiée::$MSG"
+      - name: Annuler les anciens builds encore en attente chez Expo
+        if: steps.kind.outputs.native == 'true'
+        run: |
+          for ST in new in-queue in-progress; do
+            npx --yes eas-cli@latest build:list --platform android --status $ST --json --non-interactive 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{JSON.parse(s).forEach(b=>console.log(b.id))}catch(e){}})' | while read -r ID; do
+              npx --yes eas-cli@latest build:cancel "$ID" --non-interactive && echo "::notice title=Build annulé::$ID"
+            done
+          done
       - name: Build APK (Expo, plan gratuit) et diagnostic
         if: steps.kind.outputs.native == 'true'
         timeout-minutes: 240
