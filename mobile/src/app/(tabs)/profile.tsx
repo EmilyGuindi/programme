@@ -3,6 +3,8 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useState } from 'react';
 import { Alert } from 'react-native';
+import { Wordmark } from '@/components/logo';
+import { View } from 'react-native';
 import { Button, Card, Field, Gap, Input, Row, Screen, Segmented, T } from '@/components/ui';
 import { weekOf } from '@/engine/coach';
 import { addDays, DAYS_SHORT, fmtShort, num, today } from '@/engine/dates';
@@ -67,7 +69,7 @@ export default function Profile() {
         <Row between style={{ marginVertical: 10 }}><T>Cycle menstruel dans le check-in</T><Button small label={pr.cycleOptIn ? 'Activé' : 'Désactivé'} onPress={() => toggle('cycleOptIn')} /></Row>
         <Row><Button label="Exporter" style={{ flex: 1 }} onPress={exportData} /><Button label="Importer" style={{ flex: 1 }} onPress={importData} /></Row>
       </Card>
-      <T v="xs" muted style={{ textAlign: 'center' }}>BYYND 2.0</T>
+      <View style={{ alignItems: 'center', marginTop: space.s4, gap: 8 }}><Wordmark height={14} tagline /><T v="xs" muted>Version 2.0.2</T></View>
     </Screen>
   );
 }

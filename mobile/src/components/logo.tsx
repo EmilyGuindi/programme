@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { brand, font, useTheme } from '@/theme/tokens';
+import { WORDMARK_D, WORDMARK_W } from './wordmark-path';
 
 const P1 = 'M12 12 L58 46 L58 114 L43 99 L43 54 L12 31 Z';
 const P2 = 'M114 12 L68 46 L68 114 L83 99 L83 54 L114 31 Z';
@@ -27,13 +28,18 @@ export function AppMark({ size = 32 }: { size?: number }) {
   );
 }
 
-/** Logo complet : symbole + wordmark. */
-export function Wordmark({ height = 22, mono }: { height?: number; mono?: string }) {
+/** Logo complet : symbole + wordmark vectorisé (identique sur tous les appareils). */
+export function Wordmark({ height = 18, tagline = false, onDark = false }: { height?: number; tagline?: boolean; onDark?: boolean }) {
   const { c } = useTheme();
+  const sym = height * 1.55, gap = height * 0.55, w = (WORDMARK_W / 100) * height;
+  const ink = onDark ? '#FFFFFF' : c.ink;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: height * 0.42 }}>
-      <Symbol size={height * 1.15} color={mono || c.accent} />
-      <Text style={{ fontFamily: font.black, fontSize: height, lineHeight: height * 1.15, letterSpacing: -height * 0.05, color: mono || c.ink }}>BYYND</Text>
+    <View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap }}>
+        <Symbol size={sym} color={c.accent} />
+        <Svg width={w} height={height} viewBox={`0 0 ${WORDMARK_W} 100`}><Path d={WORDMARK_D} fill={ink} /></Svg>
+      </View>
+      {tagline ? <Text style={{ fontFamily: font.regular, fontSize: height * 0.62, letterSpacing: height * 0.22, color: onDark ? 'rgba(255,255,255,.75)' : c.ink2, marginTop: height * 0.35, marginLeft: sym + gap }}>Go beyond.</Text> : null}
     </View>
   );
 }

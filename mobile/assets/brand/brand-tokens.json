@@ -1,0 +1,14 @@
+{
+  "name": "BYYND",
+  "tagline": "Go beyond.",
+  "colors": {
+    "cobalt": "#0047FF",
+    "charcoal": "#111111",
+    "mist": "#EAE8E4",
+    "white": "#FFFFFF"
+  },
+  "fonts": {
+    "suggested": "Archivo or another licensed geometric sans; wordmark text is editable"
+  },
+  "note": "Vector reconstruction inspired by approved reference board, not a pixel-perfect tracing."
+}

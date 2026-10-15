@@ -16,7 +16,7 @@ export default function Today() {
   return (
     <Screen>
       <Row between style={{ paddingTop: space.s4, paddingBottom: space.s3 }}>
-        <Wordmark height={20} />
+        <Wordmark height={16} />
         <Button small kind="ghost" label={r.level === 'inconnu' ? 'Check-in' : 'Modifier le check-in'} onPress={() => router.push('/checkin')} />
       </Row>
       <T muted>{fmtLong(d)}</T>
