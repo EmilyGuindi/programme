@@ -2,14 +2,14 @@
   "expo": {
     "name": "BYYND",
     "slug": "byynd",
-    "version": "2.0.2",
+    "version": "2.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "byynd",
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.emilyguindi.byynd",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "backgroundColor": "#0047FF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -47,6 +47,10 @@
     },
     "runtimeVersion": {
       "policy": "appVersion"
+    },
+    "updates": {
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     }
   }
 }

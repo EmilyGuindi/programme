@@ -4,6 +4,8 @@ import * as Sharing from 'expo-sharing';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { Wordmark } from '@/components/logo';
+import * as Updates from 'expo-updates';
+import { APP_VERSION, CHANGELOG } from '@/changelog';
 import { View } from 'react-native';
 import { Button, Card, Field, Gap, Input, Row, Screen, Segmented, T } from '@/components/ui';
 import { weekOf } from '@/engine/coach';
@@ -69,7 +71,11 @@ export default function Profile() {
         <Row between style={{ marginVertical: 10 }}><T>Cycle menstruel dans le check-in</T><Button small label={pr.cycleOptIn ? 'Activé' : 'Désactivé'} onPress={() => toggle('cycleOptIn')} /></Row>
         <Row><Button label="Exporter" style={{ flex: 1 }} onPress={exportData} /><Button label="Importer" style={{ flex: 1 }} onPress={importData} /></Row>
       </Card>
-      <View style={{ alignItems: 'center', marginTop: space.s4, gap: 8 }}><Wordmark height={14} tagline /><T v="xs" muted>Version 2.0.2</T></View>
+      <Card>
+        <T v="h3">Quoi de neuf</T>
+        {CHANGELOG.slice(0, 3).map(v => <View key={v.version} style={{ marginTop: space.s3 }}><T v="label">{`${v.version} · ${v.date}`}</T>{v.items.map(i => <T key={i} v="small" muted>{`· ${i}`}</T>)}</View>)}
+      </Card>
+      <View style={{ alignItems: 'center', marginTop: space.s4, gap: 8 }}><Wordmark height={14} tagline /><T v="xs" muted>{`Version ${APP_VERSION}${Updates.isEmbeddedLaunch ? '' : ' · mise à jour à distance'}${Updates.createdAt ? ` du ${Updates.createdAt.toLocaleDateString('fr-FR')}` : ''}`}</T></View>
     </Screen>
   );
 }

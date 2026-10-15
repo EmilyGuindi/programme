@@ -5,6 +5,8 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
+import { checkForUpdate } from '@/components/update-banner';
 import { loadStore, useReady } from '@/store/store';
 import { useTheme } from '@/theme/tokens';
 
@@ -16,6 +18,7 @@ export default function RootLayout() {
   const ready = useReady();
   const { c, dark } = useTheme();
   useEffect(() => { if (fontsLoaded && ready) SplashScreen.hideAsync(); }, [fontsLoaded, ready]);
+  useEffect(() => { const sub = AppState.addEventListener('change', st => { if (st === 'active') checkForUpdate(); }); return () => sub.remove(); }, []);
   if (!fontsLoaded || !ready) return null;
   const base = dark ? DarkTheme : DefaultTheme;
   const theme = { ...base, colors: { ...base.colors, background: c.paper, card: c.surface, text: c.ink, border: c.line, primary: c.accent } };

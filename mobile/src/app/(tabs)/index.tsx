@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 import { ActivityRow, openPlan, presetFor, TYPE_LABEL } from '@/components/plan-row';
 import { Wordmark } from '@/components/logo';
+import { UpdateBanner } from '@/components/update-banner';
 import { Button, Card, Coach, Gap, Pill, Row, Screen, T, Tag } from '@/components/ui';
 import { activitiesOn, adapted, coachLine, doneOn, recovery } from '@/engine/coach';
 import { addDays, fmtLong, today } from '@/engine/dates';
@@ -19,6 +20,7 @@ export default function Today() {
         <Wordmark height={16} />
         <Button small kind="ghost" label={r.level === 'inconnu' ? 'Check-in' : 'Modifier le check-in'} onPress={() => router.push('/checkin')} />
       </Row>
+      <UpdateBanner />
       <T muted>{fmtLong(d)}</T>
       <T v="title">{r.level === 'inconnu' ? 'Comment tu te sens ?' : `Bonjour ${s.user.name}`}</T>
       <Row style={{ marginVertical: space.s3, flexWrap: 'wrap' }}><Pill level={r.level} /><View style={{ flex: 1, minWidth: 160 }}><T v="small" muted>{r.reasons[0]}</T></View></Row>
