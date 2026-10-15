@@ -175,7 +175,7 @@ const DEFAULT = {
 };
 let S = JSON.parse(JSON.stringify(DEFAULT));
 try{ const raw=localStorage.getItem(KEY); if(raw) S=Object.assign(S,JSON.parse(raw)); }catch(e){}
-function save(){ S.updatedAt=Date.now(); try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} schedulePush(); }
+function save(){ S.updatedAt=Date.now(); try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} /* version web en lecture seule : plus d'envoi au serveur */ }
 /* ---------- sync serveur (lot 2) ---------- */
 let syncState={status:"local",at:0,msg:""}, pushTimer=null;
 function apiBase(){ if(/\.workers\.dev$/.test(location.hostname)) return ""; return (S.server&&S.server.url||"").replace(/\/$/,""); }
@@ -413,7 +413,7 @@ function topbar(extra){ return `<div class="topbar"><div class="brand">${LOGO}${
 function renderToday(){
   const d=today(), a=adapted(d), r=recovery(d), acts=activitiesOn(d), c=S.checkins[d];
   const shown=a.replaced||a; const tmr=adapted(addDays(d,1));
-  let h=topbar(`<button class="btn sm ghost" data-sheet="checkin">${c?"Modifier le check-in":"Check-in"}</button>`);
+  let h=`<div class="coach" style="border-left-color:var(--warn)">Cette version web n'est plus mise à jour. Utilise l'app Android BYYND : tes données y sont synchronisées.</div>`+topbar(`<button class="btn sm ghost" data-sheet="checkin">${c?"Modifier le check-in":"Check-in"}</button>`);
   h+=`<p class="muted" style="margin-bottom:4px">${fmtD(d)}</p><h1>${c?"Bonjour Emily":"Comment tu te sens ?"}</h1>
   <div class="row" style="margin:10px 0 14px">${pillHtml(r.level)}<span class="small muted">${esc(r.reasons[0])}</span></div>`;
   if(!c) h+=`<button class="btn primary block" data-sheet="checkin">Faire mon check-in · 30 s</button><div style="height:12px"></div>`;

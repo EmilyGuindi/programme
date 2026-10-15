@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import { useSyncExternalStore } from 'react';
 import { mergeStrava } from '@/engine/strava';
+import { mergeStates } from '@/engine/merge';
 import { DEFAULT_STATE, migrate, seed } from '@/engine/state';
 import type { AppState } from '@/engine/types';
 
@@ -9,7 +10,7 @@ const KEY = 'byynd-v2';
 const SERVER_KEY = 'byynd-server';
 
 export type SyncStatus = { status: 'local' | 'sync' | 'ok' | 'err' | 'off'; at: number; msg: string };
-type Server = { url: string; key: string };
+type Server = { url: string; key: string; version?: number };
 
 let state: AppState = seed(structuredClone(DEFAULT_STATE));
 let server: Server = { url: '', key: '' };
@@ -56,21 +57,31 @@ async function api(path: string, init: RequestInit = {}) {
   return fetch(base() + path, { ...init, headers: { Authorization: `Bearer ${server.key}`, 'Content-Type': 'application/json', ...(init.headers || {}) } });
 }
 function schedulePush() { if (!configured()) return; if (pushTimer) clearTimeout(pushTimer); pushTimer = setTimeout(push, 1500); }
-export async function push() {
-  if (!configured()) return;
+let pushing = false;
+export async function push(retry = true): Promise<void> {
+  if (!configured() || pushing) return;
+  pushing = true;
   try {
     setSync({ status: 'sync', at: Date.now(), msg: '' });
-    const r = await api('/api/state', { method: 'PUT', body: JSON.stringify({ json: JSON.stringify(state), updatedAt: state.updatedAt }) });
-    if (r.status === 409) { const d = await r.json(); adopt(d); setSync({ status: 'ok', at: Date.now(), msg: 'Version plus récente récupérée' }); }
-    else if (r.status === 401) setSync({ status: 'err', at: Date.now(), msg: 'Clé refusée' });
-    else if (r.ok) setSync({ status: 'ok', at: Date.now(), msg: '' });
+    const r = await api('/api/state', { method: 'PUT', body: JSON.stringify({ json: JSON.stringify(state), updatedAt: state.updatedAt, base: server.version ?? 0 }) });
+    if (r.status === 409) {
+      // modifié ailleurs entre-temps : on fusionne au lieu d'écraser, puis on renvoie
+      const d = await r.json(); absorb(d);
+      pushing = false; if (retry) return push(false); return;
+    }
+    if (r.status === 401) setSync({ status: 'err', at: Date.now(), msg: 'Clé refusée' });
+    else if (r.ok) { setServer({ version: state.updatedAt }); setSync({ status: 'ok', at: Date.now(), msg: '' }); }
     else setSync({ status: 'err', at: Date.now(), msg: `Erreur ${r.status}` });
   } catch { setSync({ status: 'off', at: Date.now(), msg: 'Hors ligne : synchro différée' }); }
+  finally { pushing = false; }
 }
-function adopt(d: { json: string | null; updatedAt: number }) {
+/** Intègre la version du serveur sans rien perdre de ce qui a été fait sur ce téléphone. */
+function absorb(d: { json: string | null; updatedAt: number }) {
   if (!d.json) return;
-  state = migrate(JSON.parse(d.json)); state.updatedAt = d.updatedAt; emit();
+  const remote = migrate(JSON.parse(d.json));
+  state = mergeStates(state, remote); state.updatedAt = Date.now(); emit();
   AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {});
+  setServer({ version: d.updatedAt });
 }
 export async function pull(): Promise<SyncStatus> {
   if (!configured()) return sync;
@@ -79,8 +90,8 @@ export async function pull(): Promise<SyncStatus> {
     if (r.status === 401) { setSync({ status: 'err', at: Date.now(), msg: 'Clé refusée' }); return sync; }
     if (!r.ok) throw new Error();
     const d = await r.json();
-    if (d.json && d.updatedAt > (state.updatedAt || 0)) adopt(d);
-    else if ((state.updatedAt || 0) > (d.updatedAt || 0)) await push();
+    if (d.json && d.updatedAt !== (server.version ?? 0)) { absorb(d); await push(); }
+    else if (!d.json || (state.updatedAt || 0) > (d.updatedAt || 0)) await push();
     setSync({ status: 'ok', at: Date.now(), msg: '' });
     stravaStatus(); pullStrava();
   } catch { setSync({ status: 'off', at: Date.now(), msg: 'Serveur injoignable' }); }

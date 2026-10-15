@@ -51,7 +51,8 @@ async function api(req, env, url, c) {
       if (!body || typeof body.json !== "string" || typeof body.updatedAt !== "number") return json({ error: "bad_request" }, 400, c);
       if (body.json.length > 4_000_000) return json({ error: "too_large" }, 413, c);
       const cur = await env.DB.prepare("SELECT updated_at FROM state WHERE id = ?").bind("main").first();
-      if (cur && cur.updated_at > body.updatedAt) {
+      // Concurrence optimiste : on n'écrase jamais une version qu'on n'a pas vue. Les anciens clients (sans base) ne peuvent plus écrire.
+      if (cur && (typeof body.base !== "number" || cur.updated_at !== body.base)) {
         const row = await env.DB.prepare("SELECT json, updated_at FROM state WHERE id = ?").bind("main").first();
         return json({ conflict: true, json: row.json, updatedAt: row.updated_at }, 409, c);
       }

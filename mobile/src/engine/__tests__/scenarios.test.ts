@@ -93,3 +93,11 @@ test('Strava : remplace la saisie manuelle du même jour', () => {
   mergeStrava(s, [item({ id: '7', sport: 'Crossfit', date: '2026-12-01', min: 60 })]);
   assert.equal(s.activities.filter(x => x.date === '2026-12-01' && x.type === 'crossfit').length, 1); assert.equal(s.activities.find(x => x.stravaId === '7')!.effort, 7);
 });
+
+import { mergeStates } from '../merge';
+test('synchro : une version plus récente ailleurs ne fait pas disparaître le CrossFit coché ici', () => {
+  const local = fresh(); local.activities.push({ id: 'cf', date: '2026-10-15', type: 'crossfit', title: 'CrossFit', source: 'manuel', complementary: false, matched: '2026-10-15' }); local.updatedAt = 100;
+  const remote = fresh(); remote.measurements.push({ id: 'w2', date: '2026-10-19', weight: 66.9 }); remote.updatedAt = 200;
+  const m = mergeStates(local, remote);
+  assert.ok(doneOn(m, '2026-10-15')); assert.ok(m.measurements.some(x => x.id === 'w2'));
+});
