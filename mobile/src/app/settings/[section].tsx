@@ -6,6 +6,7 @@ import * as Updates from 'expo-updates';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, View } from 'react-native';
 import { APP_VERSION, CHANGELOG } from '@/changelog';
+import { manualUpdateCheck } from '@/components/update-banner';
 import { Bullets } from '@/components/guide';
 import { Button, Card, Field, Gap, Input, Row, Screen, Segmented, T } from '@/components/ui';
 import { phaseOf, weekOf } from '@/engine/coach';
@@ -170,10 +171,21 @@ function Data() {
 }
 
 function News() {
+  const { c } = useTheme(); const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
+  const installed = Updates.isEmbeddedLaunch ? 'version installée avec l\'APK' : `mise à jour à distance${Updates.createdAt ? ` du ${Updates.createdAt.toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}`;
   return (
     <>
+      <Card>
+        <T v="h3">{`Version ${APP_VERSION}`}</T>
+        <T v="small" muted style={{ marginTop: 4 }}>{installed}</T>
+        <Gap h={space.s3} />
+        {msg === 'ready'
+          ? <Button kind="primary" block label="Redémarrer pour appliquer" onPress={() => Updates.reloadAsync()} />
+          : <Button block disabled={busy} label={busy ? 'Recherche…' : 'Rechercher une mise à jour'} onPress={async () => { setBusy(true); setMsg(await manualUpdateCheck()); setBusy(false); }} />}
+        {msg && msg !== 'ready' ? <T v="small" style={{ marginTop: 8 }} color={msg.startsWith('Impossible') ? c.stop : undefined}>{msg}</T> : null}
+        {msg === 'ready' ? <T v="small" style={{ marginTop: 8 }}>Nouvelle version téléchargée.</T> : null}
+      </Card>
       {CHANGELOG.map(v => <Card key={v.version}><T v="label">{`${v.version} · ${v.date}`}</T><Gap h={6} /><Bullets items={v.items} /></Card>)}
-      <T v="xs" muted style={{ textAlign: 'center' }}>{`Version ${APP_VERSION}${Updates.isEmbeddedLaunch ? '' : ' · mise à jour à distance'}${Updates.createdAt ? ` du ${Updates.createdAt.toLocaleDateString('fr-FR')}` : ''}`}</T>
     </>
   );
 }

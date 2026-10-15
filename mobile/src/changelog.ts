@@ -1,6 +1,6 @@
 /** Historique « Quoi de neuf ». La première entrée est la version en cours. */
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
-  { version: '2.5.0', date: '16 oct. 2026', items: ['Notifications : check-in chaque matin et pesée hebdo, même app fermée, sans doublon.', 'Notification de test dans Profil → Rappels.', 'Profil en cartes illustrées, comme Progression.'] },
+  { version: '2.5.0', date: '16 oct. 2026', items: ['Bouton « Rechercher une mise à jour » dans Quoi de neuf.', 'Notifications : check-in chaque matin et pesée hebdo, même app fermée, sans doublon.', 'Notification de test dans Profil → Rappels.', 'Profil en cartes illustrées, comme Progression.'] },
   { version: '2.4.0', date: '16 oct. 2026', items: ['Icône de l\'app en version noire.', 'Wordmark BYYND redessiné fidèlement à la planche de marque (ligature N–D).', 'Salutation selon l\'heure : bonjour, bon après-midi, bonsoir, bonne nuit.'] },
   { version: '2.3.1', date: '16 oct. 2026', items: ['Progression : plus de chiffres affichés d\'emblée, quatre cartes illustrées à ouvrir quand tu veux.'] },
   { version: '2.3.0', date: '15 oct. 2026', items: ['Chaque jour du programme s\'ouvre : ce qui est prévu, pourquoi, comment le faire.', 'Running : échauffement détaillé, explication de chaque terme, comment ressentir chaque allure, retour au calme.', 'Renforcement : mode d\'emploi complet de chaque exercice (installation, exécution, respiration, erreurs, variantes, vidéo).', 'Récupération active guidée : marche et mobilité, exercice par exercice.'] },
