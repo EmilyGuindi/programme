@@ -14,7 +14,9 @@ export function openPlan(a: AdaptedPlan) {
   if (a.type === 'event' && a.event) router.push({ pathname: '/event', params: { id: a.event.id } });
   else if (s.type === 'run' || ('run' in s && s.run)) router.push({ pathname: '/run/[date]', params: { date: a.date } });
   else if (s.type === 'renfo') router.push({ pathname: '/renfo/[date]', params: { date: a.date } });
+  else openDay(a.date);
 }
+export const openDay = (date: string) => router.push({ pathname: '/day/[date]', params: { date } });
 export function presetFor(a: AdaptedPlan) { return a.hyrox ? 'hyrox' : a.type === 'box' ? 'crossfit' : a.type === 'run' ? 'running' : a.type === 'renfo' ? 'renfo' : 'marche'; }
 
 export function PlanRow({ a, showDay = true }: { a: AdaptedPlan; showDay?: boolean }) {
@@ -22,10 +24,9 @@ export function PlanRow({ a, showDay = true }: { a: AdaptedPlan; showDay?: boole
   const s = getState(); const shown = a.replaced || a; const done = doneOn(s, a.date); const acts = activitiesOn(s, a.date);
   const isToday = a.date === today();
   const stripe = a.type === 'event' ? c.accent : shown.type === 'run' ? c.accent : shown.type === 'box' ? c.ink : shown.type === 'renfo' ? c.ink2 : 'transparent';
-  const openable = a.type === 'event' || shown.type === 'run' || shown.type === 'renfo';
   const sub = done ? acts.filter(x => !x.complementary).map(x => x.title + (x.durationMin ? ` ${Math.round(x.durationMin)} min` : '')).join(', ') : [shown === a ? a.dur : '', shown.type !== 'box' ? shown.goal : a.note].filter(Boolean).join(' · ');
   return (
-    <Pressable disabled={!openable} onPress={() => openPlan(a)} accessibilityRole={openable ? 'button' : undefined}
+    <Pressable onPress={() => (a.type === 'event' && a.event ? openPlan(a) : openDay(a.date))} accessibilityRole="button" accessibilityHint="Voir le détail du jour"
       style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, backgroundColor: a.type === 'event' ? c.accentSoft : c.surface, borderWidth: isToday ? 2 : 1, borderColor: isToday ? c.accent : c.line, borderLeftWidth: 4, borderLeftColor: stripe, borderStyle: shown.type === 'run' ? 'dashed' : 'solid', borderRadius: radius.r2, paddingVertical: space.s3, paddingHorizontal: space.s4, minHeight: 72, opacity: pressed ? 0.85 : 1 })}>
       {showDay ? <View style={{ width: 44 }}><T v="label">{DAYS_SHORT[dow(a.date)]}</T><T v="xs" muted>{fmtShort(a.date)}</T></View> : null}
       <View style={{ flex: 1, gap: 2 }}>

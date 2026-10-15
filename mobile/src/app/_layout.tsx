@@ -37,6 +37,7 @@ export default function RootLayout() {
         <Stack.Screen name="renfo/[date]" options={sheet} />
         <Stack.Screen name="progress/[view]" />
         <Stack.Screen name="strava" options={sheet} />
+        <Stack.Screen name="day/[date]" options={sheet} />
       </Stack>
     </ThemeProvider>
   );

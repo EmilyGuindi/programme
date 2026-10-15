@@ -1,6 +1,9 @@
 import { useLocalSearchParams, router } from 'expo-router';
 import { View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { Bullets, Disclosure } from '@/components/guide';
 import { Sheet } from '@/components/sheet';
+import { EX_GUIDE } from '@/engine/guides';
 import { Button, Card, Coach, Gap, Input, Row, Segmented, T, Tick } from '@/components/ui';
 import { adapted, bestKg, recovery, strengthBlocks, suggestKg } from '@/engine/coach';
 import { fmtDay } from '@/engine/dates';
@@ -26,6 +29,16 @@ export default function RenfoScreen() {
       <Segmented options={[['n', 'Normale'], ['r', 'Réduite'], ['x', 'Je passe']]} value={mode} onChange={v => update(st => { st.overrides[date] = { ...(st.overrides[date] || {}), level: v === 'x' ? 'rouge' : v === 'r' ? 'orange' : 'vert' }; })} />
       <Gap />
       {mode === 'x' ? <Card><T v="h3">Séance supprimée</T><T muted style={{ marginTop: 6 }}>Repos ou marche. Pas de rattrapage : lundi reste un jour de repos.</T></Card> : <>
+        <Disclosure title="Comment lire la séance" sub="Supersets, RIR, repos, charges" open={!Object.keys(log.ex || {}).length}>
+          <Bullets items={[
+            'Superset : tu enchaînes les deux exercices d\'un bloc (A1 puis A2) sans pause, puis tu te reposes, puis tu recommences. Ça gagne du temps sans fatiguer les mêmes muscles.',
+            'Séries × répétitions : « 3 × 8–10 » veut dire 3 séries de 8 à 10 répétitions.',
+            'RIR (répétitions en réserve) : combien de répétitions tu pourrais encore faire à la fin de la série. RIR 2 = tu t\'arrêtes en pouvant en faire 2 de plus, avec une technique propre.',
+            'Choisir la charge : prends un poids qui te mène au RIR indiqué dans la fourchette de répétitions. Trop facile, monte un peu à la série suivante ; trop dur, baisse.',
+            'Charge suggérée : calculée à partir de tes séances précédentes. Si tu as fait le haut de la fourchette partout la dernière fois, l\'app te propose un peu plus.',
+            'Note la charge et les répétitions de chaque série, puis coche : c\'est ce qui permet de progresser.',
+          ]} />
+        </Disclosure>
         <Card><T v="h3">Échauffement · 6–8 min</T>{WARMUP.map((w, i) => <Row key={i} style={{ paddingVertical: 6 }}><Tick sizePx={28} on={!!log.warm?.[i]} label={w} onPress={() => update(st => { const l = (st.strength[date] = st.strength[date] || { ex: {} }); l.warm = { ...(l.warm || {}), [i]: !l.warm?.[i] }; })} /><T style={{ flex: 1 }}>{w}</T></Row>)}</Card>
         {blocks.map((b, bi) => (
           <View key={b.title}>
@@ -46,8 +59,23 @@ export default function RenfoScreen() {
                       <Input style={{ flex: 1 }} keyboardType="number-pad" defaultValue={x.reps[j] ?? ''} placeholder="reps" onChangeText={t => setEx(e.id, l => { l.reps[j] = t; })} />
                       <Tick sizePx={44} on={!!x.done[j]} label={`Série ${j + 1} faite`} onPress={() => setEx(e.id, l => { l.done[j] = !l.done[j]; })} />
                     </Row>))}
-                  <Pressable onPress={() => setOpen(open === e.id ? null : e.id)}><T v="small" color={c.accent} style={{ marginTop: 4 }}>{open === e.id || (shoulder && e.shoulder) ? 'Masquer les consignes' : 'Technique, alternatives, épaule'}</T></Pressable>
-                  {open === e.id || (shoulder && e.shoulder) ? <View style={{ gap: 6, marginTop: 6 }}><T v="small"><T v="small" style={{ fontWeight: '600' }}>Technique : </T>{e.tech}</T><T v="small"><T v="small" style={{ fontWeight: '600' }}>Alternatives : </T>{e.alt}</T>{e.shoulder ? <T v="small" color={shoulder ? c.stop : undefined}><T v="small" style={{ fontWeight: '600' }}>Épaule : </T>{e.shoulder}</T> : null}</View> : null}
+                  <Pressable onPress={() => setOpen(open === e.id ? null : e.id)}><T v="small" color={c.accent} style={{ marginTop: 4 }}>{open === e.id ? 'Masquer le mode d\'emploi' : 'Mode d\'emploi complet'}</T></Pressable>
+                  {shoulder && e.shoulder && open !== e.id ? <T v="small" color={c.stop} style={{ marginTop: 6 }}><T v="small" style={{ fontWeight: '600' }}>Épaule : </T>{e.shoulder}</T> : null}
+                  {open === e.id ? (() => { const g = EX_GUIDE[e.id]; return (
+                    <View style={{ gap: 10, marginTop: 8 }}>
+                      {g ? <>
+                        <View><T v="label">Installation</T><Bullets items={g.setup} numbered /></View>
+                        <View><T v="label">Exécution</T><Bullets items={g.exec} numbered /></View>
+                        <T v="small"><T v="small" style={{ fontWeight: '600' }}>Respiration : </T>{g.breath}</T>
+                        <T v="small"><T v="small" style={{ fontWeight: '600' }}>Ce que tu dois sentir : </T>{g.feel}</T>
+                        <View><T v="label">Erreurs fréquentes</T><Bullets items={g.mistakes} /></View>
+                        <T v="small"><T v="small" style={{ fontWeight: '600' }}>Plus facile : </T>{g.easier}</T>
+                        <T v="small"><T v="small" style={{ fontWeight: '600' }}>Plus dur : </T>{g.harder}</T>
+                      </> : <T v="small">{e.tech}</T>}
+                      <T v="small"><T v="small" style={{ fontWeight: '600' }}>Sans le matériel : </T>{e.alt}</T>
+                      {e.shoulder ? <T v="small" color={shoulder ? c.stop : undefined}><T v="small" style={{ fontWeight: '600' }}>Si l'épaule fait mal : </T>{e.shoulder}</T> : null}
+                      {g ? <Button small label="Voir une démonstration vidéo" onPress={() => WebBrowser.openBrowserAsync(`https://www.youtube.com/results?search_query=${encodeURIComponent(g.search)}`)} /> : null}
+                    </View>); })() : null}
                 </Card>);
             })}
           </View>))}

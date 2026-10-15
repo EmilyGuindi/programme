@@ -1,5 +1,6 @@
 /** Historique « Quoi de neuf ». La première entrée est la version en cours. */
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  { version: '2.3.0', date: '15 oct. 2026', items: ['Chaque jour du programme s\'ouvre : ce qui est prévu, pourquoi, comment le faire.', 'Running : échauffement détaillé, explication de chaque terme, comment ressentir chaque allure, retour au calme.', 'Renforcement : mode d\'emploi complet de chaque exercice (installation, exécution, respiration, erreurs, variantes, vidéo).', 'Récupération active guidée : marche et mobilité, exercice par exercice.'] },
   { version: '2.2.3', date: '15 oct. 2026', items: ['Correctif : l\'adresse et la clé du serveur sont enregistrées dès la saisie.'] },
   { version: '2.2.2', date: '15 oct. 2026', items: ['Bouton « Connecter Strava » toujours actif, avec un message clair si quelque chose manque.'] },
   { version: '2.2.1', date: '15 oct. 2026', items: ['Correctif : une séance cochée ne disparaît plus après une synchronisation.', 'Synchro par fusion : rien n\'est écrasé entre ton téléphone et le serveur.'] },

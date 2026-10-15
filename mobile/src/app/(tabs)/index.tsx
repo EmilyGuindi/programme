@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { View } from 'react-native';
-import { ActivityRow, openPlan, presetFor, TYPE_LABEL } from '@/components/plan-row';
+import { ActivityRow, openDay, openPlan, presetFor, TYPE_LABEL } from '@/components/plan-row';
 import { Wordmark } from '@/components/logo';
 import { UpdateBanner } from '@/components/update-banner';
 import { ActivityPrompts } from '@/components/activity-prompts';
@@ -29,7 +29,7 @@ export default function Today() {
       <Coach>{coachLine(s, d)}</Coach>
       <ActivityPrompts />
 
-      <Card tone={isEvent ? 'ink' : 'default'}>
+      <Card tone={isEvent ? 'ink' : 'default'} onPress={isEvent ? undefined : () => openDay(d)}>
         <Row between><Tag tone={isEvent ? 'inverse' : undefined}>{`${TYPE_LABEL[shown.type]}${a.optional ? ' · optionnel' : ''}`}</Tag>{a.reason ? <Tag tone="accent">adaptée</Tag> : null}</Row>
         <T v="h2" color={fg} style={{ marginTop: space.s3, marginBottom: 4 }}>{shown.title}</T>
         <T muted={!isEvent} color={isEvent ? 'rgba(244,242,238,.75)' : undefined}>{[a.replaced ? '' : a.dur, shown.goal, a.note].filter(Boolean).join(' · ')}</T>
@@ -47,7 +47,7 @@ export default function Today() {
       <Gap h={space.s2} />
       <Button small label="Ajouter une activité" onPress={() => router.push({ pathname: '/activity', params: { date: d } })} />
       <Gap h={space.s5} />
-      <Card tone="flat"><Row gap={8}><Tag>Demain</Tag><T v="label" style={{ flex: 1 }}>{(tmr.replaced || tmr).title}</T><T v="small" muted>{tmr.dur || ''}</T></Row></Card>
+      <Card tone="flat" onPress={() => openDay(addDays(d, 1))}><Row gap={8}><Tag>Demain</Tag><T v="label" style={{ flex: 1 }}>{(tmr.replaced || tmr).title}</T><T v="small" muted>{tmr.dur || ''}</T></Row></Card>
     </Screen>
   );
 }
