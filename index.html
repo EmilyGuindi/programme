@@ -140,7 +140,7 @@ table{border-collapse:collapse;width:100%;font-size:var(--fs-14)} th,td{text-ali
 </div></nav>
 <script>
 /* ================= BYYND — lot 1 ================= */
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const LOGO = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#15161A"/><path d="M13 46h14V31h14V16h12" fill="none" stroke="#F4F2EE" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="53" cy="16" r="5" fill="#2946F0"/></svg>';
 const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
 
@@ -170,11 +170,34 @@ const DEFAULT = {
     prefs:{ checkinTime:"07:00", weighDay:0, weighTime:"07:30", notifCheckin:true, notifWeigh:true, cycleOptIn:false },
     ref:{ k10:null, k5:null } },
   program:{ id:"c1", name:"Cycle 1 · Oct → Fév", start:"2026-10-12", weeks:20 },
-  events:[], activities:[], checkins:{}, measurements:[], strength:{}, runs:{}, overrides:{}, adjustments:[], migrated:false
+  events:[], activities:[], checkins:{}, measurements:[], strength:{}, runs:{}, overrides:{}, adjustments:[], migrated:false,
+  server:{ url:"", key:"" }
 };
 let S = JSON.parse(JSON.stringify(DEFAULT));
 try{ const raw=localStorage.getItem(KEY); if(raw) S=Object.assign(S,JSON.parse(raw)); }catch(e){}
-function save(){ S.updatedAt=Date.now(); try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+function save(){ S.updatedAt=Date.now(); try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} schedulePush(); }
+/* ---------- sync serveur (lot 2) ---------- */
+let syncState={status:"local",at:0,msg:""}, pushTimer=null;
+function apiBase(){ if(/\.workers\.dev$/.test(location.hostname)) return ""; return (S.server&&S.server.url||"").replace(/\/$/,""); }
+function apiKey(){ return S.server&&S.server.key||""; }
+function syncReady(){ return !!apiKey()&&(apiBase()!==""||/\.workers\.dev$/.test(location.hostname)); }
+function stateJson(){ const {server,...rest}=S; return JSON.stringify(rest); }
+async function apiFetch(path,opt={}){ const r=await fetch(apiBase()+path,{...opt,headers:{"Authorization":"Bearer "+apiKey(),"Content-Type":"application/json",...(opt.headers||{})}}); return r; }
+function schedulePush(){ if(!syncReady()) return; clearTimeout(pushTimer); pushTimer=setTimeout(pushState,1500); }
+async function pushState(){ if(!syncReady()) return; try{ syncState.status="sync"; renderSyncBadge();
+    const r=await apiFetch("/api/state",{method:"PUT",body:JSON.stringify({json:stateJson(),updatedAt:S.updatedAt})});
+    if(r.status===409){ const d=await r.json(); adoptRemote(d); syncState={status:"ok",at:Date.now(),msg:"Version plus récente récupérée"}; render(); }
+    else if(r.status===401){ syncState={status:"err",at:Date.now(),msg:"Clé refusée"}; }
+    else if(r.ok){ syncState={status:"ok",at:Date.now(),msg:""}; }
+    else syncState={status:"err",at:Date.now(),msg:"Erreur "+r.status};
+  }catch(e){ syncState={status:"off",at:Date.now(),msg:"Hors ligne : synchro différée"}; }
+  renderSyncBadge(); }
+function adoptRemote(d){ if(!d||!d.json) return; const remote=JSON.parse(d.json); const server=S.server; S=Object.assign(JSON.parse(JSON.stringify(DEFAULT)),remote,{server}); S.updatedAt=d.updatedAt||S.updatedAt; try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+async function pullState(){ if(!syncReady()) return; try{ const r=await apiFetch("/api/state"); if(r.status===401){ syncState={status:"err",at:Date.now(),msg:"Clé refusée"}; renderSyncBadge(); return; } if(!r.ok) throw 0; const d=await r.json();
+    if(d.json&&d.updatedAt>(S.updatedAt||0)){ adoptRemote(d); render(); toast("Données récupérées depuis ton compte"); } else if((S.updatedAt||0)>(d.updatedAt||0)) await pushState();
+    syncState={status:"ok",at:Date.now(),msg:""}; }catch(e){ syncState={status:"off",at:Date.now(),msg:"Serveur injoignable"}; } renderSyncBadge(); }
+function renderSyncBadge(){ const el=document.getElementById("syncBadge"); if(!el) return; const t={local:"Sur ce téléphone",sync:"Synchronisation…",ok:"Synchronisé",err:"Erreur : "+syncState.msg,off:syncState.msg}[syncState.status]; el.textContent=t; el.className="tiny "+(syncState.status==="err"?"stop":"muted"); }
+window.addEventListener("online",()=>{ if(syncReady()) pushState(); });
 
 /* ---------- seeds & migration ---------- */
 function seed(){
@@ -532,6 +555,11 @@ function renderProfile(){
   const u=S.user, pr=u.prefs; const notifSupported="Notification" in window&&"serviceWorker" in navigator; const perm=notifSupported?Notification.permission:"unsupported";
   let h=topbar()+`<h1 style="margin-bottom:14px">Profil</h1>`;
   h+=`<div class="card"><h3>Objectifs</h3><div class="field" style="margin-top:10px"><label for="gw">Poids souhaité (kg)</label><input class="input" id="gw" data-pref="goals.weightTarget" inputmode="decimal" value="${u.goals.weightTarget}"></div><div class="field"><label for="gr">Running</label><input class="input" id="gr" data-pref="goals.run" value="${esc(u.goals.run)}"></div><div class="field" style="margin:0"><label for="gp">Physique</label><textarea class="input" id="gp" data-pref="goals.physique">${esc(u.goals.physique)}</textarea></div></div>`;
+  const sv=S.server||{url:"",key:""}; const onWorkers=/\.workers\.dev$/.test(location.hostname);
+  h+=`<div class="card"><h3>Serveur BYYND</h3><p class="muted small" style="margin:6px 0 10px">Sauvegarde tes données hors du téléphone et les synchronise entre appareils. <span id="syncBadge" class="tiny muted"></span></p>
+    ${onWorkers?"":`<div class="field"><label for="su">Adresse du serveur</label><input class="input" id="su" data-server="url" value="${esc(sv.url)}" placeholder="https://byynd.xxx.workers.dev"></div>`}
+    <div class="field"><label for="sk">Clé d'accès (APP_KEY)</label><input class="input" id="sk" type="password" data-server="key" value="${esc(sv.key)}" placeholder="la clé définie dans GitHub"></div>
+    <div class="row"><button class="btn" style="flex:1" id="syncNow">Synchroniser maintenant</button><button class="btn" id="syncTest">Tester</button></div></div>`;
   h+=`<div class="card"><h3>Strava</h3><p class="muted small" style="margin:6px 0 10px">Prévu au lot 4. Une activité peut déjà être ajoutée à la main depuis Aujourd'hui ou Programme.</p><button class="btn block" disabled>Connecter Strava · bientôt</button></div>`;
   h+=`<div class="card"><h3>Notifications</h3><p class="muted small" style="margin:6px 0 10px">${perm==="granted"?"Autorisées sur cet appareil. L'envoi quand l'app est fermée arrive au lot 3 ; tes horaires sont déjà enregistrés.":perm==="denied"?"Refusées dans Chrome : à réactiver dans les paramètres du site.":perm==="unsupported"?"Non disponibles dans ce navigateur.":"Pas encore autorisées. L'envoi quand l'app est fermée arrive au lot 3."}</p>
     <div class="grid2"><div class="field"><label for="ct">Check-in, heure</label><input class="input" id="ct" type="time" data-pref="prefs.checkinTime" value="${pr.checkinTime}"></div><div class="field"><label for="wt">Pesée, heure</label><input class="input" id="wt" type="time" data-pref="prefs.weighTime" value="${pr.weighTime}"></div></div>
@@ -742,6 +770,8 @@ document.addEventListener("click",e=>{
   if(t.id==="saveResult"){ saveResult(); return; }
   if(t.dataset.weighday){ S.user.prefs.weighDay=+t.dataset.weighday; save(); render(); return; }
   if(t.dataset.toggle){ const p=t.dataset.toggle.split("."); S.user[p[0]][p[1]]=!S.user[p[0]][p[1]]; save(); render(); return; }
+  if(t.id==="syncNow"){ pullState().then(()=>toast(syncState.status==="ok"?"Synchronisé":"Échec : "+syncState.msg)); return; }
+  if(t.id==="syncTest"){ (async()=>{ try{ const r=await fetch(apiBase()+"/api/health"); const d=await r.json(); const k=await apiFetch("/api/state"); toast(d.ok?(k.status===401?"Serveur OK, clé refusée":k.ok?"Serveur et clé OK":"Serveur OK, erreur "+k.status):"Réponse inattendue"); }catch(e){ toast("Serveur injoignable"); } })(); return; }
   if(t.id==="askNotif"){ Notification.requestPermission().then(()=>render()); return; }
   if(t.id==="exportBtn"){ const b=new Blob([JSON.stringify(S,null,1)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="byynd-"+today()+".json"; document.body.appendChild(a); a.click(); a.remove(); return; }
   if(t.id==="importBtn"){ $("#importFile").click(); return; }
@@ -750,6 +780,7 @@ document.addEventListener("input",e=>{
   const el=e.target;
   if(el.dataset.f){ const id=el.closest(".ex").dataset.ex, x=S.strength[sheetArg].ex[id]; x[el.dataset.f][+el.dataset.j]=el.value.replace(",","."); save(); return; }
   if(el.dataset.run){ const R=S.runs[sheetArg]; R[el.dataset.run]=el.value.replace(",","."); save(); return; }
+  if(el.dataset.server){ S.server=S.server||{url:"",key:""}; S.server[el.dataset.server]=el.value.trim(); try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} return; }
   if(el.dataset.pref){ const v=el.dataset.pref==="goals.weightTarget"?num(el.value):el.value; if(v!=null) setPref(el.dataset.pref,v); return; }
 });
 document.addEventListener("change",e=>{
@@ -760,6 +791,7 @@ document.addEventListener("change",e=>{
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&sheet) closeSheet(); });
 if(location.hash==="#checkin") sheet="checkin"; if(location.hash==="#weigh-in") sheet="measure";
 render(); if(sheet){ const s=sheet; sheet=null; openSheet(s,null); }
+pullState(); setTimeout(renderSyncBadge,0);
 if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>
 </body>
