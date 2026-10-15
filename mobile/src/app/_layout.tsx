@@ -1,4 +1,4 @@
-import { Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold } from '@expo-google-fonts/archivo';
+import { Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold, Archivo_900Black } from '@expo-google-fonts/archivo';
 import { ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold } from '@expo-google-fonts/archivo-narrow';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
@@ -12,7 +12,7 @@ SplashScreen.preventAutoHideAsync();
 loadStore();
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({ Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold, ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold });
+  const [fontsLoaded] = useFonts({ Archivo_900Black, Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold, ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold });
   const ready = useReady();
   const { c, dark } = useTheme();
   useEffect(() => { if (fontsLoaded && ready) SplashScreen.hideAsync(); }, [fontsLoaded, ready]);
