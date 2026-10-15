@@ -32,6 +32,19 @@ jobs:
           echo "D1: $ID"
           sed -i "s/D1_PLACEHOLDER/$ID/" wrangler.toml
           wrangler d1 execute byynd --remote --file=worker/schema.sql
+      - name: Sous-domaine workers.dev (création si absent)
+        run: |
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain"
+          CUR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$API" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log(j.success&&j.result&&j.result.subdomain||"")}catch(e){console.log("")}})')
+          if [ -z "$CUR" ]; then
+            for NAME in emilyguindi byynd-emily byynd-eg-2026; do
+              R=$(curl -s -X PUT -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" --data "{\"subdomain\":\"$NAME\"}" "$API")
+              if echo "$R" | grep -q '"success":true'; then CUR=$NAME; break; fi
+              echo "Essai $NAME : $R"
+            done
+          fi
+          if [ -z "$CUR" ]; then echo "::error title=Sous-domaine::Impossible de créer le sous-domaine workers.dev automatiquement"; exit 1; fi
+          echo "::notice title=Sous-domaine::$CUR.workers.dev"
       - name: Déployer le Worker
         run: |
           set -o pipefail
