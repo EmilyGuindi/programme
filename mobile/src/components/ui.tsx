@@ -1,0 +1,135 @@
+import * as Haptics from 'expo-haptics';
+import { type ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import type { Level } from '@/engine/types';
+import { font, radius, size, space, touch, useTheme } from '@/theme/tokens';
+
+const tap = () => Haptics.selectionAsync().catch(() => {});
+
+/* ---------- Typographie ---------- */
+type TV = 'mega' | 'hero' | 'title' | 'h2' | 'h3' | 'body' | 'small' | 'xs' | 'label';
+export function T({ v = 'body', muted, color, style, children, numberOfLines }: { v?: TV; muted?: boolean; color?: string; style?: StyleProp<TextStyle>; children: ReactNode; numberOfLines?: number }) {
+  const { c } = useTheme();
+  const base: Record<TV, TextStyle> = {
+    mega: { fontFamily: font.condensed, fontSize: size.mega, lineHeight: 62, fontVariant: ['tabular-nums'] },
+    hero: { fontFamily: font.condensed, fontSize: size.hero, lineHeight: 42, fontVariant: ['tabular-nums'] },
+    title: { fontFamily: font.semibold, fontSize: size.xxl, lineHeight: 34 },
+    h2: { fontFamily: font.semibold, fontSize: size.xl, lineHeight: 27 },
+    h3: { fontFamily: font.semibold, fontSize: size.lg, lineHeight: 23 },
+    body: { fontFamily: font.regular, fontSize: size.md, lineHeight: 23 },
+    small: { fontFamily: font.regular, fontSize: size.sm, lineHeight: 20 },
+    xs: { fontFamily: font.regular, fontSize: size.xs, lineHeight: 16 },
+    label: { fontFamily: font.semibold, fontSize: size.md, lineHeight: 22 },
+  };
+  return <Text numberOfLines={numberOfLines} style={[base[v], { color: color || (muted ? c.ink2 : c.ink) }, style]}>{children}</Text>;
+}
+
+/* ---------- Mise en page ---------- */
+export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
+  const { c } = useTheme();
+  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: space.s4, paddingBottom: 120 }}>{children}</View>;
+  return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}>{scroll ? <ScrollView keyboardShouldPersistTaps="handled">{inner}</ScrollView> : inner}</SafeAreaView>;
+}
+export function Row({ children, gap = space.s3, between, style }: { children: ReactNode; gap?: number; between?: boolean; style?: StyleProp<ViewStyle> }) {
+  return <View style={[{ flexDirection: 'row', alignItems: 'center', gap }, between && { justifyContent: 'space-between' }, style]}>{children}</View>;
+}
+export const Gap = ({ h = space.s3 }: { h?: number }) => <View style={{ height: h }} />;
+
+export function Card({ children, onPress, tone = 'default', style }: { children: ReactNode; onPress?: () => void; tone?: 'default' | 'ink' | 'flat'; style?: StyleProp<ViewStyle> }) {
+  const { c } = useTheme();
+  const s: ViewStyle = tone === 'ink' ? { backgroundColor: c.ink, borderColor: c.ink } : tone === 'flat' ? { backgroundColor: 'transparent', borderStyle: 'dashed', borderColor: c.line2 } : { backgroundColor: c.surface, borderColor: c.line };
+  const body = <View style={[styles.card, s, style]}>{children}</View>;
+  return onPress ? <Pressable onPress={() => { tap(); onPress(); }} style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}>{body}</Pressable> : body;
+}
+
+/* ---------- Actions ---------- */
+export function Button({ label, onPress, kind = 'secondary', small, disabled, block, style }: { label: string; onPress: () => void; kind?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'inverse'; small?: boolean; disabled?: boolean; block?: boolean; style?: StyleProp<ViewStyle> }) {
+  const { c } = useTheme();
+  const bg = kind === 'primary' ? c.accent : kind === 'inverse' ? c.paper : kind === 'ghost' ? 'transparent' : c.surface;
+  const fg = kind === 'primary' ? c.accentInk : kind === 'ghost' ? c.accent : kind === 'danger' ? c.stop : c.ink;
+  const border = kind === 'primary' ? c.accent : kind === 'ghost' || kind === 'inverse' ? 'transparent' : c.line2;
+  return (
+    <Pressable accessibilityRole="button" disabled={disabled} onPress={() => { tap(); onPress(); }}
+      style={({ pressed }) => [{ minHeight: small ? 40 : touch, paddingHorizontal: small ? space.s4 : space.s5, borderRadius: radius.r1, borderWidth: 1, borderColor: border, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.4 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }, block && { alignSelf: 'stretch' }, style]}>
+      <Text style={{ fontFamily: font.semibold, fontSize: small ? size.sm : size.md, color: fg }}>{label}</Text>
+    </Pressable>
+  );
+}
+export function Tick({ on, onPress, label, sizePx = 36 }: { on: boolean; onPress: () => void; label: string; sizePx?: number }) {
+  const { c } = useTheme();
+  return (
+    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={label} hitSlop={8}
+      onPress={() => { Haptics.impactAsync(on ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onPress(); }}
+      style={{ width: sizePx, height: sizePx, borderRadius: sizePx / 2, borderWidth: 2, borderColor: on ? c.ok : c.line2, backgroundColor: on ? c.ok : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+      {on ? <Text style={{ color: '#fff', fontFamily: font.bold, fontSize: 16 }}>✓</Text> : null}
+    </Pressable>
+  );
+}
+
+/* ---------- Statuts ---------- */
+export function Pill({ level }: { level: Level }) {
+  const { c } = useTheme();
+  const m = { vert: [c.ok, c.okSoft, 'Vert'], orange: [c.warn, c.warnSoft, 'Orange'], rouge: [c.stop, c.stopSoft, 'Rouge'], inconnu: [c.ink2, c.surface2, 'Check-in à faire'] }[level];
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: m[1], borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 4, alignSelf: 'flex-start' }}>
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: m[0] }} />
+      <Text style={{ fontFamily: font.semibold, fontSize: size.sm, color: m[0] }}>{m[2]}</Text>
+    </View>
+  );
+}
+export function Tag({ children, tone }: { children: ReactNode; tone?: 'accent' | 'inverse' }) {
+  const { c } = useTheme();
+  const col = tone === 'accent' ? c.accent : tone === 'inverse' ? c.paper : c.ink2;
+  return <View style={{ borderWidth: 1, borderColor: tone === 'inverse' ? 'rgba(255,255,255,.3)' : c.line, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 1, alignSelf: 'flex-start' }}><Text style={{ fontFamily: font.semibold, fontSize: size.xs, color: col }}>{children}</Text></View>;
+}
+export function Coach({ children }: { children: ReactNode }) {
+  const { c } = useTheme();
+  return <View style={{ borderLeftWidth: 4, borderLeftColor: c.accent, backgroundColor: c.surface, borderTopRightRadius: radius.r2, borderBottomRightRadius: radius.r2, paddingVertical: space.s3, paddingHorizontal: space.s4, marginBottom: space.s3 }}><T>{children}</T></View>;
+}
+
+/* ---------- Saisie ---------- */
+export function Choices<V extends string | number>({ options, value, onChange, cols }: { options: [V, string][]; value: V | null | undefined; onChange: (v: V | null) => void; cols?: number }) {
+  const { c } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+      {options.map(([v, l]) => {
+        const on = value === v;
+        return (
+          <Pressable key={String(v)} accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={() => { tap(); onChange(on ? null : v); }}
+            style={{ flexGrow: 1, flexBasis: cols ? `${100 / cols - 2}%` : 64, minHeight: cols && cols > 6 ? 44 : touch, borderRadius: radius.r1, borderWidth: 1, borderColor: on ? c.ink : c.line2, backgroundColor: on ? c.ink : c.surface, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+            <Text style={{ fontFamily: font.semibold, fontSize: size.md, color: on ? c.paper : c.ink }}>{l}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+export function Segmented<V extends string>({ options, value, onChange }: { options: [V, string][]; value: V; onChange: (v: V) => void }) {
+  const { c } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', backgroundColor: c.surface2, borderRadius: radius.r1, padding: 3, gap: 3 }}>
+      {options.map(([v, l]) => {
+        const on = v === value;
+        return <Pressable key={v} onPress={() => { tap(); onChange(v); }} style={{ flex: 1, minHeight: 40, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? c.surface : 'transparent' }}><Text style={{ fontFamily: font.semibold, fontSize: size.sm, color: on ? c.ink : c.ink2 }}>{l}</Text></Pressable>;
+      })}
+    </View>
+  );
+}
+export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return <View style={{ marginBottom: space.s4 }}><Row gap={6} style={{ marginBottom: 6 }}><T v="label">{label}</T>{hint ? <T v="small" muted>{hint}</T> : null}</Row>{children}</View>;
+}
+export function Input(props: TextInputProps & { big?: boolean }) {
+  const { c } = useTheme();
+  return <TextInput placeholderTextColor={c.ink2} {...props} style={[{ minHeight: props.big ? 64 : touch, borderWidth: 1, borderColor: c.line2, backgroundColor: c.surface, borderRadius: radius.r1, paddingHorizontal: 14, color: c.ink, fontFamily: props.big ? font.condensed : font.regular, fontSize: props.big ? 36 : size.md }, props.style]} />;
+}
+export function Stat({ items }: { items: [string, string][] }) {
+  const { c } = useTheme();
+  return <Row gap={space.s3}>{items.map(([v, l]) => <View key={l} style={{ flex: 1, backgroundColor: c.surface2, borderRadius: radius.r1, padding: space.s3 }}><T v="h2" style={{ fontFamily: font.condensed, fontVariant: ['tabular-nums'] }}>{v}</T><T v="xs" muted>{l}</T></View>)}</Row>;
+}
+export function KV({ k, v }: { k: string; v: string }) {
+  const { c } = useTheme();
+  return <Row between style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: c.line }}><T v="small">{k}</T><T v="label" style={{ fontVariant: ['tabular-nums'] }}>{v}</T></Row>;
+}
+
+const styles = StyleSheet.create({ card: { borderWidth: 1, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3 } });
