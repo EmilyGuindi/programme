@@ -27,7 +27,17 @@ jobs:
         run: |
           npx tsc --noEmit
           npx tsx --test src/engine/__tests__/*.test.ts
+      - name: Compte Expo
+        run: |
+          set -o pipefail
+          npx --yes eas-cli@latest whoami 2>&1 | tee /tmp/who.log || { echo "::error title=EXPO_TOKEN::$(tail -c 600 /tmp/who.log | tr '\n' ' ')"; exit 1; }
       - name: Lier le projet EAS
-        run: npx --yes eas-cli@latest init --non-interactive --force
+        run: |
+          set -o pipefail
+          npx --yes eas-cli@latest init --non-interactive --force 2>&1 | tee /tmp/init.log || { echo "::error title=eas init::$(tail -c 900 /tmp/init.log | tr '\n' ' ')"; exit 1; }
       - name: Lancer le build APK (plan gratuit)
-        run: npx --yes eas-cli@latest build --platform android --profile preview --non-interactive --no-wait
+        run: |
+          set -o pipefail
+          npx --yes eas-cli@latest build --platform android --profile preview --non-interactive --no-wait 2>&1 | tee /tmp/build.log || { echo "::error title=eas build::$(tail -c 900 /tmp/build.log | tr '\n' ' ')"; exit 1; }
+          URL=$(grep -oE 'https://expo.dev/[^ ]+builds/[a-z0-9-]+' /tmp/build.log | head -1)
+          echo "::notice title=Build lancé::$URL"
