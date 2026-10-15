@@ -1,0 +1,33 @@
+name: Build Android BYYND
+
+on:
+  push:
+    branches: [main]
+    paths: ['mobile/**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Vérifier le secret
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then echo "::error::Ajoute EXPO_TOKEN dans Settings → Secrets and variables → Actions"; exit 1; fi
+      - run: npm ci
+      - name: Typecheck et tests du moteur
+        run: |
+          npx tsc --noEmit
+          npx tsx --test src/engine/__tests__/*.test.ts
+      - name: Lier le projet EAS
+        run: npx --yes eas-cli@latest init --non-interactive --force
+      - name: Lancer le build APK (plan gratuit)
+        run: npx --yes eas-cli@latest build --platform android --profile preview --non-interactive --no-wait
