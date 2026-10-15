@@ -112,7 +112,7 @@ let strava: StravaStatus | null = null;
 export const useStrava = () => useSyncExternalStore(cb => { listeners.add(cb); return () => listeners.delete(cb); }, () => strava);
 export async function stravaStatus() {
   if (!configured()) return null;
-  try { const r = await api('/api/strava/status'); if (r.ok) { strava = await r.json(); emit(); } } catch {}
+  try { const r = await api('/api/strava/status'); if (r.ok) { strava = await r.json(); emit(); } else { strava = null; emit(); } } catch { strava = null; emit(); }
   return strava;
 }
 /** Récupère les activités Strava normalisées par le serveur et les fusionne localement. */

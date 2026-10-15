@@ -55,7 +55,15 @@ export default function Profile() {
         {st?.connected ? <>
           <Row><Button label={busy ? 'Synchronisation…' : 'Synchroniser'} style={{ flex: 1 }} disabled={busy} onPress={async () => { setBusy(true); const n = await stravaSyncNow(14); setBusy(false); setSmsg(n ? `${n} activité${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.` : 'Tout est à jour.'); }} />
             <Button kind="danger" label="Déconnecter" onPress={() => Alert.alert('Déconnecter Strava ?', 'BYYND n\'aura plus accès à tes activités. Celles déjà importées restent.', [{ text: 'Annuler', style: 'cancel' }, { text: 'Déconnecter', style: 'destructive', onPress: () => disconnectStrava() }])} /></Row>
-        </> : <Button kind="primary" label="Connecter Strava" disabled={!st?.configured} onPress={async () => setSmsg(await connectStrava())} />}
+        </> : <Button kind="primary" label={busy ? 'Connexion…' : 'Connecter Strava'} disabled={busy} onPress={async () => {
+          setBusy(true); setSmsg('');
+          if (!sv.url || !sv.key) { setSmsg('Renseigne d\'abord l\'adresse du serveur et ta clé dans « Serveur BYYND », puis appuie sur Tester.'); setBusy(false); return; }
+          const cur = await stravaStatus();
+          if (!cur) setSmsg('Serveur injoignable ou clé refusée : vérifie « Serveur BYYND » avec le bouton Tester.');
+          else if (!cur.configured) setSmsg('Le serveur ne voit pas encore les identifiants Strava. Vérifie les 3 secrets STRAVA_ dans GitHub.');
+          else setSmsg(await connectStrava());
+          setBusy(false);
+        }} />}
         {smsg ? <T v="small" style={{ marginTop: 8 }}>{smsg}</T> : null}
         <T v="xs" muted style={{ marginTop: 8 }}>Les nouvelles activités arrivent quelques minutes après leur envoi sur Strava, avec un rattrapage automatique toutes les heures.</T>
       </Card>
