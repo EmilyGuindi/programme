@@ -1,0 +1,17 @@
+name = "byynd"
+main = "worker/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[assets]
+directory = "./"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/strava/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "byynd"
+database_id = "D1_PLACEHOLDER"
+
+[triggers]
+crons = ["*/5 * * * *"]
