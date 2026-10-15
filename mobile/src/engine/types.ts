@@ -13,6 +13,15 @@ export interface Activity {
   durationMin?: number | null; distanceKm?: number | null; elevM?: number | null; avgHr?: number | null;
   effort?: number | null; notes?: string; complementary: boolean; matched?: ISODate | null;
   source: 'manuel' | 'strava' | 'migration' | 'healthconnect'; kind?: 'facile' | 'qualite' | 'test'; eventId?: string;
+  /** Strava : identifiant, données brutes utiles, et décision de correspondance. */
+  stravaId?: string; sportType?: string; startLocal?: string; elapsedMin?: number | null; maxHr?: number | null;
+  laps?: { km: number; s: number; hr: number | null; elev: number | null }[];
+  needsConfirm?: boolean; userEdited?: boolean; askEffort?: boolean;
+}
+export interface StravaItem {
+  stravaId: string; name: string; sportType: string; date: ISODate; startLocal?: string; distanceKm: number | null; movingMin: number | null;
+  elapsedMin: number | null; elevM: number | null; avgHr: number | null; maxHr: number | null; perceived?: number | null; trainer?: boolean;
+  laps?: { km: number; s: number; hr: number | null; elev: number | null }[]; deleted?: boolean; updatedAt: number;
 }
 
 export interface SportEvent {
@@ -51,6 +60,7 @@ export interface AppState {
   events: SportEvent[]; activities: Activity[]; checkins: Record<ISODate, CheckIn>; measurements: Measurement[];
   strength: Record<ISODate, StrengthLog>; runs: Record<ISODate, RunLog>; overrides: Record<ISODate, Override>;
   migrated: boolean;
+  strava?: { since: number };
 }
 
 export type PlanType = 'box' | 'run' | 'renfo' | 'rest' | 'recup' | 'event';

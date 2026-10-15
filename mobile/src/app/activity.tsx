@@ -17,8 +17,8 @@ export default function ActivityScreen() {
   const set = (patch: Partial<Activity>) => setF(x => ({ ...x, ...patch }));
   function save() {
     const t = f.type as ActivityType; const comp = !!f.complementary;
-    const obj: Activity = { id: ex?.id || uid(), source: ex?.source || 'manuel', date: f.date || today(), type: t, title: f.title && ex && f.title !== TITLE[ex.type] ? f.title : t === 'marche' && comp ? 'Marche avec Sirius' : TITLE[t],
-      durationMin: num(f.durationMin), distanceKm: num(f.distanceKm), elevM: num(f.elevM), avgHr: num(f.avgHr), effort: f.effort ?? null, notes: f.notes || '', complementary: comp, matched: comp ? null : f.date, kind: f.kind || 'facile', eventId: ex?.eventId };
+    const obj: Activity = { ...(ex || {}), userEdited: true, needsConfirm: false, id: ex?.id || uid(), source: ex?.source || 'manuel', date: f.date || today(), type: t, title: f.title && ex && f.title !== TITLE[ex.type] ? f.title : t === 'marche' && comp ? 'Marche avec Sirius' : TITLE[t],
+      durationMin: num(f.durationMin), distanceKm: num(f.distanceKm), elevM: num(f.elevM), avgHr: num(f.avgHr), effort: f.effort ?? null, notes: f.notes || '', complementary: comp, matched: comp ? null : (ex?.source === 'strava' ? (ex.matched ?? f.date) : f.date), kind: f.kind || 'facile', eventId: ex?.eventId };
     update(st => { const i = st.activities.findIndex(a => a.id === obj.id); if (i >= 0) st.activities[i] = obj; else st.activities.push(obj); });
     router.back();
   }

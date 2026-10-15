@@ -10,12 +10,14 @@ import { View } from 'react-native';
 import { Button, Card, Field, Gap, Input, Row, Screen, Segmented, T } from '@/components/ui';
 import { weekOf } from '@/engine/coach';
 import { addDays, DAYS_SHORT, fmtShort, num, today } from '@/engine/dates';
-import { getState, pull, replaceState, setServer, testServer, update, useApp, useServer, useSync } from '@/store/store';
+import { connectStrava, disconnectStrava, getState, pull, replaceState, setServer, stravaStatus, stravaSyncNow, testServer, update, useApp, useServer, useStrava, useSync } from '@/store/store';
+import { useEffect } from 'react';
 import { space, useTheme } from '@/theme/tokens';
 
 export default function Profile() {
   const s = useApp(); const sv = useServer(); const sync = useSync(); const { c } = useTheme();
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState(''); const st = useStrava(); const [smsg, setSmsg] = useState(''); const [busy, setBusy] = useState(false);
+  useEffect(() => { stravaStatus(); }, [sv.url, sv.key]);
   const pr = s.user.prefs;
   const syncText = { local: 'Sur ce téléphone uniquement', sync: 'Synchronisation…', ok: 'Synchronisé', err: `Erreur : ${sync.msg}`, off: sync.msg }[sync.status];
   async function exportData() {
@@ -49,8 +51,13 @@ export default function Profile() {
       </Card>
       <Card>
         <T v="h3">Strava</T>
-        <T v="small" muted style={{ marginVertical: 6 }}>Lot 4. En attendant, ajoute une activité depuis Aujourd'hui ou Programme.</T>
-        <Button label="Connecter Strava · bientôt" disabled onPress={() => {}} />
+        <T v="small" muted style={{ marginVertical: 6 }}>{!sv.url ? 'Configure d\'abord le serveur ci-dessus.' : !st ? 'Statut inconnu.' : !st.configured ? 'Le serveur attend les identifiants Strava (secrets GitHub).' : st.connected ? `Connecté${st.athlete ? ` · ${st.athlete}` : ''}${st.lastSync ? ` · synchro ${new Date(st.lastSync).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}` : st.error ? 'Accès expiré : reconnecte Strava.' : 'Non connecté.'}</T>
+        {st?.connected ? <>
+          <Row><Button label={busy ? 'Synchronisation…' : 'Synchroniser'} style={{ flex: 1 }} disabled={busy} onPress={async () => { setBusy(true); const n = await stravaSyncNow(14); setBusy(false); setSmsg(n ? `${n} activité${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.` : 'Tout est à jour.'); }} />
+            <Button kind="danger" label="Déconnecter" onPress={() => Alert.alert('Déconnecter Strava ?', 'BYYND n\'aura plus accès à tes activités. Celles déjà importées restent.', [{ text: 'Annuler', style: 'cancel' }, { text: 'Déconnecter', style: 'destructive', onPress: () => disconnectStrava() }])} /></Row>
+        </> : <Button kind="primary" label="Connecter Strava" disabled={!st?.configured} onPress={async () => setSmsg(await connectStrava())} />}
+        {smsg ? <T v="small" style={{ marginTop: 8 }}>{smsg}</T> : null}
+        <T v="xs" muted style={{ marginTop: 8 }}>Les nouvelles activités arrivent quelques minutes après leur envoi sur Strava, avec un rattrapage automatique toutes les heures.</T>
       </Card>
       <Card>
         <T v="h3">Rappels</T>

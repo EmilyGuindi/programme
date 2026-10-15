@@ -61,3 +61,35 @@ test('migration de l\'ancien tracker', () => {
   const s = migrate({ v: 2, weeks: { 1: { days: { jeu: true }, sess: {}, chk: { weight: '67,1' }, run: {} } } });
   assert.ok(doneOn(s, '2026-10-15')); assert.ok(s.measurements.some(m => m.weight === 67.1));
 });
+
+import { mergeStrava } from '../strava';
+const item = (o: any) => ({ stravaId: o.id, name: o.name || 'x', sportType: o.sport, date: o.date, distanceKm: o.km ?? null, movingMin: o.min ?? null, elapsedMin: o.el ?? o.min ?? null, elevM: o.elev ?? null, avgHr: o.hr ?? null, maxHr: null, updatedAt: 1 });
+test('Strava : run du mercredi coché automatiquement', () => {
+  const s = fresh(); mergeStrava(s, [item({ id: '1', sport: 'Run', date: '2026-12-02', km: 6.5, min: 44, hr: 150 })]);
+  assert.ok(doneOn(s, '2026-12-02'));
+});
+test('Strava : promenade avec Sirius = complémentaire, ne valide rien', () => {
+  const s = fresh(); mergeStrava(s, [item({ id: '2', sport: 'Walk', date: '2026-12-02', km: 3, min: 45 })]);
+  assert.equal(doneOn(s, '2026-12-02'), false); assert.equal(s.activities.find(a => a.stravaId === '2')!.complementary, true);
+});
+test('Strava : CrossFit du mardi sans FC = coché, effort demandé', () => {
+  const s = fresh(); mergeStrava(s, [item({ id: '3', sport: 'Crossfit', date: '2026-12-01', min: 58 })]);
+  const a = s.activities.find(x => x.stravaId === '3')!; assert.ok(doneOn(s, '2026-12-01')); assert.equal(a.askEffort, true);
+});
+test('Strava : séance de 15 min le jeudi = confirmation demandée, pas cochée', () => {
+  const s = fresh(); mergeStrava(s, [item({ id: '4', sport: 'Workout', date: '2026-12-03', min: 15 })]);
+  assert.equal(doneOn(s, '2026-12-03'), false); assert.equal(s.activities.find(x => x.stravaId === '4')!.needsConfirm, true);
+});
+test('Strava : le 10 km de Lausanne est rattaché à la course', () => {
+  const s = fresh(); mergeStrava(s, [item({ id: '5', sport: 'Run', date: '2026-10-25', km: 10.1, min: 61 })]);
+  assert.equal(s.activities.find(x => x.stravaId === '5')!.eventId, 'ev-lausanne');
+});
+test('Strava : activité reçue en retard puis modifiée, pas de doublon', () => {
+  const s = fresh(); mergeStrava(s, [item({ id: '6', sport: 'Run', date: '2026-11-25', km: 6, min: 42 })]); mergeStrava(s, [item({ id: '6', sport: 'Run', date: '2026-11-25', km: 6.2, min: 43 })]);
+  assert.equal(s.activities.filter(x => x.stravaId === '6').length, 1);
+});
+test('Strava : remplace la saisie manuelle du même jour', () => {
+  const s = fresh(); s.activities.push({ id: 'm', date: '2026-12-01', type: 'crossfit', title: 'CrossFit', source: 'manuel', complementary: false, effort: 7 });
+  mergeStrava(s, [item({ id: '7', sport: 'Crossfit', date: '2026-12-01', min: 60 })]);
+  assert.equal(s.activities.filter(x => x.date === '2026-12-01' && x.type === 'crossfit').length, 1); assert.equal(s.activities.find(x => x.stravaId === '7')!.effort, 7);
+});

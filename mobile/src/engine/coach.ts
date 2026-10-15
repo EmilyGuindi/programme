@@ -16,7 +16,8 @@ export function phaseOf(w: number) {
 export const eventOn = (s: AppState, d: ISODate) => s.events.find(e => e.date === d && e.status !== 'annulé');
 export const activitiesOn = (s: AppState, d: ISODate) => s.activities.filter(a => a.date === d);
 /** Une séance est validée par une activité non complémentaire ce jour-là. Les promenades ne valident rien. */
-export const doneOn = (s: AppState, d: ISODate) => activitiesOn(s, d).some(a => !a.complementary);
+export const countsFor = (a: Activity, d: ISODate) => !a.complementary && (a.source !== 'strava' || a.matched === d);
+export const doneOn = (s: AppState, d: ISODate) => activitiesOn(s, d).some(a => countsFor(a, d));
 
 function satRun(s: AppState, w: number, wed: RunSession): RunSession {
   const ph = phaseOf(w);

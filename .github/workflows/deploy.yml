@@ -51,8 +51,26 @@ jobs:
           wrangler deploy 2>&1 | tee /tmp/deploy.log || { echo "::error title=wrangler deploy::$(tail -c 900 /tmp/deploy.log | tr '\n' ' ')"; exit 1; }
           URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' /tmp/deploy.log | head -1)
           echo "::notice title=Adresse BYYND::$URL"
-      - name: Clé d'accès de l'app
+      - name: Secrets du Worker (clé, Strava)
         env:
           APP_KEY: ${{ secrets.APP_KEY }}
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_VERIFY_TOKEN: ${{ secrets.STRAVA_VERIFY_TOKEN }}
         run: |
-          if [ -n "$APP_KEY" ]; then echo "$APP_KEY" | wrangler secret put APP_KEY; else echo "::warning::APP_KEY absent : l'API refusera toutes les requêtes"; fi
+          for K in APP_KEY STRAVA_CLIENT_ID STRAVA_CLIENT_SECRET STRAVA_VERIFY_TOKEN; do
+            V="${!K}"; if [ -n "$V" ]; then echo "$V" | wrangler secret put "$K" > /dev/null && echo "$K ok"; else echo "::warning::$K absent"; fi
+          done
+      - name: Abonnement webhook Strava (création si absent)
+        env:
+          CID: ${{ secrets.STRAVA_CLIENT_ID }}
+          CSEC: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          VTOK: ${{ secrets.STRAVA_VERIFY_TOKEN }}
+        run: |
+          if [ -z "$CID" ] || [ -z "$CSEC" ] || [ -z "$VTOK" ]; then echo "Strava pas encore configuré"; exit 0; fi
+          URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' /tmp/deploy.log | head -1)
+          sleep 10
+          EXIST=$(curl -s -G https://www.strava.com/api/v3/push_subscriptions -d client_id=$CID -d client_secret=$CSEC)
+          if echo "$EXIST" | grep -q '"id"'; then echo "::notice title=Webhook Strava::déjà actif"; exit 0; fi
+          R=$(curl -s -X POST https://www.strava.com/api/v3/push_subscriptions -F client_id=$CID -F client_secret=$CSEC -F callback_url=$URL/strava/webhook -F verify_token=$VTOK)
+          if echo "$R" | grep -q '"id"'; then echo "::notice title=Webhook Strava::créé"; else echo "::warning title=Webhook Strava::$(echo $R | head -c 600)"; fi

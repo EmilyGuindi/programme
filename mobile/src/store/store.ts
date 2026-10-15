@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as WebBrowser from 'expo-web-browser';
 import { useSyncExternalStore } from 'react';
+import { mergeStrava } from '@/engine/strava';
 import { DEFAULT_STATE, migrate, seed } from '@/engine/state';
 import type { AppState } from '@/engine/types';
 
@@ -80,6 +82,7 @@ export async function pull(): Promise<SyncStatus> {
     if (d.json && d.updatedAt > (state.updatedAt || 0)) adopt(d);
     else if ((state.updatedAt || 0) > (d.updatedAt || 0)) await push();
     setSync({ status: 'ok', at: Date.now(), msg: '' });
+    stravaStatus(); pullStrava();
   } catch { setSync({ status: 'off', at: Date.now(), msg: 'Serveur injoignable' }); }
   return sync;
 }
@@ -91,3 +94,42 @@ export async function testServer(): Promise<string> {
     return k.status === 401 ? 'Serveur OK, clé refusée' : k.ok ? 'Serveur et clé OK' : `Serveur OK, erreur ${k.status}`;
   } catch { return 'Serveur injoignable'; }
 }
+
+/* ---------- Strava (lot 4) ---------- */
+export type StravaStatus = { configured: boolean; connected: boolean; athlete: string | null; lastSync: number | null; error: string | null };
+let strava: StravaStatus | null = null;
+export const useStrava = () => useSyncExternalStore(cb => { listeners.add(cb); return () => listeners.delete(cb); }, () => strava);
+export async function stravaStatus() {
+  if (!configured()) return null;
+  try { const r = await api('/api/strava/status'); if (r.ok) { strava = await r.json(); emit(); } } catch {}
+  return strava;
+}
+/** Récupère les activités Strava normalisées par le serveur et les fusionne localement. */
+export async function pullStrava() {
+  if (!configured()) return 0;
+  try {
+    let since = state.strava?.since || 0, total = 0;
+    for (let i = 0; i < 6; i++) {
+      const r = await api(`/api/activities?since=${since}`); if (!r.ok) break;
+      const d = await r.json(); if (!d.items.length) break;
+      update(st => { mergeStrava(st, d.items); st.strava = { since: d.until }; });
+      since = d.until; total += d.items.length; if (d.items.length < 500) break;
+    }
+    return total;
+  } catch { return 0; }
+}
+export async function stravaSyncNow(days = 14) {
+  try { await api(`/api/strava/sync?days=${days}`, { method: 'POST' }); } catch {}
+  await stravaStatus(); return pullStrava();
+}
+export async function connectStrava(): Promise<string> {
+  if (!configured()) return 'Configure d\'abord le serveur BYYND.';
+  try {
+    const r = await api('/api/strava/connect-url'); if (r.status === 503) return 'Strava n\'est pas encore configuré côté serveur.';
+    const { url } = await r.json();
+    const res = await WebBrowser.openAuthSessionAsync(url, 'byynd://strava');
+    if (res.type === 'success' && /ok=1/.test(res.url)) { await stravaStatus(); setTimeout(() => stravaSyncNow(90), 4000); return 'Strava connecté. Import de tes 90 derniers jours en cours.'; }
+    return res.type === 'success' ? 'Connexion refusée ou annulée.' : 'Connexion annulée.';
+  } catch { return 'Serveur injoignable.'; }
+}
+export async function disconnectStrava() { try { await api('/api/strava/disconnect', { method: 'POST' }); } catch {} await stravaStatus(); }

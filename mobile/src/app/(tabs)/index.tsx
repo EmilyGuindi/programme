@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { ActivityRow, openPlan, presetFor, TYPE_LABEL } from '@/components/plan-row';
 import { Wordmark } from '@/components/logo';
 import { UpdateBanner } from '@/components/update-banner';
+import { ActivityPrompts } from '@/components/activity-prompts';
 import { Button, Card, Coach, Gap, Pill, Row, Screen, T, Tag } from '@/components/ui';
 import { activitiesOn, adapted, coachLine, doneOn, recovery } from '@/engine/coach';
 import { addDays, fmtLong, today } from '@/engine/dates';
@@ -26,6 +27,7 @@ export default function Today() {
       <Row style={{ marginVertical: space.s3, flexWrap: 'wrap' }}><Pill level={r.level} /><View style={{ flex: 1, minWidth: 160 }}><T v="small" muted>{r.reasons[0]}</T></View></Row>
       {r.level === 'inconnu' ? <><Button kind="primary" block label="Faire mon check-in · 30 s" onPress={() => router.push('/checkin')} /><Gap /></> : null}
       <Coach>{coachLine(s, d)}</Coach>
+      <ActivityPrompts />
 
       <Card tone={isEvent ? 'ink' : 'default'}>
         <Row between><Tag tone={isEvent ? 'inverse' : undefined}>{`${TYPE_LABEL[shown.type]}${a.optional ? ' · optionnel' : ''}`}</Tag>{a.reason ? <Tag tone="accent">adaptée</Tag> : null}</Row>

@@ -1,5 +1,6 @@
 /* BYYND — backend (lot 2). Cloudflare Worker + D1. Zéro dépendance. */
-const VERSION = "2.0.0";
+import { handleStrava, hourly, stravaApi } from "./strava.js";
+const VERSION = "2.1.0";
 const ALLOWED_ORIGINS = ["https://emilyguindi.github.io"];
 
 function cors(req) {
@@ -24,11 +25,13 @@ export default {
     const c = cors(req);
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: c });
     if (url.pathname.startsWith("/api/")) return api(req, env, url, c).catch(e => json({ error: "server", detail: String(e.message || e) }, 500, c));
-    if (url.pathname.startsWith("/strava/")) return json({ error: "Strava : lot 4, pas encore déployé" }, 501, c);
+    if (url.pathname.startsWith("/strava/")) return handleStrava(req, env, ctx, url).catch(e => new Response("error", { status: 500 }));
     return env.ASSETS.fetch(req);
   },
   async scheduled(event, env, ctx) {
-    /* Lot 3 : envoi des notifications push. Pour l'instant : trace seulement. */
+    const d = new Date(event.scheduledTime);
+    if (d.getUTCMinutes() < 5) ctx.waitUntil(hourly(env));
+    /* Lot 3 : notifications push. */
   }
 };
 
@@ -56,6 +59,7 @@ async function api(req, env, url, c) {
       return json({ ok: true, updatedAt: body.updatedAt }, 200, c);
     }
   }
+  if (p.startsWith("/api/strava/") || p === "/api/activities") { const r = await stravaApi(req, env, null, url, json, c); if (r) return r; }
   if (p === "/api/push/subscribe" && req.method === "POST") {
     const sub = await req.json();
     if (!sub || !sub.endpoint) return json({ error: "bad_request" }, 400, c);
