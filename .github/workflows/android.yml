@@ -6,6 +6,9 @@ on:
     paths: ['mobile/**']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -53,28 +56,25 @@ jobs:
           MSG=$(git log -1 --pretty=%s)
           npx --yes eas-cli@latest update --channel preview --platform android --message "$MSG" --non-interactive 2>&1 | tee /tmp/upd.log || { echo "::error title=eas update::$(tail -c 900 /tmp/upd.log | tr '\n' ' ')"; exit 1; }
           echo "::notice title=Mise à jour publiée::$MSG"
-      - name: Build APK (plan gratuit) et diagnostic
+      - name: Java 17
         if: steps.kind.outputs.native == 'true'
-        timeout-minutes: 240
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build APK sur GitHub (sans file d'attente Expo)
+        if: steps.kind.outputs.native == 'true'
+        timeout-minutes: 90
         run: |
-          npx --yes eas-cli@latest build --platform android --profile preview --non-interactive --wait --json > /tmp/build.json 2>/tmp/build.err || true
-          ID=$(node -e 'try{const a=JSON.parse(require("fs").readFileSync("/tmp/build.json","utf8"));console.log((Array.isArray(a)?a[0]:a).id||"")}catch(e){console.log("")}')
-          if [ -z "$ID" ]; then ID=$(npx --yes eas-cli@latest build:list --platform android --limit 1 --json --non-interactive | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{console.log(JSON.parse(s)[0].id)})'); fi
-          npx --yes eas-cli@latest build:view "$ID" --json > /tmp/view.json
-          node -e '
-            const b=JSON.parse(require("fs").readFileSync("/tmp/view.json","utf8"));
-            const fs=require("fs");
-            fs.writeFileSync("/tmp/status",b.status||"");
-            fs.writeFileSync("/tmp/apk",(b.artifacts&&(b.artifacts.applicationArchiveUrl||b.artifacts.buildUrl))||"");
-            fs.writeFileSync("/tmp/err",b.error?((b.error.errorCode||"")+" — "+(b.error.message||"")):"");
-            fs.writeFileSync("/tmp/logs",(b.logFiles||[]).join("\n"));
-          '
-          STATUS=$(cat /tmp/status)
-          echo "::notice title=Build $STATUS::https://expo.dev/accounts/emilyguindi/projects/byynd/builds/$ID"
-          if [ "$STATUS" = "FINISHED" ]; then echo "::notice title=APK::$(cat /tmp/apk)"; exit 0; fi
-          echo "::error title=Erreur EAS::$(cat /tmp/err | tr '\n' ' ' | head -c 1500)"
-          : > /tmp/all.log
-          while read -r u; do [ -n "$u" ] && curl -sL "$u" >> /tmp/all.log; done < /tmp/logs
-          grep -iE "error|failed|exception|what went wrong|could not" /tmp/all.log | grep -v "^\s*$" | tail -40 > /tmp/errs.txt || true
-          n=0; while read -r line; do n=$((n+1)); echo "::error title=Log $n::$(echo "$line" | cut -c1-900)"; [ $n -ge 30 ] && break; done < /tmp/errs.txt
-          exit 1
+          set -o pipefail
+          npx --yes eas-cli@latest build --platform android --profile preview --local --non-interactive --output "$GITHUB_WORKSPACE/byynd.apk" 2>&1 | tee /tmp/local.log || { grep -iE "error|failed|what went wrong" /tmp/local.log | tail -25 | while read -r l; do echo "::error title=Build::$(echo "$l" | cut -c1-800)"; done; exit 1; }
+      - name: Publier l'APK (lien fixe)
+        if: steps.kind.outputs.native == 'true'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(node -p "require('./mobile/app.json').expo.version")
+          TAG="v$V-${{ github.run_number }}"
+          gh release create "$TAG" byynd.apk --title "BYYND $V" --notes "$(git log -1 --pretty=%s)" --latest
+          echo "::notice title=APK::https://github.com/${{ github.repository }}/releases/latest/download/byynd.apk"
