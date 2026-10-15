@@ -35,9 +35,27 @@ jobs:
         run: |
           set -o pipefail
           npx --yes eas-cli@latest init --non-interactive --force 2>&1 | tee /tmp/init.log || { echo "::error title=eas init::$(tail -c 900 /tmp/init.log | tr '\n' ' ')"; exit 1; }
-      - name: Lancer le build APK (plan gratuit)
+      - name: Build APK (plan gratuit) et diagnostic
+        timeout-minutes: 240
         run: |
-          set -o pipefail
-          npx --yes eas-cli@latest build --platform android --profile preview --non-interactive --no-wait 2>&1 | tee /tmp/build.log || { echo "::error title=eas build::$(tail -c 900 /tmp/build.log | tr '\n' ' ')"; exit 1; }
-          URL=$(grep -oE 'https://expo.dev/[^ ]+builds/[a-z0-9-]+' /tmp/build.log | head -1)
-          echo "::notice title=Build lancé::$URL"
+          npx --yes eas-cli@latest build --platform android --profile preview --non-interactive --wait --json > /tmp/build.json 2>/tmp/build.err || true
+          ID=$(node -e 'try{const a=JSON.parse(require("fs").readFileSync("/tmp/build.json","utf8"));console.log((Array.isArray(a)?a[0]:a).id||"")}catch(e){console.log("")}')
+          if [ -z "$ID" ]; then ID=$(npx --yes eas-cli@latest build:list --platform android --limit 1 --json --non-interactive | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{console.log(JSON.parse(s)[0].id)})'); fi
+          npx --yes eas-cli@latest build:view "$ID" --json > /tmp/view.json
+          node -e '
+            const b=JSON.parse(require("fs").readFileSync("/tmp/view.json","utf8"));
+            const fs=require("fs");
+            fs.writeFileSync("/tmp/status",b.status||"");
+            fs.writeFileSync("/tmp/apk",(b.artifacts&&(b.artifacts.applicationArchiveUrl||b.artifacts.buildUrl))||"");
+            fs.writeFileSync("/tmp/err",b.error?((b.error.errorCode||"")+" — "+(b.error.message||"")):"");
+            fs.writeFileSync("/tmp/logs",(b.logFiles||[]).join("\n"));
+          '
+          STATUS=$(cat /tmp/status)
+          echo "::notice title=Build $STATUS::https://expo.dev/accounts/emilyguindi/projects/byynd/builds/$ID"
+          if [ "$STATUS" = "FINISHED" ]; then echo "::notice title=APK::$(cat /tmp/apk)"; exit 0; fi
+          echo "::error title=Erreur EAS::$(cat /tmp/err | tr '\n' ' ' | head -c 1500)"
+          : > /tmp/all.log
+          while read -r u; do [ -n "$u" ] && curl -sL "$u" >> /tmp/all.log; done < /tmp/logs
+          grep -iE "error|failed|exception|what went wrong|could not" /tmp/all.log | grep -v "^\s*$" | tail -40 > /tmp/errs.txt || true
+          n=0; while read -r line; do n=$((n+1)); echo "::error title=Log $n::$(echo "$line" | cut -c1-900)"; [ $n -ge 30 ] && break; done < /tmp/errs.txt
+          exit 1
