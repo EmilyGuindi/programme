@@ -13,8 +13,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npx --yes eas-cli@latest init --non-interactive --force > /dev/null
+      - run: npm ci --no-audit --no-fund > /dev/null
+      - run: npx --yes eas-cli@latest init --non-interactive --force || true
       - name: Infos
+        shell: bash {0}
         run: |
           note(){ echo "::notice title=$1::$(echo "$2" | tr '\n' ' ' | head -c 3000)"; }
           note "channel preview" "$(npx --yes eas-cli@latest channel:view preview --json --non-interactive 2>&1 | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);const c=j.currentPage||j;console.log(JSON.stringify({name:c.name,branchMapping:c.branchMapping,branches:(c.updateBranches||[]).map(b=>({name:b.name,updates:(b.updateGroups||[]).slice(0,3).map(g=>g.map(u=>({rt:u.runtimeVersion,platform:u.platform,msg:u.message,created:u.createdAt})))}))}))}catch(e){console.log(s.slice(0,1500))}})')"
