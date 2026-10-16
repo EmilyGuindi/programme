@@ -7,7 +7,7 @@ const P1 = 'M12 12 L58 46 L58 114 L43 99 L43 54 L12 31 Z';
 const P2 = 'M114 12 L68 46 L68 114 L83 99 L83 54 L114 31 Z';
 
 /** Symbole BYYND : deux trajectoires qui se rejoignent et montent au-delà. */
-export function Symbol({ size = 24, color }: { size?: number; color?: string }) {
+export function BrandMark({ size = 24, color }: { size?: number; color?: string }) {
   const { c } = useTheme();
   const fill = color || c.accent;
   return (
@@ -36,7 +36,7 @@ export function Wordmark({ height = 18, tagline = false, onDark = false }: { hei
   return (
     <View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap }}>
-        <Symbol size={sym} color={c.accent} />
+        <BrandMark size={sym} color={c.accent} />
         <Svg width={w} height={height} viewBox={`0 0 ${WORDMARK_W} 100`}><Path d={WORDMARK_D} fill={ink} fillRule="evenodd" /></Svg>
       </View>
       {tagline ? <Text style={{ fontFamily: font.regular, fontSize: height * 0.62, letterSpacing: height * 0.22, color: onDark ? 'rgba(255,255,255,.75)' : c.ink2, marginTop: height * 0.35, marginLeft: sym + gap }}>Go beyond.</Text> : null}

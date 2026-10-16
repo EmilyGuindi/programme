@@ -6,7 +6,7 @@ import { Insights } from '@/components/insights';
 import { Bullets } from '@/components/guide';
 import { achievements, bodyJourney, runningJourney, type Step } from '@/engine/journey';
 import { recordsUntil } from '@/engine/records';
-import { Symbol } from '@/components/logo';
+import { BrandMark } from '@/components/logo';
 import { sportDay } from '@/engine/dates';
 import { Pressable } from 'react-native';
 import { ActivityRow } from '@/components/plan-row';
@@ -173,7 +173,7 @@ function Records() {
       <T v="h3" style={{ marginTop: space.s5, marginBottom: space.s2 }}>Paliers</T>
       {ach.map(a => (
         <Row key={a.id} gap={space.s3} style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: radius.r2, padding: space.s3, marginBottom: space.s2, opacity: a.date ? 1 : 0.55 }}>
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: a.date ? c.ink : c.surface2, alignItems: 'center', justifyContent: 'center' }}><Symbol size={22} color={a.date ? c.paper : c.ink2} /></View>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: a.date ? c.ink : c.surface2, alignItems: 'center', justifyContent: 'center' }}><BrandMark size={22} color={a.date ? c.paper : c.ink2} /></View>
           <View style={{ flex: 1 }}><T v="label">{a.title}</T><T v="small" muted>{a.date ? `Atteint le ${fmtShort(a.date)}` : a.detail}</T></View>
         </Row>
       ))}

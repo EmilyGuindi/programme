@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Animated, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Symbol } from '@/components/logo';
+import { BrandMark } from '@/components/logo';
 import { Button, Card, Choices, Field, Row, T } from '@/components/ui';
 import { buildClosure } from '@/engine/closure';
 import { update, useApp } from '@/store/store';
@@ -27,7 +27,7 @@ export default function DoneScreen() {
       <Row style={{ justifyContent: 'flex-end', padding: space.s4 }}><Button small kind="ghost" label="Fermer" onPress={close} /></Row>
       <Animated.ScrollView style={{ opacity: fade }} contentContainerStyle={{ paddingHorizontal: space.s4, paddingBottom: 60, maxWidth: 560, width: '100%', alignSelf: 'center' }}>
         <Animated.View style={{ alignSelf: 'center', transform: [{ scale }], backgroundColor: c.ink, borderRadius: 999, width: 96, height: 96, alignItems: 'center', justifyContent: 'center', marginBottom: space.s4 }}>
-          <Symbol size={46} color={c.paper} />
+          <BrandMark size={46} color={c.paper} />
         </Animated.View>
         <T v="title" style={{ textAlign: 'center' }}>Séance terminée</T>
         <T muted style={{ textAlign: 'center', marginBottom: space.s4 }}>{cl.title}</T>

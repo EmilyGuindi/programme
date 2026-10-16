@@ -7,7 +7,7 @@ import { nextEvent, pendingDebrief, readiness } from '@/engine/race';
 import { availableRecaps } from '@/engine/recap';
 import { useApp } from '@/store/store';
 import { radius, space, useTheme } from '@/theme/tokens';
-import { Symbol } from './logo';
+import { BrandMark } from './logo';
 import { Row, T, Tag } from './ui';
 
 /** Cartes contextuelles d'Aujourd'hui : prochaine compétition, débrief, fin de séance Strava, bilan du dimanche. Au plus deux à la fois. */
@@ -38,7 +38,7 @@ function Ctx({ tag, title, sub, onPress }: { tag: string; title: string; sub: st
   const { c } = useTheme();
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, backgroundColor: c.accentSoft, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3, opacity: pressed ? 0.85 : 1 })}>
-      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' }}><Symbol size={20} /></View>
+      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' }}><BrandMark size={20} /></View>
       <View style={{ flex: 1 }}><Tag tone="accent">{tag}</Tag><T v="label" style={{ marginTop: 4 }}>{title}</T><T v="small" muted>{sub}</T></View>
       <T v="h3" color={c.accent}>›</T>
     </Pressable>
