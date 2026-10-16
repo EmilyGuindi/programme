@@ -1,7 +1,8 @@
 import { addDays, dow, iso } from './dates';
 import type { AppState } from './types';
+import { weekOf } from './coach';
 
-export interface Reminder { id: string; at: Date; title: string; body: string; url: string; kind: 'checkin' | 'weigh' | 'both' }
+export interface Reminder { id: string; at: Date; title: string; body: string; url: string; kind: 'checkin' | 'weigh' | 'both' | 'recap' }
 
 const at = (dateIso: string, hhmm: string) => { const [h, m] = (hhmm || '07:00').split(':').map(n => +n || 0); const [y, mo, d] = dateIso.split('-').map(Number); return new Date(y, mo - 1, d, h, m, 0, 0); };
 const weekStartOf = (d: string) => addDays(d, -dow(d));
@@ -20,6 +21,10 @@ export function planReminders(s: AppState, now = new Date(), days = 14): Reminde
     if (c && w && Math.abs(c.getTime() - w.getTime()) <= 60 * 60_000) {
       out.push({ id: `both-${d}`, at: c < w ? c : w, kind: 'both', title: 'Check-in et pesée du jour', body: 'Comment tu te sens ? Ensuite, ton bilan hebdo en 20 secondes.', url: '/checkin?then=measure' });
       continue;
+    }
+    if (p.notifRecap !== false && dow(d) === 6) {
+      const w = weekOf(s, d); const r = at(d, '19:00');
+      if (w >= 1 && w <= s.program.weeks && !s.recapsSeen?.[String(w)] && valid(r)) out.push({ id: `recap-${d}`, at: r!, kind: 'recap', title: 'Ton bilan de la semaine est prêt', body: 'Ce que tu as accompli, en quelques cartes.', url: `/recap/${w}` });
     }
     if (c) out.push({ id: `checkin-${d}`, at: c, kind: 'checkin', title: 'Comment tu te sens ce matin ?', body: 'Ton coach adapte ta journée. 30 secondes.', url: '/checkin' });
     if (w) out.push({ id: `weigh-${d}`, at: w, kind: 'weigh', title: "C'est l'heure de ton bilan hebdo", body: 'On fait le point sur ta progression ?', url: '/measure' });

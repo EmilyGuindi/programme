@@ -27,7 +27,8 @@ export default function RunScreen() {
       Object.assign(act, { title: run!.title, durationMin: min, distanceKm: km, elevM: num(R.elev), avgHr: num(R.hr), effort: R.rpe ?? null, kind: run!.kind === 'qualite' ? 'qualite' : run!.kind === 'test' ? 'test' : 'facile' });
       if (run!.kind === 'test') { const t = parseTime(R.test); if (t && t > 900) { if (/10 km/.test(run!.title)) st.user.ref.k10 = t; else st.user.ref.k5 = t; } }
     });
-    router.back();
+    const act = getState().activities.find(x => x.date === date && x.type === 'running' && x.source === 'manuel');
+    if (act && !getState().closures?.[act.id]) router.replace({ pathname: '/done/[id]', params: { id: act.id } }); else router.back();
   }
   return (
     <Sheet title={run.title} sub={`${fmtDay(date)} · ${run.dur}`}>

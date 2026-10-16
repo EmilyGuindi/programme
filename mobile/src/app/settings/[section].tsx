@@ -55,7 +55,7 @@ function Reminders() {
   const s = useApp(); const { c } = useTheme(); const pr = s.user.prefs;
   const [perm, setPerm] = useState<string>('…'); const [next, setNext] = useState<Date | null>(null); const [msg, setMsg] = useState('');
   const refresh = async () => { setPerm(await permission()); await syncReminders(getState(), true); setNext(await nextScheduled()); };
-  useEffect(() => { refresh(); }, [pr.checkinTime, pr.weighTime, pr.weighDay, pr.notifCheckin, pr.notifWeigh]);
+  useEffect(() => { refresh(); }, [pr.checkinTime, pr.weighTime, pr.weighDay, pr.notifCheckin, pr.notifWeigh, pr.notifRecap]);
   const planned = planReminders(s).slice(0, 3);
   const fmt = (d: Date) => `${d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
   return (
@@ -85,7 +85,11 @@ function Reminders() {
         </View> : null}
         <T v="small" muted style={{ marginTop: 8 }}>Pas de rappel si tu t'es déjà pesée cette semaine. Si les deux tombent à moins d'une heure d'écart, tu reçois un seul message.</T>
       </Card>
-      {planned.length ? <Card><T v="h3">Les 3 prochains</T>{planned.map(r => <T key={r.id} v="small" style={{ marginTop: 6 }}>{`${fmt(r.at)} · ${r.kind === 'both' ? 'check-in et pesée' : r.kind === 'weigh' ? 'pesée' : 'check-in'}`}</T>)}</Card> : null}
+      <Card>
+        <Row between><T v="h3">Bilan du dimanche</T><Button small label={pr.notifRecap !== false ? 'Activé' : 'Désactivé'} kind={pr.notifRecap !== false ? 'primary' : 'secondary'} onPress={() => update(st => { st.user.prefs.notifRecap = st.user.prefs.notifRecap === false; })} /></Row>
+        <T v="small" muted style={{ marginTop: 8 }}>Le dimanche à 19 h, quand ton bilan de la semaine est prêt. Jamais deux fois pour la même semaine.</T>
+      </Card>
+      {planned.length ? <Card><T v="h3">Les 3 prochains</T>{planned.map(r => <T key={r.id} v="small" style={{ marginTop: 6 }}>{`${fmt(r.at)} · ${r.kind === 'both' ? 'check-in et pesée' : r.kind === 'weigh' ? 'pesée' : r.kind === 'recap' ? 'bilan' : 'check-in'}`}</T>)}</Card> : null}
       <T v="xs" muted>Les rappels sont programmés sur ton téléphone : ils arrivent même app fermée et sans connexion. Si un rappel n'arrive pas, vérifie que l'économie de batterie n'est pas appliquée à BYYND (Paramètres → Applis → BYYND → Batterie → Non restreinte).</T>
     </>
   );

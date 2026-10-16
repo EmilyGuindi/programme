@@ -20,7 +20,8 @@ export default function ActivityScreen() {
     const obj: Activity = { ...(ex || {}), userEdited: true, needsConfirm: false, id: ex?.id || uid(), source: ex?.source || 'manuel', date: f.date || today(), type: t, title: f.title && ex && f.title !== TITLE[ex.type] ? f.title : t === 'marche' && comp ? 'Marche avec Sirius' : TITLE[t],
       durationMin: num(f.durationMin), distanceKm: num(f.distanceKm), elevM: num(f.elevM), avgHr: num(f.avgHr), effort: f.effort ?? null, notes: f.notes || '', complementary: comp, matched: comp ? null : (ex?.source === 'strava' ? (ex.matched ?? f.date) : f.date), kind: f.kind || 'facile', eventId: ex?.eventId };
     update(st => { const i = st.activities.findIndex(a => a.id === obj.id); if (i >= 0) st.activities[i] = obj; else st.activities.push(obj); });
-    router.back();
+    if (!ex && !obj.complementary && (obj.type === 'crossfit' || obj.type === 'hyrox' || obj.type === 'running' || obj.type === 'renfo' || obj.type === 'hyrox-simu')) router.replace({ pathname: '/done/[id]', params: { id: obj.id } });
+    else router.back();
   }
   return (
     <Sheet title={ex ? "Modifier l'activité" : 'Ajouter une activité'}>

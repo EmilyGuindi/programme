@@ -9,7 +9,7 @@ import { adapted, bestKg, recovery, strengthBlocks, suggestKg } from '@/engine/c
 import { fmtDay } from '@/engine/dates';
 import { LEGS, WARMUP } from '@/engine/library';
 import type { ExerciseLog } from '@/engine/types';
-import { update, useApp } from '@/store/store';
+import { getState, update, useApp } from '@/store/store';
 import { space, useTheme } from '@/theme/tokens';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
@@ -81,7 +81,7 @@ export default function RenfoScreen() {
           </View>))}
         <T v="xs" muted>Charge suggérée : ta dernière charge, +1 kg (+2,5 kg sur hip thrust et RDL) si tu as atteint le haut de la fourchette sur toutes les séries.</T>
         <Gap />
-        <Button kind="primary" block label="Terminer la séance" onPress={() => { update(st => { if (!st.activities.some(x => x.date === date && x.type === 'renfo')) st.activities.push({ id: 'renfo-' + date, date, type: 'renfo', title: 'Renforcement', source: 'manuel', matched: date, complementary: false }); }); router.back(); }} />
+        <Button kind="primary" block label="Terminer la séance" onPress={() => { update(st => { if (!st.activities.some(x => x.date === date && x.type === 'renfo')) st.activities.push({ id: 'renfo-' + date, date, type: 'renfo', title: 'Renforcement', source: 'manuel', matched: date, complementary: false }); }); const a = getState().activities.find(x => x.date === date && x.type === 'renfo'); if (a && !getState().closures?.[a.id]) router.replace({ pathname: '/done/[id]', params: { id: a.id } }); else router.back(); }} />
       </>}
     </Sheet>
   );

@@ -5,6 +5,7 @@ import { ActivityRow, openDay, openPlan, presetFor, TYPE_LABEL } from '@/compone
 import { Wordmark } from '@/components/logo';
 import { UpdateBanner } from '@/components/update-banner';
 import { ActivityPrompts } from '@/components/activity-prompts';
+import { ContextCards } from '@/components/today-cards';
 import { Button, Card, Coach, Gap, Pill, Row, Screen, T, Tag } from '@/components/ui';
 import { activitiesOn, adapted, coachLine, doneOn, recovery } from '@/engine/coach';
 import { addDays, fmtLong, sportDay } from '@/engine/dates';
@@ -38,6 +39,7 @@ export default function Today() {
       <Row style={{ marginVertical: space.s3, flexWrap: 'wrap' }}><Pill level={r.level} /><View style={{ flex: 1, minWidth: 160 }}><T v="small" muted>{r.reasons[0]}</T></View></Row>
       {r.level === 'inconnu' ? <><Button kind="primary" block label="Faire mon check-in · 30 s" onPress={() => router.push('/checkin')} /><Gap /></> : null}
       <Coach>{coachLine(s, d)}</Coach>
+      <ContextCards d={d} />
       <ActivityPrompts />
 
       <Card tone={isEvent ? 'ink' : 'default'} onPress={isEvent ? undefined : () => openDay(d)}>
@@ -46,7 +48,7 @@ export default function Today() {
         <T muted={!isEvent} color={isEvent ? 'rgba(244,242,238,.75)' : undefined}>{[a.replaced ? '' : a.dur, shown.goal, a.note].filter(Boolean).join(' · ')}</T>
         <Gap />
         {done && shown.type !== 'renfo' ? <T v="label" color={c.ok}>Séance validée</T>
-          : isEvent ? <Button kind="inverse" block label={a.event?.result ? 'Voir mon résultat' : 'Saisir mon résultat'} onPress={() => router.push({ pathname: '/result/[id]', params: { id: a.event!.id } })} />
+          : isEvent ? <Button kind="inverse" block label="Ma stratégie et ma checklist" onPress={() => router.push({ pathname: '/race/[id]', params: { id: a.event!.id } })} />
           : shown.type === 'run' ? <Button kind="primary" block label="Voir la séance" onPress={() => openPlan(a)} />
           : shown.type === 'renfo' ? <Row><Button kind="primary" label="Commencer" style={{ flex: 1 }} onPress={() => openPlan(a)} /><Button label="Je passe" onPress={() => update(st => { st.overrides[d] = { ...(st.overrides[d] || {}), level: 'rouge' }; })} /></Row>
           : shown.type === 'box' || shown.type === 'recup' ? <Button kind="primary" block label="Marquer comme fait" onPress={() => router.push({ pathname: '/activity', params: { date: d, preset: a.replaced ? 'marche' : presetFor(a) } })} />

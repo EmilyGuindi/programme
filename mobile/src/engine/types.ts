@@ -28,7 +28,9 @@ export interface SportEvent {
   id: string; name: string; type: 'course' | 'ocr' | 'hyrox-compet' | 'autre'; date: ISODate; time?: string;
   distanceKm?: number | null; place?: string; priority: 'participation' | 'repère' | 'objectif'; goal?: string;
   status: 'prévu' | 'fait' | 'annulé';
-  result?: { time: number; elevM?: number | null; avgHr?: number | null; effort?: number | null; notes?: string };
+  result?: { time: number; elevM?: number | null; avgHr?: number | null; effort?: number | null; notes?: string;
+    feeling?: number | null; pacing?: 'trop-vite' | 'regulier' | 'fini-fort' | null; conditions?: string[] };
+  checklist?: Record<string, boolean>;
 }
 
 export interface CheckIn {
@@ -53,7 +55,7 @@ export interface AppState {
   user: {
     name: string; tz: string; height: number; startDate: ISODate;
     goals: { weightTarget: number; run: string; physique: string };
-    prefs: { checkinTime: string; weighDay: number; weighTime: string; notifCheckin: boolean; notifWeigh: boolean; cycleOptIn: boolean };
+    prefs: { checkinTime: string; weighDay: number; weighTime: string; notifCheckin: boolean; notifWeigh: boolean; cycleOptIn: boolean; notifRecap?: boolean };
     ref: { k10: number | null; k5: number | null };
   };
   program: { id: string; name: string; start: ISODate; weeks: number };
@@ -61,6 +63,10 @@ export interface AppState {
   strength: Record<ISODate, StrengthLog>; runs: Record<ISODate, RunLog>; overrides: Record<ISODate, Override>;
   migrated: boolean;
   strava?: { since: number };
+  /** Écrans de fin de séance déjà montrés (une seule fois par activité). */
+  closures?: Record<string, number>;
+  /** Bilans hebdomadaires déjà ouverts. */
+  recapsSeen?: Record<string, number>;
 }
 
 export type PlanType = 'box' | 'run' | 'renfo' | 'rest' | 'recup' | 'event';

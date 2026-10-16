@@ -42,6 +42,9 @@ export default function RootLayout() {
         <Stack.Screen name="strava" options={sheet} />
         <Stack.Screen name="day/[date]" options={sheet} />
         <Stack.Screen name="settings/[section]" />
+        <Stack.Screen name="race/[id]" options={sheet} />
+        <Stack.Screen name="done/[id]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="recap/[week]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
       </Stack>
     </ThemeProvider>
   );

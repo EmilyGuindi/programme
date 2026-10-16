@@ -11,7 +11,7 @@ export const TYPE_LABEL = { box: 'Box', run: 'Running', renfo: 'Renforcement', r
 
 export function openPlan(a: AdaptedPlan) {
   const s = a.replaced || a;
-  if (a.type === 'event' && a.event) router.push({ pathname: '/event', params: { id: a.event.id } });
+  if (a.type === 'event' && a.event) router.push({ pathname: '/race/[id]', params: { id: a.event.id } });
   else if (s.type === 'run' || ('run' in s && s.run)) router.push({ pathname: '/run/[date]', params: { date: a.date } });
   else if (s.type === 'renfo') router.push({ pathname: '/renfo/[date]', params: { date: a.date } });
   else openDay(a.date);

@@ -8,9 +8,9 @@ import type { SportEvent } from '@/engine/types';
 import { update, useApp } from '@/store/store';
 
 export default function EventScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>(); const s = useApp();
+  const { id, edit: editParam } = useLocalSearchParams<{ id?: string; edit?: string }>(); const s = useApp();
   const ex = id ? s.events.find(e => e.id === id) : undefined;
-  const [edit, setEdit] = useState(!ex);
+  const [edit, setEdit] = useState(!ex || editParam === '1');
   const [f, setF] = useState<Partial<SportEvent>>(ex || { type: 'course', date: today(), priority: 'repère', status: 'prévu' });
   const set = (p: Partial<SportEvent>) => setF(x => ({ ...x, ...p }));
   const [err, setErr] = useState('');
@@ -23,6 +23,7 @@ export default function EventScreen() {
   return (
     <Sheet title={ex ? ex.name : 'Nouvel événement'} sub={ex ? fmtLong(ex.date) : 'Course, compétition, événement'}>
       {ex && !edit ? <Card>
+        <Button kind="primary" block label="Ouvrir la préparation" onPress={() => router.replace({ pathname: '/race/[id]', params: { id: ex.id } })} /><Gap h={8} />
         <Row gap={6}><Tag>{ex.type}</Tag><Tag>{ex.priority}</Tag><Tag tone="accent">{ex.status}</Tag></Row>
         {ex.goal ? <T style={{ marginTop: 10 }}>{ex.goal}</T> : null}
         <T v="small" muted style={{ marginTop: 4 }}>{[ex.place, ex.time ? `départ ${ex.time}` : '', ex.distanceKm ? `${ex.distanceKm} km` : ''].filter(Boolean).join(' · ')}</T>
@@ -39,6 +40,7 @@ export default function EventScreen() {
         <Field label="Statut"><Choices options={[['prévu', 'Prévu'], ['fait', 'Fait'], ['annulé', 'Annulé']]} value={f.status} onChange={v => v && set({ status: v })} /></Field>
         {err ? <T v="small" color="#C23B4C">{err}</T> : null}
         <Button kind="primary" block label={ex ? 'Enregistrer' : 'Ajouter'} onPress={save} />
+        {ex ? <><Gap h={8} /><Button kind="danger" block label="Supprimer l'événement" onPress={() => { update(st => { st.events = st.events.filter(e => e.id !== ex.id); }); router.back(); }} /></> : null}
       </View>}
     </Sheet>
   );

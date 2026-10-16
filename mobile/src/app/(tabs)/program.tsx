@@ -32,7 +32,7 @@ export default function Program() {
       </Card>
       <T v="h3" style={{ marginTop: space.s4, marginBottom: space.s2 }}>Courses et événements</T>
       {evs.map(e => (
-        <Pressable key={e.id} onPress={() => router.push({ pathname: '/event', params: { id: e.id } })} style={{ backgroundColor: c.accentSoft, borderLeftWidth: 4, borderLeftColor: c.accent, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s2 }}>
+        <Pressable key={e.id} onPress={() => router.push({ pathname: '/race/[id]', params: { id: e.id } })} style={{ backgroundColor: c.accentSoft, borderLeftWidth: 4, borderLeftColor: c.accent, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s2 }}>
           <Row between><T v="label" style={{ flex: 1 }}>{e.name}</T><Tag tone="accent">{e.result ? 'résultat' : e.status}</Tag></Row>
           <T v="small" muted>{[fmtShort(e.date), e.time, e.distanceKm ? `${e.distanceKm} km` : '', e.priority, e.result ? `${clock(e.result.time)}${e.distanceKm ? ` (${mmss(e.result.time / e.distanceKm)}/km)` : ''}` : ''].filter(Boolean).join(' · ')}</T>
         </Pressable>

@@ -4,6 +4,9 @@ import { Pressable, View } from 'react-native';
 import { IlluBody, IlluRegularity, IlluRun, IlluStrength } from '@/components/illustrations';
 import { Screen, T } from '@/components/ui';
 import { radius, space, useTheme } from '@/theme/tokens';
+import { availableRecaps, buildRecap } from '@/engine/recap';
+import { fmtShort } from '@/engine/dates';
+import { useApp } from '@/store/store';
 
 /** Les chiffres ne s'affichent qu'à la demande : chaque tuile ouvre sa vue détaillée. */
 const TILES: { view: string; title: string; question: string; Illu: ComponentType<{ size?: number }> }[] = [
@@ -14,7 +17,7 @@ const TILES: { view: string; title: string; question: string; Illu: ComponentTyp
 ];
 
 export default function Progress() {
-  const { c } = useTheme();
+  const { c } = useTheme(); const s = useApp(); const recaps = availableRecaps(s);
   return (
     <Screen>
       <T v="title" style={{ paddingTop: space.s4 }}>Progression</T>
@@ -29,6 +32,11 @@ export default function Progress() {
           </Pressable>
         ))}
       </View>
+      <T v="h3" style={{ marginTop: space.s5, marginBottom: space.s2 }}>Bilans de la semaine</T>
+      {recaps.length ? recaps.map(w => { const r = buildRecap(s, w); const seen = !!s.recapsSeen?.[String(w)]; return (
+        <Pressable key={w} onPress={() => router.push({ pathname: '/recap/[week]', params: { week: String(w) } })} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: seen ? c.surface : c.accentSoft, borderWidth: 1, borderColor: c.line, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s2, opacity: pressed ? 0.85 : 1 })}>
+          <View><T v="label">{`Semaine ${w}${seen ? '' : ' · nouveau'}`}</T><T v="small" muted>{`${fmtShort(r.from)} – ${fmtShort(r.to)}`}</T></View><T v="h3" color={c.accent}>›</T>
+        </Pressable>); }) : <T v="small" muted>Ton premier bilan arrivera dimanche soir.</T>}
     </Screen>
   );
 }
