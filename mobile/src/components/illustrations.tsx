@@ -120,3 +120,26 @@ export function IlluNews({ size = 72 }: P) {
     </Svg>
   );
 }
+
+export function IlluJourney({ size = 72 }: P) {
+  const { a, ink, bg } = useCols();
+  return (
+    <Svg width={size} height={size} viewBox="0 0 72 72">
+      <Path d="M14 60C14 44 58 48 58 32S20 22 22 10" stroke={ink} strokeWidth={3} fill="none" strokeLinecap="round" strokeDasharray="1 7" />
+      <Circle cx={14} cy={60} r={6} fill={a} />
+      <Circle cx={40} cy={40} r={6} fill={bg} stroke={ink} strokeWidth={3} />
+      <Circle cx={22} cy={10} r={6} fill={bg} stroke={ink} strokeWidth={3} />
+    </Svg>
+  );
+}
+export function IlluPeak({ size = 72 }: P) {
+  const { a, ink } = useCols();
+  return (
+    <Svg width={size} height={size} viewBox="0 0 72 72">
+      <Path d="M4 62L28 22l12 18 8-10 20 32z" fill="none" stroke={ink} strokeWidth={3} strokeLinejoin="round" />
+      <Path d="M28 22V6" stroke={ink} strokeWidth={3} strokeLinecap="round" />
+      <Path d="M29 7h12l-4 5 4 5H29z" fill={a} />
+      <Path d="M20 36l8 5 7-4" stroke={a} strokeWidth={3} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import type { ComponentType } from 'react';
 import { Pressable, View } from 'react-native';
-import { IlluBody, IlluRegularity, IlluRun, IlluStrength } from '@/components/illustrations';
+import { IlluBody, IlluJourney, IlluPeak, IlluRegularity, IlluRun, IlluStrength } from '@/components/illustrations';
 import { Screen, T } from '@/components/ui';
 import { radius, space, useTheme } from '@/theme/tokens';
 import { availableRecaps, buildRecap } from '@/engine/recap';
@@ -14,6 +14,8 @@ const TILES: { view: string; title: string; question: string; Illu: ComponentTyp
   { view: 'running', title: 'Running', question: 'Est-ce que je cours mieux ?', Illu: IlluRun },
   { view: 'physique', title: 'Physique', question: 'Comment évolue mon corps ?', Illu: IlluBody },
   { view: 'strength', title: 'Renforcement', question: 'Est-ce que je deviens plus forte ?', Illu: IlluStrength },
+  { view: 'journey', title: 'Mon parcours', question: 'Où j\'en suis, et la suite ?', Illu: IlluJourney },
+  { view: 'records', title: 'Records et paliers', question: 'Mes meilleures marques', Illu: IlluPeak },
 ];
 
 export default function Progress() {

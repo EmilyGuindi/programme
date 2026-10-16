@@ -170,3 +170,21 @@ test('V2 · notification du bilan le dimanche 19 h, une seule fois', () => {
   assert.ok(planReminders(s, now, 1).some(r => r.kind === 'recap' && r.url === '/recap/3'));
   s.recapsSeen = { '3': 1 }; assert.ok(!planReminders(s, now, 1).some(r => r.kind === 'recap'));
 });
+
+import { insights } from '../insights';
+import { achievements, runningJourney } from '../journey';
+test('V2 · lot C : aucun insight sans données suffisantes', () => {
+  const s = fresh(); assert.equal(insights(s, '2026-11-20').length, 0);
+  s.activities.push({ id: 'one', date: '2026-11-18', type: 'running', title: 'Run', distanceKm: 6, durationMin: 42, complementary: false, source: 'manuel', kind: 'facile', effort: 4 });
+  assert.ok(!insights(s, '2026-11-20').some(i => i.domain === 'running'));
+});
+test('V2 · lot C : tendance running avec sa source', () => {
+  const s = fresh();
+  [['a', '2026-11-04', 44], ['b', '2026-11-11', 44], ['c', '2026-11-18', 41.5]].forEach(([id, d, m]) => s.activities.push({ id: id as string, date: d as string, type: 'running', title: 'Run', distanceKm: 6, durationMin: m as number, elevM: 40, complementary: false, source: 'manuel', kind: 'facile', effort: 4 }));
+  const i = insights(s, '2026-11-20').find(x => x.id === 'run-pace')!; assert.equal(i.level, 'tendance'); assert.match(i.basis, /3 sorties/);
+});
+test('V2 · lot C : parcours running, premier repère atteint après Lausanne', () => {
+  const s = fresh(); const lau = s.events.find(e => e.id === 'ev-lausanne')!; lau.result = { time: 3720 }; recordEventResult(s, lau);
+  const j = runningJourney(s, '2026-10-27'); assert.equal(j.find(x => x.id === 'r4')!.status, 'atteinte'); assert.equal(j.filter(x => x.status === 'en cours').length, 1);
+  assert.equal(achievements(s, '2026-10-27').find(a => a.id === 'a-race')!.date, '2026-10-25');
+});

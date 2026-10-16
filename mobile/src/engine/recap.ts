@@ -1,6 +1,7 @@
-import { activitiesOn, adapted, countsFor, DELOAD, phaseOf, runInsight, weekOf, weekStart } from './coach';
+import { activitiesOn, adapted, countsFor, DELOAD, phaseOf, weekOf, weekStart } from './coach';
 import { addDays, DAYS_SHORT, dow } from './dates';
 import { newRecords } from './records';
+import { insights } from './insights';
 import type { AppState, ISODate } from './types';
 
 export type RecapCard = { kind: 'numbers' | 'sessions' | 'highlight' | 'progress' | 'records' | 'recovery' | 'next'; title: string; lines: string[]; big?: string; bigLabel?: string };
@@ -31,8 +32,8 @@ export function buildRecap(s: AppState, w: number): Recap {
   const top = hard.sort((a, b) => b.e - a.e)[0];
   if (ev) cards.push({ kind: 'highlight', title: 'Ton moment fort', lines: [`${ev.name} : terminé.`] });
   else if (top && top.e >= 7) cards.push({ kind: 'highlight', title: 'Ton moment fort', lines: [`${top.t}, ressenti ${top.e}/10.`] });
-  const ins = runInsight(s);
-  if (!/Pas encore|pas encore/.test(ins)) cards.push({ kind: 'progress', title: 'Ce qui évolue', lines: [ins] });
+  const ins = insights(s, to).filter(i => i.level !== 'observation' || i.domain === 'running').slice(0, 3);
+  if (ins.length) cards.push({ kind: 'progress', title: 'Ce qui évolue', lines: ins.map(i => i.text) });
   const rec = newRecords(s, from, to);
   if (rec.length) cards.push({ kind: 'records', title: rec.length > 1 ? 'Nouveaux records' : 'Nouveau record', lines: rec.map(r => `${r.label} : ${r.value}`) });
   const cis = Array.from({ length: 7 }, (_, i) => s.checkins[addDays(from, i)]).filter(c => c && c.sleep && c.energy);
