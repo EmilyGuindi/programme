@@ -8,12 +8,15 @@ import { font, radius, size, space, touch, useTheme } from '@/theme/tokens';
 const tap = () => Haptics.selectionAsync().catch(() => {});
 
 /* ---------- Typographie ---------- */
-type TV = 'mega' | 'hero' | 'title' | 'h2' | 'h3' | 'body' | 'small' | 'xs' | 'label';
+type TV = 'mega' | 'hero' | 'display' | 'title' | 'h2' | 'h3' | 'body' | 'small' | 'xs' | 'label' | 'overline' | 'num';
 export function T({ v = 'body', muted, color, style, children, numberOfLines }: { v?: TV; muted?: boolean; color?: string; style?: StyleProp<TextStyle>; children: ReactNode; numberOfLines?: number }) {
   const { c } = useTheme();
   const base: Record<TV, TextStyle> = {
     mega: { fontFamily: font.condensed, fontSize: size.mega, lineHeight: 62, fontVariant: ['tabular-nums'] },
     hero: { fontFamily: font.condensed, fontSize: size.hero, lineHeight: 42, fontVariant: ['tabular-nums'] },
+    display: { fontFamily: font.condensedBold, fontSize: 52, lineHeight: 52, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
+    overline: { fontFamily: font.semibold, fontSize: size.xxs, lineHeight: 14, letterSpacing: 1.2, textTransform: 'uppercase' },
+    num: { fontFamily: font.condensedBold, fontSize: size.xl, lineHeight: 24, fontVariant: ['tabular-nums'] },
     title: { fontFamily: font.semibold, fontSize: size.xxl, lineHeight: 34 },
     h2: { fontFamily: font.semibold, fontSize: size.xl, lineHeight: 27 },
     h3: { fontFamily: font.semibold, fontSize: size.lg, lineHeight: 23 },
@@ -38,7 +41,7 @@ export const Gap = ({ h = space.s3 }: { h?: number }) => <View style={{ height: 
 
 export function Card({ children, onPress, tone = 'default', style }: { children: ReactNode; onPress?: () => void; tone?: 'default' | 'ink' | 'flat'; style?: StyleProp<ViewStyle> }) {
   const { c } = useTheme();
-  const s: ViewStyle = tone === 'ink' ? { backgroundColor: c.ink, borderColor: c.ink } : tone === 'flat' ? { backgroundColor: 'transparent', borderStyle: 'dashed', borderColor: c.line2 } : { backgroundColor: c.surface, borderColor: c.line };
+  const s: ViewStyle = tone === 'ink' ? { backgroundColor: c.stage, borderColor: c.stage } : tone === 'flat' ? { backgroundColor: 'transparent', borderStyle: 'dashed', borderColor: c.line2 } : { backgroundColor: c.surface, borderColor: c.surface };
   const body = <View style={[styles.card, s, style]}>{children}</View>;
   return onPress ? <Pressable onPress={() => { tap(); onPress(); }} style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}>{body}</Pressable> : body;
 }
@@ -133,3 +136,57 @@ export function KV({ k, v }: { k: string; v: string }) {
 }
 
 const styles = StyleSheet.create({ card: { borderWidth: 1, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3 } });
+
+
+/* ---------- Éléments de liste compacts (réglages, plannings, accès secondaires) ---------- */
+export function ListGroup({ children, title }: { children: ReactNode; title?: string }) {
+  const { c } = useTheme();
+  return (
+    <View style={{ marginBottom: space.s5, marginTop: space.s2 }}>
+      {title ? <T v="overline" muted style={{ marginBottom: space.s2, marginLeft: space.s1 }}>{title}</T> : null}
+      <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, overflow: 'hidden' }}>{children}</View>
+    </View>
+  );
+}
+export function ListRow({ title, sub, left, right, onPress, last, chevron = true }: { title: string; sub?: string; left?: ReactNode; right?: ReactNode; onPress?: () => void; last?: boolean; chevron?: boolean }) {
+  const { c } = useTheme();
+  const body = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s3, minHeight: 56, paddingHorizontal: space.s4, paddingVertical: space.s3 }}>
+      {left}
+      <View style={{ flex: 1 }}><T v="label">{title}</T>{sub ? <T v="small" muted numberOfLines={2}>{sub}</T> : null}</View>
+      {right}
+      {onPress && chevron ? <T v="h3" color={c.ink3}>›</T> : null}
+    </View>
+  );
+  return (
+    <View>
+      {onPress ? <Pressable accessibilityRole="button" onPress={() => { tap(); onPress(); }} style={({ pressed }) => ({ backgroundColor: pressed ? c.surface2 : 'transparent' })}>{body}</Pressable> : body}
+      {!last ? <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.line2, marginLeft: space.s4 }} /> : null}
+    </View>
+  );
+}
+/** Interrupteur cohérent pour tous les réglages. */
+export function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
+  const { c } = useTheme();
+  return (
+    <Pressable accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: value }} hitSlop={10} onPress={() => { tap(); onChange(!value); }}
+      style={{ width: 50, height: 30, borderRadius: 15, padding: 3, backgroundColor: value ? c.accent : c.line2, justifyContent: 'center' }}>
+      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', transform: [{ translateX: value ? 20 : 0 }] }} />
+    </Pressable>
+  );
+}
+/** Barre de progression fine, segmentée si besoin. */
+export function Meter({ value, segments, color, track }: { value: number; segments?: number; color?: string; track?: string }) {
+  const { c } = useTheme(); const v = Math.max(0, Math.min(1, value));
+  if (segments) return <View style={{ flexDirection: 'row', gap: 3 }}>{Array.from({ length: segments }, (_, i) => <View key={i} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: i < Math.round(v * segments) ? color || c.accent : track || c.line2 }} />)}</View>;
+  return <View style={{ height: 6, borderRadius: 3, backgroundColor: track || c.line2 }}><View style={{ width: `${v * 100}%`, height: 6, borderRadius: 3, backgroundColor: color || c.accent }} /></View>;
+}
+export function Divider({ inset = 0 }: { inset?: number }) {
+  const { c } = useTheme(); return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.line2, marginLeft: inset }} />;
+}
+
+/** Retour discret, cohérent sur tous les écrans de détail. */
+export function BackLink({ label, onPress }: { label: string; onPress: () => void }) {
+  const { c } = useTheme();
+  return <Pressable accessibilityRole="button" accessibilityLabel={`Retour : ${label}`} hitSlop={12} onPress={() => { tap(); onPress(); }} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 8, opacity: pressed ? 0.6 : 1 })}><T v="h3" color={c.accent} style={{ lineHeight: 22 }}>‹</T><T v="label" color={c.accent}>{label}</T></Pressable>;
+}

@@ -37,7 +37,7 @@ export default function DayScreen() {
 
       {shown.type === 'recup' ? <>
         <T v="h3" style={{ marginBottom: 4 }}>Ta routine de récupération</T>
-        <T v="small" muted style={{ marginBottom: space.s3 }}>Environ 40 min au total. Coche au fur et à mesure, touche un exercice pour savoir comment le faire.</T>
+        <T v="small" muted style={{ marginBottom: space.s3 }}>Environ 40 min au total.</T>
         <MoveList moves={MOBILITY} />
         {!done ? <Button kind="primary" block label="Marquer comme fait" onPress={() => router.push({ pathname: '/activity', params: { date, preset: 'marche' } })} /> : null}
       </> : null}

@@ -3,7 +3,7 @@ import type { RunSession, Zone } from './types';
 const st = (text: string, zone: Zone | null = null) => ({ text, zone });
 
 export const RUN = {
-  easy: (min: number, ld = 0): RunSession => ({ kind: 'facile', title: `Footing facile ${min} min`, dur: `${min + (ld ? 4 : 0)} min`,
+  easy: (min: number, ld = 0): RunSession => ({ kind: 'facile', title: `Footing facile ${min} min`, dur: `${min + ld + 3} min au total`,
     goal: "Endurance fondamentale : construire la base aérobie sans fatigue.",
     steps: [st("5 min très facile en guise d'échauffement", 'easy'), st(`${min - 5} min facile, respiration confortable`, 'easy'),
       ...(ld ? [st(`${ld} lignes droites de 15 s, récup 45 s en marchant`)] : []), st('3 min de marche pour finir')] }),

@@ -34,6 +34,6 @@ export function buildClosure(s: AppState, a: Activity): Closure {
   return { title: a.title, stats, goal, facts, next, askEffort: a.effort == null, askPain: !(c && c.pain) };
 }
 /** Activité qui mérite un écran de fin, pas encore montré. */
-export function pendingClosure(s: AppState, from: string): Activity | undefined {
-  return s.activities.filter(a => !a.complementary && a.date >= from && countsFor(a, a.date) && !s.closures?.[a.id] && !a.eventId).sort((a, b) => b.date.localeCompare(a.date))[0];
+export function pendingClosure(s: AppState, from: string, to = '9999-12-31'): Activity | undefined {
+  return s.activities.filter(a => !a.complementary && a.date >= from && a.date <= to && countsFor(a, a.date) && !s.closures?.[a.id] && !a.eventId).sort((a, b) => b.date.localeCompare(a.date))[0];
 }

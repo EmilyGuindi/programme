@@ -34,24 +34,6 @@ export default function RunScreen() {
     <Sheet title={run.title} sub={`${fmtDay(date)} · ${run.dur}`}>
       {a.reason ? <Coach>{a.reason}</Coach> : null}
       <T><T v="label">Objectif : </T>{run.goal}</T><Gap />
-      <Disclosure title="Comprendre la séance" sub="Les termes utilisés, expliqués" open>
-        <Bullets items={[...new Set(run.steps.flatMap(st => RUN_TERMS.filter(([re]) => re.test(st.text)).map(([, t]) => t)))].concat(run.kind === 'facile' || run.kind === 'recup' ? ['Le seul piège d\'un footing facile, c\'est d\'aller trop vite. Si tu ne peux pas parler, ralentis : c\'est cette allure lente qui fait progresser ton endurance.'] : [])} />
-      </Disclosure>
-      <Disclosure title="Avant de partir : échauffement détaillé" sub="Coche au fur et à mesure">
-        <T v="small" muted style={{ marginBottom: 8 }}>{run.kind === 'facile' || run.kind === 'recup' ? 'Pour un footing facile, les 5 premières minutes très lentes suffisent. Les éducatifs sont un bonus.' : 'Indispensable avant une séance d\'allure : fais tout.'}</T>
-        <MoveList moves={RUN_WARMUP} />
-      </Disclosure>
-      {zs.map(z => (
-        <Disclosure key={'z' + z} title={`Comment courir en ${ZONE_NAME[z].split(' ·')[0].toLowerCase()}`} sub={zoneText(s, z)}>
-          <Bullets items={[ZONE_GUIDE[z].feel, ZONE_GUIDE[z].talk, ZONE_GUIDE[z].breath, ZONE_GUIDE[z].tip]} />
-        </Disclosure>
-      ))}
-      <Disclosure title="Après : retour au calme et étirements" sub="10 min">
-        <MoveList moves={RUN_COOLDOWN} />
-      </Disclosure>
-      <Disclosure title="L'échelle d'effort (1 à 10)">
-        {RPE_SCALE.map(([n, t]) => <KV key={n} k={t} v={`${n}/10`} />)}
-      </Disclosure>
       {zs.length ? <Card><T v="h3">Allures cibles</T>{zs.map(z => <KV key={z} k={ZONE_NAME[z]} v={zoneText(s, z)} />)}<T v="xs" muted style={{ marginTop: 8 }}>{`Depuis ${zones(s).src}. En côte ou par vent, suis l'effort : les répétitions se font sur du plat ou en boucle.`}</T></Card> : null}
       {live != null ? (
         <Card tone="ink">
@@ -77,6 +59,25 @@ export default function RunScreen() {
           <Button kind="primary" block label="Commencer en mode guidé" onPress={() => setLive(0)} />
         </>
       )}
+      <T v="overline" muted style={{ marginTop: space.s5, marginBottom: space.s2 }}>Pour bien la faire</T>
+      <Disclosure title="Comprendre la séance" sub="Les termes utilisés, expliqués">
+        <Bullets items={[...new Set(run.steps.flatMap(st => RUN_TERMS.filter(([re]) => re.test(st.text)).map(([, t]) => t)))].concat(run.kind === 'facile' || run.kind === 'recup' ? ['Le seul piège d\'un footing facile, c\'est d\'aller trop vite. Si tu ne peux pas parler, ralentis : c\'est cette allure lente qui fait progresser ton endurance.'] : [])} />
+      </Disclosure>
+      <Disclosure title="Avant de partir : échauffement détaillé" sub="Coche au fur et à mesure">
+        <T v="small" muted style={{ marginBottom: 8 }}>{run.kind === 'facile' || run.kind === 'recup' ? 'Pour un footing facile, les 5 premières minutes très lentes suffisent. Les éducatifs sont un bonus.' : 'Indispensable avant une séance d\'allure : fais tout.'}</T>
+        <MoveList moves={RUN_WARMUP} />
+      </Disclosure>
+      {zs.map(z => (
+        <Disclosure key={'z' + z} title={`Comment courir en ${ZONE_NAME[z].split(' ·')[0].toLowerCase()}`} sub={zoneText(s, z)}>
+          <Bullets items={[ZONE_GUIDE[z].feel, ZONE_GUIDE[z].talk, ZONE_GUIDE[z].breath, ZONE_GUIDE[z].tip]} />
+        </Disclosure>
+      ))}
+      <Disclosure title="Après : retour au calme et étirements" sub="10 min">
+        <MoveList moves={RUN_COOLDOWN} />
+      </Disclosure>
+      <Disclosure title="L'échelle d'effort (1 à 10)">
+        {RPE_SCALE.map(([n, t]) => <KV key={n} k={t} v={`${n}/10`} />)}
+      </Disclosure>
       <T v="h3" style={{ marginTop: space.s5, marginBottom: space.s2 }}>Bilan</T>
       <T v="small" muted style={{ marginBottom: space.s3 }}>Tant que Strava n'est pas connecté, note distance et durée : c'est ce qui fait évoluer tes allures.</T>
       <Row><View style={{ flex: 1 }}><Field label="Distance (km)"><Input keyboardType="decimal-pad" defaultValue={R.km} placeholder="6,2" onChangeText={t => set({ km: t.replace(',', '.') })} /></Field></View>

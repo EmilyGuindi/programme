@@ -1,38 +1,43 @@
 import { router } from 'expo-router';
-import type { ComponentType } from 'react';
-import { Pressable, View } from 'react-native';
+import { useEffect } from 'react';
+import { View } from 'react-native';
 import { APP_VERSION } from '@/changelog';
-import { IlluBell, IlluConnect, IlluCycle, IlluData, IlluGoals, IlluNews } from '@/components/illustrations';
+import { Icon } from '@/components/icons';
 import { Wordmark } from '@/components/logo';
-import { Screen, T } from '@/components/ui';
-import { radius, space, useTheme } from '@/theme/tokens';
+import { ListGroup, ListRow, Screen, T } from '@/components/ui';
+import { phaseOf, weekOf } from '@/engine/coach';
+import { DAYS_SHORT, sportDay } from '@/engine/dates';
+import { stravaStatus, useApp, useServer, useStrava, useSync } from '@/store/store';
+import { space } from '@/theme/tokens';
 
-const TILES: { section: string; title: string; sub: string; Illu: ComponentType<{ size?: number }> }[] = [
-  { section: 'goals', title: 'Objectifs', sub: 'Ce que je vise', Illu: IlluGoals },
-  { section: 'reminders', title: 'Rappels', sub: 'Check-in et pesée', Illu: IlluBell },
-  { section: 'connections', title: 'Connexions', sub: 'Serveur et Strava', Illu: IlluConnect },
-  { section: 'program', title: 'Programme', sub: 'Mon cycle en cours', Illu: IlluCycle },
-  { section: 'data', title: 'Mes données', sub: 'Sauvegarde et réglages', Illu: IlluData },
-  { section: 'news', title: 'Quoi de neuf', sub: 'Dernières nouveautés', Illu: IlluNews },
-];
+const open = (section: string) => router.push({ pathname: '/settings/[section]', params: { section } });
+const h = (t: string) => { const [a, b] = t.split(':'); return `${+a} h${b !== '00' ? ` ${b}` : ''}`; };
 
 export default function Profile() {
-  const { c } = useTheme();
+  const s = useApp(); const sv = useServer(); const sync = useSync(); const st = useStrava();
+  useEffect(() => { stravaStatus(); }, [sv.url, sv.key]);
+  const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, sportDay()))); const ph = phaseOf(w); const pr = s.user.prefs;
+  const rem = [pr.notifCheckin ? `check-in ${h(pr.checkinTime)}` : '', pr.notifWeigh ? `pesée ${DAYS_SHORT[pr.weighDay].toLowerCase()}. ${h(pr.weighTime)}` : '', pr.notifRecap !== false ? 'bilan dim.' : ''].filter(Boolean);
+  const conn = !sv.url ? 'Données sur ce téléphone uniquement' : [sync.status === 'ok' ? 'Serveur synchronisé' : sync.status === 'err' ? 'Serveur : erreur' : 'Serveur configuré', st?.connected ? 'Strava connecté' : 'Strava non connecté'].join(' · ');
   return (
     <Screen>
-      <T v="title" style={{ paddingTop: space.s4 }}>Profil</T>
-      <T muted style={{ marginBottom: space.s4 }}>Touche une carte pour l'ouvrir.</T>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.s3 }}>
-        {TILES.map(({ section, title, sub, Illu }) => (
-          <Pressable key={section} accessibilityRole="button" accessibilityLabel={`${title}. ${sub}`}
-            onPress={() => router.push({ pathname: '/settings/[section]', params: { section } })}
-            style={({ pressed }) => ({ flexBasis: '47%', flexGrow: 1, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: radius.r2, padding: space.s4, gap: space.s3, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-            <View style={{ backgroundColor: c.accentSoft, borderRadius: radius.r2, alignItems: 'center', justifyContent: 'center', paddingVertical: space.s4 }}><Illu size={64} /></View>
-            <View><T v="label">{title}</T><T v="small" muted>{sub}</T></View>
-          </Pressable>
-        ))}
+      <View style={{ paddingTop: space.s4, marginBottom: space.s5 }}>
+        <T v="title">{s.user.name}</T>
+        <T muted>{`${s.program.name} · semaine ${w} · phase ${ph.n}`}</T>
       </View>
-      <View style={{ alignItems: 'center', marginTop: space.s6, gap: 8 }}><Wordmark height={14} tagline /><T v="xs" muted>{`Version ${APP_VERSION}`}</T></View>
+      <ListGroup title="Mon entraînement">
+        <ListRow title="Objectifs" sub={`10 km à 5'30/km · ${String(s.user.goals.weightTarget).replace('.', ',')} kg souhaités`} left={<Icon name="target" />} onPress={() => open('goals')} />
+        <ListRow title="Programme" sub={`Phase ${ph.n} · ${ph.name}`} left={<Icon name="cycle" />} onPress={() => open('program')} />
+        <ListRow last title="Rappels" sub={rem.length ? rem.join(' · ') : 'Désactivés'} left={<Icon name="bell" />} onPress={() => open('reminders')} />
+      </ListGroup>
+      <ListGroup title="Connexions">
+        <ListRow last title="Serveur et Strava" sub={conn} left={<Icon name="link" />} onPress={() => open('connections')} />
+      </ListGroup>
+      <ListGroup title="Application">
+        <ListRow title="Mes données" sub="Sauvegarde, import, préférences" left={<Icon name="data" />} onPress={() => open('data')} />
+        <ListRow last title="Quoi de neuf" sub={`Version ${APP_VERSION}`} left={<Icon name="spark" />} onPress={() => open('news')} />
+      </ListGroup>
+      <View style={{ alignItems: 'center', marginTop: space.s4, gap: 6 }}><Wordmark height={12} tagline /></View>
     </Screen>
   );
 }

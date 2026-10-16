@@ -4,11 +4,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as Updates from 'expo-updates';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, View } from 'react-native';
+import { Alert, Linking, Pressable, View } from 'react-native';
 import { APP_VERSION, CHANGELOG } from '@/changelog';
 import { manualUpdateCheck } from '@/components/update-banner';
 import { Bullets } from '@/components/guide';
-import { Button, Card, Field, Gap, Input, Row, Screen, Segmented, T } from '@/components/ui';
+import { BackLink, Button, Card, Field, Gap, Input, ListGroup, ListRow, Row, Screen, Segmented, T, Toggle } from '@/components/ui';
 import { phaseOf, weekOf } from '@/engine/coach';
 import { addDays, DAYS_SHORT, fmtShort, num, today } from '@/engine/dates';
 import { planReminders } from '@/engine/reminders';
@@ -16,13 +16,13 @@ import { askPermission, nextScheduled, permission, syncReminders, testNotificati
 import { connectStrava, disconnectStrava, getState, pull, replaceState, setServer, stravaStatus, stravaSyncNow, testServer, update, useApp, useServer, useStrava, useSync } from '@/store/store';
 import { space, useTheme } from '@/theme/tokens';
 
-const TITLES: Record<string, string> = { goals: 'Objectifs', reminders: 'Rappels', connections: 'Connexions', program: 'Programme', data: 'Mes données', news: 'Quoi de neuf' };
+const TITLES: Record<string, string> = { goals: 'Objectifs', reminders: 'Rappels', connections: 'Serveur et Strava', program: 'Programme', data: 'Mes données', news: 'Quoi de neuf' };
 
 export default function Section() {
   const { section } = useLocalSearchParams<{ section: string }>();
   return (
     <Screen>
-      <Row style={{ paddingTop: space.s4, paddingBottom: space.s3 }}><Button small label="‹ Profil" onPress={() => router.back()} /></Row>
+      <View style={{ paddingTop: space.s3, paddingBottom: space.s2 }}><BackLink label="Profil" onPress={() => router.back()} /></View>
       <T v="title" style={{ marginBottom: space.s3 }}>{TITLES[section] || 'Profil'}</T>
       {section === 'goals' ? <Goals /> : section === 'reminders' ? <Reminders /> : section === 'connections' ? <Connections /> : section === 'program' ? <Program /> : section === 'data' ? <Data /> : <News />}
     </Screen>
@@ -32,65 +32,49 @@ export default function Section() {
 function Goals() {
   const s = useApp();
   return (
-    <Card>
-      <Field label="Poids souhaité (kg)" hint="une cible, pas une obligation"><Input keyboardType="decimal-pad" defaultValue={String(s.user.goals.weightTarget).replace('.', ',')} onChangeText={t => { const v = num(t); if (v) update(st => { st.user.goals.weightTarget = v; }); }} /></Field>
-      <Field label="Running"><Input defaultValue={s.user.goals.run} onChangeText={t => update(st => { st.user.goals.run = t; })} /></Field>
-      <Field label="Physique"><Input multiline style={{ minHeight: 90, paddingTop: 12 }} defaultValue={s.user.goals.physique} onChangeText={t => update(st => { st.user.goals.physique = t; })} /></Field>
-    </Card>
+    <>
+      <Field label="Objectif running" hint=""><T v="small" muted style={{ marginBottom: 6 }}>Ce que tu vises à terme. Les étapes intermédiaires sont dans Mon parcours.</T><Input defaultValue={s.user.goals.run} onChangeText={t => update(st => { st.user.goals.run = t; })} /></Field>
+      <Field label="Poids souhaité"><T v="small" muted style={{ marginBottom: 6 }}>Une cible, pas une obligation. Elle sert de repère sur la courbe.</T>
+        <Row><Input style={{ width: 120 }} keyboardType="decimal-pad" defaultValue={String(s.user.goals.weightTarget).replace('.', ',')} onChangeText={t => { const v = num(t); if (v) update(st => { st.user.goals.weightTarget = v; }); }} /><T muted>kg</T></Row></Field>
+      <Field label="Objectif physique"><T v="small" muted style={{ marginBottom: 6 }}>En quelques mots, ce que tu veux voir évoluer.</T><Input multiline style={{ minHeight: 96, paddingTop: 12, textAlignVertical: 'top' }} defaultValue={s.user.goals.physique} onChangeText={t => update(st => { st.user.goals.physique = t; })} /></Field>
+    </>
   );
 }
 
-const TIMES = ['06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00'];
+const TIMES = ['05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00'];
 function TimePick({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const i = Math.max(0, TIMES.indexOf(value));
-  return (
-    <Row>
-      <Button small label="−" onPress={() => onChange(TIMES[Math.max(0, i - 1)])} />
-      <T v="h2" style={{ minWidth: 80, textAlign: 'center', fontVariant: ['tabular-nums'] }}>{value.replace(':', ' h ')}</T>
-      <Button small label="+" onPress={() => onChange(TIMES[Math.min(TIMES.length - 1, i + 1)])} />
-    </Row>
-  );
+  const { c } = useTheme(); const i = Math.max(0, TIMES.indexOf(value));
+  const B = ({ g, to, d }: { g: string; to: number; d: boolean }) => <Pressable accessibilityRole="button" accessibilityLabel={g === '−' ? 'Plus tôt' : 'Plus tard'} disabled={d} hitSlop={6} onPress={() => onChange(TIMES[to])} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center', opacity: d ? 0.35 : 1 }}><T v="label">{g}</T></Pressable>;
+  return <Row gap={8}><B g="−" to={Math.max(0, i - 1)} d={i === 0} /><T v="num" style={{ minWidth: 64, textAlign: 'center', fontSize: 20 }}>{value.replace(':', ' h ')}</T><B g="+" to={Math.min(TIMES.length - 1, i + 1)} d={i === TIMES.length - 1} /></Row>;
 }
 function Reminders() {
   const s = useApp(); const { c } = useTheme(); const pr = s.user.prefs;
   const [perm, setPerm] = useState<string>('…'); const [next, setNext] = useState<Date | null>(null); const [msg, setMsg] = useState('');
   const refresh = async () => { setPerm(await permission()); await syncReminders(getState(), true); setNext(await nextScheduled()); };
   useEffect(() => { refresh(); }, [pr.checkinTime, pr.weighTime, pr.weighDay, pr.notifCheckin, pr.notifWeigh, pr.notifRecap]);
-  const planned = planReminders(s).slice(0, 3);
-  const fmt = (d: Date) => `${d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+  const fmt = (d: Date) => `${d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', ' h ')}`;
+  const set = (fn: (p: typeof pr) => void) => update(st => fn(st.user.prefs));
   return (
     <>
-      <Card>
-        <T v="h3">État</T>
-        <T style={{ marginTop: 6 }} color={perm === 'granted' ? c.ok : perm === 'denied' ? c.stop : undefined}>
-          {perm === 'granted' ? 'Notifications autorisées.' : perm === 'denied' ? 'Notifications bloquées dans les réglages Android.' : perm === '…' ? 'Vérification…' : 'Pas encore autorisées.'}
-        </T>
-        {perm === 'granted' ? <T v="small" muted style={{ marginTop: 4 }}>{next ? `Prochain rappel : ${fmt(next)}.` : 'Aucun rappel programmé (tout est déjà fait, ou rappels désactivés).'}</T> : null}
-        <Gap h={space.s3} />
-        {perm === 'undetermined' ? <Button kind="primary" block label="Autoriser les notifications" onPress={async () => { await askPermission(); refresh(); }} /> : null}
-        {perm === 'denied' ? <Button kind="primary" block label="Ouvrir les réglages" onPress={() => Linking.openSettings()} /> : null}
-        {perm === 'granted' ? <Button block label="M'envoyer une notification de test" onPress={async () => { await testNotification(); setMsg('Envoyée : elle arrive dans 5 secondes. Verrouille ton téléphone pour vérifier qu\'elle s\'affiche aussi app fermée, puis ouvre-la : elle doit t\'amener au check-in.'); }} /> : null}
-        {msg ? <T v="small" style={{ marginTop: 8 }}>{msg}</T> : null}
-      </Card>
-      <Card>
-        <Row between><T v="h3">Check-in du matin</T><Button small label={pr.notifCheckin ? 'Activé' : 'Désactivé'} kind={pr.notifCheckin ? 'primary' : 'secondary'} onPress={() => update(st => { st.user.prefs.notifCheckin = !st.user.prefs.notifCheckin; })} /></Row>
-        {pr.notifCheckin ? <View style={{ marginTop: space.s3 }}><TimePick value={pr.checkinTime} onChange={v => update(st => { st.user.prefs.checkinTime = v; })} /></View> : null}
-        <T v="small" muted style={{ marginTop: 8 }}>Chaque jour. Pas de rappel si ton check-in est déjà fait.</T>
-      </Card>
-      <Card>
-        <Row between><T v="h3">Pesée hebdo</T><Button small label={pr.notifWeigh ? 'Activé' : 'Désactivé'} kind={pr.notifWeigh ? 'primary' : 'secondary'} onPress={() => update(st => { st.user.prefs.notifWeigh = !st.user.prefs.notifWeigh; })} /></Row>
-        {pr.notifWeigh ? <View style={{ marginTop: space.s3, gap: space.s3 }}>
-          <Segmented options={DAYS_SHORT.map((d, i) => [String(i), d]) as [string, string][]} value={String(pr.weighDay)} onChange={v => update(st => { st.user.prefs.weighDay = +v; })} />
-          <TimePick value={pr.weighTime} onChange={v => update(st => { st.user.prefs.weighTime = v; })} />
-        </View> : null}
-        <T v="small" muted style={{ marginTop: 8 }}>Pas de rappel si tu t'es déjà pesée cette semaine. Si les deux tombent à moins d'une heure d'écart, tu reçois un seul message.</T>
-      </Card>
-      <Card>
-        <Row between><T v="h3">Bilan du dimanche</T><Button small label={pr.notifRecap !== false ? 'Activé' : 'Désactivé'} kind={pr.notifRecap !== false ? 'primary' : 'secondary'} onPress={() => update(st => { st.user.prefs.notifRecap = st.user.prefs.notifRecap === false; })} /></Row>
-        <T v="small" muted style={{ marginTop: 8 }}>Le dimanche à 19 h, quand ton bilan de la semaine est prêt. Jamais deux fois pour la même semaine.</T>
-      </Card>
-      {planned.length ? <Card><T v="h3">Les 3 prochains</T>{planned.map(r => <T key={r.id} v="small" style={{ marginTop: 6 }}>{`${fmt(r.at)} · ${r.kind === 'both' ? 'check-in et pesée' : r.kind === 'weigh' ? 'pesée' : r.kind === 'recap' ? 'bilan' : 'check-in'}`}</T>)}</Card> : null}
-      <T v="xs" muted>Les rappels sont programmés sur ton téléphone : ils arrivent même app fermée et sans connexion. Si un rappel n'arrive pas, vérifie que l'économie de batterie n'est pas appliquée à BYYND (Paramètres → Applis → BYYND → Batterie → Non restreinte).</T>
+      <View style={{ marginBottom: space.s5 }}>
+        {perm === 'granted' ? <T>{next ? `Prochain rappel ${fmt(next)}.` : 'Aucun rappel programmé.'}</T>
+          : perm === 'denied' ? <T color={c.stop}>Les notifications sont bloquées pour BYYND dans Android.</T>
+          : perm === '…' ? <T muted>Vérification…</T> : <T>Les notifications ne sont pas encore autorisées.</T>}
+        {perm === 'undetermined' ? <Button kind="primary" block style={{ marginTop: space.s3 }} label="Autoriser les notifications" onPress={async () => { await askPermission(); refresh(); }} /> : null}
+        {perm === 'denied' ? <Button kind="primary" block style={{ marginTop: space.s3 }} label="Ouvrir les réglages Android" onPress={() => Linking.openSettings()} /> : null}
+      </View>
+      <ListGroup title="Rappels">
+        <ListRow chevron={false} title="Check-in du matin" sub="Chaque jour, sauf s'il est déjà fait" right={<Toggle label="Check-in du matin" value={pr.notifCheckin} onChange={v => set(p => { p.notifCheckin = v; })} />} last={!pr.notifCheckin} />
+        {pr.notifCheckin ? <ListRow chevron={false} title="Heure" right={<TimePick value={pr.checkinTime} onChange={v => set(p => { p.checkinTime = v; })} />} /> : null}
+        <ListRow chevron={false} title="Pesée" sub="Une fois par semaine, sauf si déjà faite" right={<Toggle label="Pesée" value={pr.notifWeigh} onChange={v => set(p => { p.notifWeigh = v; })} />} />
+        {pr.notifWeigh ? <><View style={{ paddingHorizontal: space.s4, paddingBottom: space.s3 }}><Segmented options={DAYS_SHORT.map((d, i) => [String(i), d]) as [string, string][]} value={String(pr.weighDay)} onChange={v => set(p => { p.weighDay = +v; })} /></View>
+          <ListRow chevron={false} title="Heure" right={<TimePick value={pr.weighTime} onChange={v => set(p => { p.weighTime = v; })} />} /></> : null}
+        <ListRow last chevron={false} title="Bilan du dimanche" sub="À 19 h, quand ta semaine est prête" right={<Toggle label="Bilan du dimanche" value={pr.notifRecap !== false} onChange={v => set(p => { p.notifRecap = v; })} />} />
+      </ListGroup>
+      <T v="small" muted>Check-in et pesée à moins d'une heure d'écart arrivent en un seul message.</T>
+      {perm === 'granted' ? <Button small kind="ghost" label="Envoyer une notification de test" style={{ alignSelf: 'flex-start', paddingHorizontal: 0, marginTop: space.s3 }} onPress={async () => { await testNotification(); setMsg('Elle arrive dans 5 secondes.'); }} /> : null}
+      {msg ? <T v="small">{msg}</T> : null}
+      <T v="xs" muted style={{ marginTop: space.s5 }}>Rappel absent ? Paramètres Android → Applications → BYYND → Batterie → Non restreinte.</T>
     </>
   );
 }
@@ -135,20 +119,27 @@ function Connections() {
 }
 
 function Program() {
-  const s = useApp(); const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, today()))); const ph = phaseOf(w);
+  const s = useApp(); const { c } = useTheme(); const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, today())));
+  const PH = [{ n: 'A', name: 'Évaluation', from: 1, to: 5, what: 'Courses de l\'automne, premiers repères 10 km' }, { n: 'B', name: 'Base aérobie', from: 6, to: 10, what: 'Endurance, premières séances au seuil' }, { n: 'C', name: 'Seuil', from: 11, to: 15, what: 'Allure soutenue, repère fin janvier' }, { n: 'D', name: 'Spécifique 10 km', from: 16, to: 19, what: 'Allure cible, bilan mi-février' }, { n: '20', name: 'Bilan', from: 20, to: 20, what: 'Comparaison des repères' }];
   return (
-    <Card>
-      <T v="h3">{s.program.name}</T>
-      <T style={{ marginTop: 6 }}>{`${fmtShort(s.program.start)} → ${fmtShort(addDays(s.program.start, s.program.weeks * 7 - 1))}`}</T>
-      <T style={{ marginTop: 6 }}>{`Semaine ${w} sur ${s.program.weeks} · Phase ${ph.n}, ${ph.name}`}</T>
-      <Gap />
-      <Bullets items={['A · Évaluation (S1–S5) : courses de l\'automne, repères 10 km.', 'B · Base aérobie (S6–S10) : endurance, premières séances au seuil.', 'C · Seuil (S11–S15) : allure soutenue, repère fin janvier.', 'D · Spécifique 10 km (S16–S19) : allure cible, bilan mi-février.', 'Bilan (S20).']} />
-    </Card>
+    <>
+      <T muted style={{ marginBottom: space.s4 }}>{`${fmtShort(s.program.start)} → ${fmtShort(addDays(s.program.start, s.program.weeks * 7 - 1))} · semaine ${w} sur ${s.program.weeks}`}</T>
+      <ListGroup title="Phases">
+        {PH.map((p, i) => { const st = w > p.to ? 'terminée' : w >= p.from ? 'en cours' : 'à venir'; return (
+          <ListRow key={p.n + i} last={i === PH.length - 1} chevron={false} title={`${p.name}`} sub={`S${p.from}${p.to !== p.from ? `–S${p.to}` : ''} · ${p.what}`}
+            left={<View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: st === 'en cours' ? c.accent : st === 'terminée' ? c.ink : c.surface2 }}><T v="label" color={st === 'à venir' ? c.ink2 : '#fff'}>{p.n}</T></View>}
+            right={<T v="xs" color={st === 'en cours' ? c.accent : c.ink3}>{st}</T>} />); })}
+      </ListGroup>
+      <ListGroup title="Compétitions du cycle">
+        {s.events.filter(e => e.status !== 'annulé').sort((a, b) => a.date.localeCompare(b.date)).map((e, i, arr) => <ListRow key={e.id} last={i === arr.length - 1} title={e.name} sub={`${fmtShort(e.date)}${e.result ? ' · terminée' : ''}`} onPress={() => router.push({ pathname: '/race/[id]', params: { id: e.id } })} />)}
+      </ListGroup>
+      <T v="small" muted>Semaine allégée en S12. Une séance manquée ne se rattrape pas : la suite s'ajuste.</T>
+    </>
   );
 }
 
 function Data() {
-  const s = useApp(); const pr = s.user.prefs;
+  const s = useApp(); const sv = useServer(); const pr = s.user.prefs;
   async function exportData() {
     const f = new File(Paths.cache, `byynd-${today()}.json`); if (f.exists) f.delete(); f.create(); f.write(JSON.stringify(getState(), null, 1));
     await Sharing.shareAsync(f.uri, { mimeType: 'application/json', dialogTitle: 'Sauvegarde BYYND' });
@@ -156,20 +147,22 @@ function Data() {
   async function importData() {
     const r = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true }); if (r.canceled) return;
     try { const d = JSON.parse(await new File(r.assets[0].uri).text());
-      Alert.alert('Importer cette sauvegarde ?', 'Les données de ce téléphone seront remplacées.', [{ text: 'Annuler', style: 'cancel' }, { text: 'Importer', style: 'destructive', onPress: () => replaceState(d) }]);
-    } catch { Alert.alert('Fichier non reconnu'); }
+      Alert.alert('Remplacer tes données ?', 'Toutes les données de ce téléphone seront remplacées par celles de la sauvegarde. Cette action est irréversible.', [{ text: 'Annuler', style: 'cancel' }, { text: 'Remplacer', style: 'destructive', onPress: () => replaceState(d) }]);
+    } catch { Alert.alert('Fichier non reconnu', 'Choisis un fichier exporté depuis BYYND.'); }
   }
   return (
     <>
-      <Card>
-        <Row between><View style={{ flex: 1 }}><T v="label">Cycle menstruel dans le check-in</T><T v="small" muted>Facultatif. Aide à lire les variations de poids.</T></View>
-          <Button small label={pr.cycleOptIn ? 'Activé' : 'Désactivé'} kind={pr.cycleOptIn ? 'primary' : 'secondary'} onPress={() => update(st => { st.user.prefs.cycleOptIn = !st.user.prefs.cycleOptIn; })} /></Row>
-      </Card>
-      <Card>
-        <T v="h3">Sauvegarde</T>
-        <T v="small" muted style={{ marginVertical: 6 }}>Tes données sont sur ton téléphone et sur ton serveur. Un export te donne en plus une copie à garder.</T>
-        <Row><Button label="Exporter" style={{ flex: 1 }} onPress={exportData} /><Button label="Importer" style={{ flex: 1 }} onPress={importData} /></Row>
-      </Card>
+      <ListGroup title="Où sont tes données">
+        <ListRow chevron={false} title="Sur ce téléphone" sub={`${s.activities.length} activités · ${s.measurements.length} pesées · ${Object.keys(s.checkins).length} check-ins`} />
+        <ListRow last chevron={false} title="Sur ton serveur" sub={sv.url ? 'Copie synchronisée automatiquement' : 'Non configuré : voir Serveur et Strava'} />
+      </ListGroup>
+      <ListGroup title="Préférences">
+        <ListRow last chevron={false} title="Cycle menstruel dans le check-in" sub="Facultatif. Aide à lire les variations de poids." right={<Toggle label="Cycle menstruel" value={pr.cycleOptIn} onChange={v => update(st => { st.user.prefs.cycleOptIn = v; })} />} />
+      </ListGroup>
+      <ListGroup title="Sauvegarde">
+        <ListRow title="Exporter une copie" sub="Un fichier à garder où tu veux" onPress={exportData} />
+        <ListRow last title="Importer une sauvegarde" sub="Remplace les données de ce téléphone" onPress={importData} />
+      </ListGroup>
     </>
   );
 }

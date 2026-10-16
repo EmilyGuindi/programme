@@ -28,7 +28,7 @@ export function ContextCards({ d }: { d: string }) {
         <T v="small" color={c.paper} style={{ marginTop: space.s2, textDecorationLine: 'underline' }}>Préparer ma course</T>
       </Pressable>);
   }
-  const pc = pendingClosure(s, addDays(d, -1));
+  const pc = pendingClosure(s, addDays(d, -1), d);
   if (pc && pc.source === 'strava') cards.push(<Ctx key="cl" tag="Strava" title={`${pc.title} enregistré`} sub="Voir le bilan de ta séance" onPress={() => router.push({ pathname: '/done/[id]', params: { id: pc.id } })} />);
   const rec = availableRecaps(s)[0];
   if (rec && !s.recapsSeen?.[String(rec)]) cards.push(<Ctx key="recap" tag="Bilan" title={`Ta semaine ${rec} en un coup d'œil`} sub="Quelques cartes, 30 secondes" onPress={() => router.push({ pathname: '/recap/[week]', params: { week: String(rec) } })} />);
