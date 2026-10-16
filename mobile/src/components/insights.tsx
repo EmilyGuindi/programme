@@ -3,7 +3,8 @@ import { insights, type Insight } from '@/engine/insights';
 import { sportDay } from '@/engine/dates';
 import { useApp } from '@/store/store';
 import { radius, space, useTheme } from '@/theme/tokens';
-import { T } from './ui';
+import { Row, T } from './ui';
+import { Confidence, Kicker } from './brand';
 
 const LEVEL: Record<Insight['level'], string> = { observation: 'Observation', tendance: 'Tendance', confirmée: 'Progression confirmée' };
 
@@ -14,14 +15,16 @@ export function Insights({ domains, max = 3, title = 'Ce que tes données montre
   if (!list.length) return null;
   return (
     <View style={{ marginVertical: space.s3 }}>
-      <T v="h3" style={{ marginBottom: space.s2 }}>{title}</T>
-      {list.map(i => (
-        <View key={i.id} style={{ borderLeftWidth: 4, borderLeftColor: i.level === 'confirmée' ? c.ok : i.level === 'tendance' ? c.accent : c.line2, backgroundColor: c.surface, borderTopRightRadius: radius.r2, borderBottomRightRadius: radius.r2, padding: space.s3, paddingLeft: space.s4, marginBottom: space.s2 }}>
-          <T v="xs" color={i.level === 'confirmée' ? c.ok : i.level === 'tendance' ? c.accent : c.ink2} style={{ fontWeight: '600', marginBottom: 2 }}>{LEVEL[i.level]}</T>
-          <T>{i.text}</T>
-          <T v="xs" muted style={{ marginTop: 4 }}>{`Basé sur : ${i.basis}`}</T>
-        </View>
-      ))}
+      <Kicker>{title}</Kicker>
+      <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, marginTop: space.s2 }}>
+        {list.map((i, k) => (
+          <View key={i.id} style={{ padding: space.s4, borderTopWidth: k ? 0.5 : 0, borderTopColor: c.line2 }}>
+            <Row gap={8}><Confidence level={i.level} /><T v="overline" color={i.level === 'confirmée' ? c.ok : i.level === 'tendance' ? c.accent : c.ink2}>{LEVEL[i.level]}</T></Row>
+            <T v="h3" style={{ marginTop: space.s2, fontSize: 17, lineHeight: 23 }}>{i.text}</T>
+            <T v="xs" muted style={{ marginTop: 6 }}>{i.basis}</T>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }

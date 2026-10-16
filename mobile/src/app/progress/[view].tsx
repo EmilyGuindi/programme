@@ -4,6 +4,7 @@ import { ScrollView, View } from 'react-native';
 import { BarChart, PaceChart, WeightChart } from '@/components/charts';
 import { Disclosure } from '@/components/guide';
 import { Insights } from '@/components/insights';
+import { Badge, Kicker, Rail, Stage, StepMark } from '@/components/brand';
 import { Icon } from '@/components/icons';
 import { availableRecaps, buildRecap } from '@/engine/recap';
 import { Bullets } from '@/components/guide';
@@ -13,7 +14,7 @@ import { BrandMark } from '@/components/logo';
 import { sportDay } from '@/engine/dates';
 import { Pressable } from 'react-native';
 import { ActivityRow } from '@/components/plan-row';
-import { BackLink, Button, Card, Gap, KV, ListGroup, ListRow, Row, Screen, Segmented, Stat, T } from '@/components/ui';
+import { BackLink, Button, Card, Gap, KV, ListGroup, ListRow, Meter, Row, Screen, Segmented, Stat, T } from '@/components/ui';
 import { adapted, doneOn, mandatoryStats, runInsight, trend, weekOf, weekStart, weightInsight, weightSeries, ZONE_NAME, zones, zoneText } from '@/engine/coach';
 import { addDays, clock, fmtShort, mmss, num, today } from '@/engine/dates';
 import { EX } from '@/engine/library';
@@ -138,69 +139,75 @@ function Strength() {
   );
 }
 
-const STATUS_COL = (c: any, st: Step['status']) => (st === 'atteinte' ? c.ok : st === 'en cours' ? c.accent : st === 'réévaluée' ? c.warn : c.line2);
 function Track({ title, steps }: { title: string; steps: Step[] }) {
   const { c } = useTheme(); const [open, setOpen] = useState<string | null>(steps.find(x => x.status === 'en cours')?.id ?? null);
+  const doneN = steps.filter(x => x.status === 'atteinte').length;
   return (
-    <View style={{ marginBottom: space.s5 }}>
-      <T v="h2" style={{ marginBottom: space.s3 }}>{title}</T>
-      {steps.map((st, i) => (
-        <Row key={st.id} gap={space.s3} style={{ alignItems: 'stretch' }}>
-          <View style={{ width: 24, alignItems: 'center' }}>
-            <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: st.status === 'à venir' ? c.paper : STATUS_COL(c, st.status), borderWidth: 3, borderColor: STATUS_COL(c, st.status), marginTop: 14 }} />
-            {i < steps.length - 1 ? <View style={{ flex: 1, width: 3, backgroundColor: st.status === 'atteinte' ? c.ok : c.line, marginTop: 2 }} /> : null}
-          </View>
-          <Pressable style={{ flex: 1, paddingBottom: space.s3 }} onPress={() => setOpen(open === st.id ? null : st.id)}>
-            <View style={{ backgroundColor: st.status === 'en cours' ? c.surface : 'transparent', borderRadius: radius.r2, padding: st.status === 'en cours' ? space.s4 : space.s3, paddingLeft: st.status === 'en cours' ? space.s4 : 0 }}>
-              <Row between><T v="label" style={{ flex: 1 }}>{st.title}</T><T v="xs" color={STATUS_COL(c, st.status)} style={{ fontWeight: '600' }}>{st.status}</T></Row>
-              {open === st.id ? <View style={{ marginTop: space.s2, gap: 6 }}>
-                <T v="small"><T v="small" style={{ fontWeight: '600' }}>Critère : </T>{st.criterion}</T>
-                <T v="small"><T v="small" style={{ fontWeight: '600' }}>Où tu en es : </T>{st.progress ?? 'pas encore mesurable, les données arrivent avec tes séances.'}</T>
-                {st.ratio != null && st.status !== 'atteinte' ? <View style={{ height: 6, backgroundColor: c.line, borderRadius: 3 }}><View style={{ width: `${Math.round(st.ratio * 100)}%`, height: 6, backgroundColor: c.accent, borderRadius: 3 }} /></View> : null}
-                {st.history.length ? <T v="small"><T v="small" style={{ fontWeight: '600' }}>Historique : </T>{st.history.join(' · ')}</T> : null}
-                {st.status !== 'atteinte' ? <T v="small"><T v="small" style={{ fontWeight: '600' }}>Prochaine action : </T>{st.next}</T> : null}
-              </View> : null}
+    <View style={{ marginBottom: space.s6 }}>
+      <Row between style={{ marginBottom: space.s3 }}><Kicker>{title}</Kicker><T v="small" muted>{`${doneN} sur ${steps.length} étapes`}</T></Row>
+      {steps.map((st, i) => { const state = st.status === 'atteinte' ? 'done' : st.status === 'en cours' ? 'current' : st.status === 'réévaluée' ? 'revised' : 'next'; const isOpen = open === st.id; const cur = st.status === 'en cours';
+        return (
+          <Row key={st.id} gap={space.s3} style={{ alignItems: 'stretch' }}>
+            <View style={{ width: 24, alignItems: 'center' }}>
+              <View style={{ marginTop: cur ? 18 : 12 }}><StepMark state={state as any} /></View>
+              {i < steps.length - 1 ? <View style={{ flex: 1, marginTop: 4, alignItems: 'center' }}><Rail done={st.status === 'atteinte'} height="100%" /></View> : null}
             </View>
-          </Pressable>
-        </Row>
-      ))}
+            <Pressable style={{ flex: 1, paddingBottom: space.s2 }} accessibilityRole="button" accessibilityState={{ expanded: isOpen }} onPress={() => setOpen(isOpen ? null : st.id)}>
+              <View style={cur ? { backgroundColor: c.stage, borderRadius: radius.r2, padding: space.s4 } : { paddingVertical: space.s3 }}>
+                <Row between>
+                  <T v={cur ? 'h3' : 'label'} color={cur ? c.stageInk : st.status === 'à venir' ? c.ink2 : c.ink} style={{ flex: 1 }}>{st.title}</T>
+                  {st.status === 'atteinte' ? <T v="overline" color={c.ok}>Atteinte</T> : cur ? <T v="overline" color={c.accent}>En cours</T> : <T v="h3" color={c.ink3} style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}>›</T>}
+                </Row>
+                {cur && st.ratio != null ? <View style={{ marginTop: space.s3 }}><Meter value={st.ratio} track="rgba(244,242,238,0.15)" color={c.accent} /></View> : null}
+                {cur && st.progress ? <T v="small" color={c.stageInk2} style={{ marginTop: 6 }}>{st.progress}</T> : null}
+                {isOpen ? <View style={{ marginTop: space.s3, gap: 8 }}>
+                  <T v="small" color={cur ? c.stageInk : c.ink}><T v="small" style={{ fontWeight: '700' }} color={cur ? c.stageInk : c.ink}>Critère · </T>{st.criterion}</T>
+                  {!cur ? <T v="small" color={c.ink2}>{st.progress ?? 'Pas encore mesurable : les données arrivent avec tes séances.'}</T> : null}
+                  {st.history.length ? <T v="small" color={cur ? c.stageInk2 : c.ink2}>{st.history.join(' · ')}</T> : null}
+                  {st.status !== 'atteinte' ? <Row gap={8} style={{ alignItems: 'flex-start' }}><T v="small" color={c.accent} style={{ fontWeight: '700' }}>→</T><T v="small" color={cur ? c.stageInk : c.ink} style={{ flex: 1 }}>{st.next}</T></Row> : null}
+                </View> : null}
+              </View>
+            </Pressable>
+          </Row>
+        ); })}
     </View>
   );
 }
 function Journey() {
   const s = useApp(); const d = sportDay();
-  return (<><T v="title">Mon parcours</T><T v="small" muted style={{ marginBottom: space.s4 }}>Des étapes mesurables, de l'endurance à ton objectif 10 km.</T>
+  return (<><T v="title" style={{ fontSize: 32, lineHeight: 38 }}>Mon parcours</T><T muted style={{ marginTop: 4, marginBottom: space.s5 }}>Des étapes mesurables, de l'endurance à ton objectif 10 km.</T>
     <Track title="Running" steps={runningJourney(s, d)} /><Track title="Physique et renforcement" steps={bodyJourney(s, d)} /></>);
 }
 function Records() {
   const s = useApp(); const { c } = useTheme(); const d = sportDay(); const recs = recordsUntil(s, d); const ach = achievements(s, d);
+  const got = ach.filter(a => a.date), locked = ach.filter(a => !a.date);
+  const run = recs.filter(r => r.id.startsWith('run-')), str = recs.filter(r => r.id.startsWith('str-'));
   const Rec = ({ label, value, date }: { label: string; value: string; date?: string }) => (
     <View style={{ flexBasis: '47%', flexGrow: 1, backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4 }}>
-      <T v="xs" muted>{label}</T><T v="h2" style={{ fontFamily: 'ArchivoNarrow_700Bold', marginTop: 4 }}>{value}</T>{date ? <T v="xs" muted>{fmtShort(date)}</T> : null}
+      <T v="overline" muted numberOfLines={1}>{label}</T><T v="hero" style={{ marginTop: 6 }}>{value}</T>{date ? <T v="xs" muted>{fmtShort(date)}</T> : null}
     </View>);
-  const run = recs.filter(r => r.id.startsWith('run-')), str = recs.filter(r => r.id.startsWith('str-'));
   return (
     <>
-      <T v="title">Records et paliers</T>
-      <T v="overline" muted style={{ marginTop: space.s4, marginBottom: space.s2 }}>Running</T>
-      {run.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{run.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Tes records apparaîtront après tes premières sorties et courses.</T>}
-      <T v="overline" muted style={{ marginTop: space.s4, marginBottom: space.s2 }}>Renforcement</T>
-      {str.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{str.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Note tes charges le dimanche : tes meilleures apparaîtront ici.</T>}
-      {ach.filter(a => a.date).length ? <>
-        <T v="overline" muted style={{ marginTop: space.s5, marginBottom: space.s2 }}>Paliers atteints</T>
-        {ach.filter(a => a.date).map(a => (
-          <Row key={a.id} gap={space.s3} style={{ backgroundColor: c.stage, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s2 }}>
-            <BrandMark size={22} color={c.stageInk} /><View style={{ flex: 1 }}><T v="label" color={c.stageInk}>{a.title}</T><T v="small" color={c.stageInk2}>{`Atteint le ${fmtShort(a.date!)}`}</T></View>
-          </Row>))}
-      </> : null}
-      <ListGroup title="Prochains paliers">
-        {ach.filter(a => !a.date).map((a, i, arr) => <ListRow key={a.id} last={i === arr.length - 1} chevron={false} title={a.title} sub={a.detail} left={<View style={{ width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: c.ink3 }} />} />)}
-      </ListGroup>
-      <T v="xs" muted style={{ marginTop: space.s2 }}>Les records de vitesse ne viennent que de courses ou de tests sur la bonne distance. Une allure impossible (GPS) est ignorée.</T>
+      <T v="title" style={{ fontSize: 32, lineHeight: 38, marginBottom: space.s4 }}>Records et paliers</T>
+      {got.length ? got.map(a => (
+        <Stage key={a.id} glow mark={false}>
+          <Row gap={space.s4}>
+            <Badge achieved size={64} label={a.title} />
+            <View style={{ flex: 1 }}><Kicker onStage>{`Palier atteint · ${fmtShort(a.date!)}`}</Kicker><T v="h2" color={c.stageInk} style={{ marginTop: 6 }}>{a.title}</T><T v="small" color={c.stageInk2} style={{ marginTop: 2 }}>{a.detail}</T></View>
+          </Row>
+        </Stage>)) : null}
+      <Kicker>Running</Kicker>
+      <View style={{ marginTop: space.s2, marginBottom: space.s5 }}>{run.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{run.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Tes records arrivent avec tes premières sorties et courses.</T>}</View>
+      <Kicker>Renforcement</Kicker>
+      <View style={{ marginTop: space.s2, marginBottom: space.s5 }}>{str.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{str.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Note tes charges le dimanche : tes meilleures apparaîtront ici.</T>}</View>
+      {locked.length ? <><Kicker>À venir</Kicker>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: space.s3 }}>
+          {locked.map(a => <View key={a.id} style={{ width: '33.33%', alignItems: 'center', marginBottom: space.s4, paddingHorizontal: 4 }}><Badge achieved={false} size={48} label={a.title} /><T v="xs" muted style={{ textAlign: 'center', marginTop: 6 }}>{a.title}</T></View>)}
+        </View></> : null}
+      <T v="xs" muted style={{ marginTop: space.s2 }}>Les records de vitesse ne viennent que de courses ou de tests sur la bonne distance.</T>
     </>
   );
 }
-
 function Recaps() {
   const s = useApp(); const { c } = useTheme(); const list = availableRecaps(s);
   return (<><T v="title" style={{ marginBottom: space.s4 }}>Bilans de la semaine</T>

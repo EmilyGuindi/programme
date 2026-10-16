@@ -122,7 +122,7 @@ export function coachLine(s: AppState, d: ISODate): string {
   if (a.reason) return a.reason;
   const next = s.events.filter(e => e.status !== 'annulé' && e.date > d && daysBetween(d, e.date) <= 3).sort((x, y) => x.date.localeCompare(y.date))[0];
   if (next && a.type !== 'rest') { const n = daysBetween(d, next.date); return `${next.name} dans ${n} jour${n > 1 ? 's' : ''} : ${lc(a.title)} comme prévu, sans chercher la fatigue.`; }
-  if (a.type === 'rest') return "Repos. C'est là que le travail de la semaine se transforme en progrès.";
+  if (a.type === 'rest') return a.note ? `${a.note} C'est là que le travail de la semaine se transforme en progrès.` : "C'est là que le travail de la semaine se transforme en progrès.";
   if (a.type === 'box') return 'Vert : séance comme prévu. Note ton effort après, c\'est ce qui règle demain.';
   if (a.type === 'run') return `Vert : ${lc(a.title)}. ${a.run?.kind === 'facile' ? 'Si tu ne peux pas parler, ralentis.' : 'Allures cibles dans la séance.'}`;
   if (a.type === 'renfo') return "Vert : renforcement possible. Optionnel : si l'envie n'y est pas, repos.";

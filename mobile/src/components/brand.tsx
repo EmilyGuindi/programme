@@ -1,0 +1,119 @@
+import { useState, type ReactNode } from 'react';
+import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import Svg, { Circle, Defs, G, Line, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { radius, space, useTheme } from '@/theme/tokens';
+import { Row, T } from './ui';
+
+/* ============================================================
+   Langage graphique BYYND
+   — La coupe : l'angle à 36° du symbole devient un coin coupé sur les surfaces « scène ».
+   — Les deux voies : deux traits parallèles (l'écart du Y) servent de rail de progression.
+   — Le chevron : le bras du Y marque une étape franchie.
+   ============================================================ */
+
+const P1 = 'M12 12 L58 46 L58 114 L43 99 L43 54 L12 31 Z';
+const P2 = 'M114 12 L68 46 L68 114 L83 99 L83 54 L114 31 Z';
+
+/** Surface « scène » : charcoal, coin supérieur droit coupé, filigrane du symbole. Réservée aux moments importants. */
+export function Stage({ children, cut = 28, mark = true, tone = 'ink', style, glow }: { children: ReactNode; cut?: number; mark?: boolean; tone?: 'ink' | 'cobalt'; style?: StyleProp<ViewStyle>; glow?: boolean }) {
+  const { c } = useTheme(); const [sz, setSz] = useState({ w: 0, h: 0 });
+  const onLayout = (e: LayoutChangeEvent) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
+  const { w, h } = sz; const r = 18; const bg = tone === 'cobalt' ? c.accent : c.stage;
+  const d = `M${r},0 H${w - cut} L${w},${cut} V${h - r} Q${w},${h} ${w - r},${h} H${r} Q0,${h} 0,${h - r} V${r} Q0,0 ${r},0 Z`;
+  return (
+    <View onLayout={onLayout} style={[{ padding: space.s5, marginBottom: space.s3 }, style]}>
+      {w > 0 ? <Svg width={w} height={h} style={{ position: 'absolute', left: 0, top: 0 }}>
+        <Defs><RadialGradient id="g" cx="100%" cy="0%" r="90%"><Stop offset="0" stopColor={c.accent} stopOpacity={tone === 'cobalt' ? 0 : 0.28} /><Stop offset="1" stopColor={c.accent} stopOpacity={0} /></RadialGradient></Defs>
+        <Path d={d} fill={bg} />
+        {glow ? <Path d={d} fill="url(#g)" /> : null}
+        {mark ? <G opacity={tone === 'cobalt' ? 0.12 : 0.07} transform={`translate(${w - 150},${h - 120}) scale(1.35)`}><Path d={P1} fill="#FFFFFF" /><Path d={P2} fill="#FFFFFF" /></G> : null}
+      </Svg> : null}
+      {children}
+    </View>
+  );
+}
+
+/** Surtitre éditorial : petit trait cobalt + capitales espacées. */
+export function Kicker({ children, color, onStage }: { children: string; color?: string; onStage?: boolean }) {
+  const { c } = useTheme();
+  return <Row gap={8}><View style={{ width: 14, height: 2, backgroundColor: c.accent }} /><T v="overline" color={color || (onStage ? c.stageInk2 : c.ink2)}>{children}</T></Row>;
+}
+
+/** Repère d'étape : chevron (bras du Y). Plein = franchi, cobalt = en cours, contour = à venir. */
+export function StepMark({ state, size = 22 }: { state: 'done' | 'current' | 'next' | 'revised'; size?: number }) {
+  const { c } = useTheme(); const fill = state === 'done' ? c.ink : state === 'current' ? c.accent : 'none'; const stroke = state === 'next' ? c.ink3 : state === 'revised' ? c.warn : fill;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M3 18l9-7 9 7v-6l-9-7-9 7z" fill={state === 'revised' ? 'none' : fill} stroke={stroke as string} strokeWidth={state === 'next' || state === 'revised' ? 1.8 : 0} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** Insigne de palier : hexagone coupé + symbole. Atteint = plein et lumineux ; à venir = contour discret. */
+export function Badge({ achieved, size = 56, label }: { achieved: boolean; size?: number; label?: string }) {
+  const { c } = useTheme(); const s = size;
+  const hex = `M${s * 0.5},${s * 0.04} L${s * 0.92},${s * 0.27} V${s * 0.73} L${s * 0.5},${s * 0.96} L${s * 0.08},${s * 0.73} V${s * 0.27} Z`;
+  return (
+    <Svg width={s} height={s} accessibilityLabel={label}>
+      <Path d={hex} fill={achieved ? c.stage : 'none'} stroke={achieved ? c.accent : c.line2} strokeWidth={achieved ? 2 : 1.5} strokeDasharray={achieved ? undefined : '3 4'} />
+      <G transform={`translate(${s * 0.27},${s * 0.27}) scale(${(s * 0.46) / 102}) translate(-12,-12)`}>
+        <Path d={P1} fill={achieved ? c.stageInk : c.line2} /><Path d={P2} fill={achieved ? c.accent : c.line2} />
+      </G>
+    </Svg>
+  );
+}
+
+/** Niveau de confiance d'un insight : 1 à 3 barres, comme un signal. */
+export function Confidence({ level }: { level: 'observation' | 'tendance' | 'confirmée' }) {
+  const { c } = useTheme(); const n = level === 'confirmée' ? 3 : level === 'tendance' ? 2 : 1;
+  return <Row gap={2} style={{ alignItems: 'flex-end' }}>{[0, 1, 2].map(i => <View key={i} style={{ width: 4, height: 6 + i * 4, borderRadius: 1, backgroundColor: i < n ? (n === 3 ? c.ok : c.accent) : c.line2 }} />)}</Row>;
+}
+
+/** Compte à rebours : chiffre + arc de graduations (une par jour, 21 jours max). */
+export function Countdown({ days, total = 21, size = 132 }: { days: number; total?: number; size?: number }) {
+  const { c } = useTheme(); const n = Math.min(total, Math.max(0, days)); const R = size / 2 - 6;
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute' }}>
+        {Array.from({ length: total }, (_, i) => { const a = (-210 + (240 * i) / (total - 1)) * (Math.PI / 180); const cx = size / 2, cy = size / 2; const r1 = R - (i < total - n ? 0 : 6);
+          return <Line key={i} x1={cx + Math.cos(a) * (R - 10)} y1={cy + Math.sin(a) * (R - 10)} x2={cx + Math.cos(a) * r1} y2={cy + Math.sin(a) * r1} stroke={i < total - n ? c.accent : 'rgba(244,242,238,0.25)'} strokeWidth={3} strokeLinecap="round" />; })}
+      </Svg>
+      <T v="display" color={c.stageInk} style={{ fontSize: 46, lineHeight: 48 }}>{days === 0 ? 'J' : `J-${days}`}</T>
+      <T v="overline" color={c.stageInk2}>{days === 0 ? "aujourd'hui" : days === 1 ? 'demain' : 'jours'}</T>
+    </View>
+  );
+}
+
+/** Profil d'effort kilomètre par kilomètre : hauteur = intensité. */
+export function EffortProfile({ km, levels }: { km: number; levels: number[] }) {
+  const { c } = useTheme(); const mx = Math.max(...levels, 8);
+  return (
+    <View>
+      <Row gap={4} style={{ alignItems: 'flex-end', height: 64 }}>
+        {levels.map((l, i) => <View key={i} style={{ flex: 1, height: 14 + (l / mx) * 50, borderRadius: 3, backgroundColor: l >= 8 ? c.accent : l >= 7 ? 'rgba(77,123,255,0.65)' : 'rgba(244,242,238,0.35)' }} />)}
+      </Row>
+      <Row between style={{ marginTop: 6 }}><T v="xs" color={c.stageInk2}>km 1</T><T v="xs" color={c.stageInk2}>{`km ${km}`}</T></Row>
+    </View>
+  );
+}
+
+/** Anneau de progression compact (checklists). */
+export function Ring({ value, size = 44, label }: { value: number; size?: number; label: string }) {
+  const { c } = useTheme(); const r = size / 2 - 4; const L = 2 * Math.PI * r; const v = Math.max(0, Math.min(1, value));
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={c.line2} strokeWidth={4} fill="none" />
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={v >= 1 ? c.ok : c.accent} strokeWidth={4} fill="none" strokeDasharray={`${L * v} ${L}`} strokeLinecap="round" />
+      </Svg>
+      <T v="xs" style={{ fontWeight: '700' }}>{label}</T>
+    </View>
+  );
+}
+
+/** Les deux voies : double rail vertical (l'écart du Y). */
+export function Rail({ done, height }: { done: boolean; height: number | string }) {
+  const { c } = useTheme(); const col = done ? c.ink : c.line2;
+  return <Row gap={3} style={{ height: height as any }}><View style={{ width: 2, height: '100%', backgroundColor: col }} /><View style={{ width: 2, height: '100%', backgroundColor: done ? c.accent : c.line2 }} /></Row>;
+}
+export const _r = { Rect, radius };

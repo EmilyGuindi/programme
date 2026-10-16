@@ -19,13 +19,18 @@ export function ContextCards({ d }: { d: string }) {
   if (ev && ev.date !== d) {
     const n = daysBetween(d, ev.date); const rd = readiness(s, ev, d);
     cards.push(
-      <Pressable key="race" onPress={() => router.push({ pathname: '/race/[id]', params: { id: ev.id } })} style={({ pressed }) => ({ backgroundColor: c.ink, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3, opacity: pressed ? 0.9 : 1 })}>
-        <Row between><Tag tone="inverse">Prochaine course</Tag><T v="small" color="rgba(244,242,238,.7)">{fmtShort(ev.date)}</T></Row>
-        <Row style={{ marginTop: space.s3, alignItems: 'flex-end' }}>
-          <T v="hero" color={c.paper}>{`J-${n}`}</T>
-          <View style={{ flex: 1, paddingBottom: 4 }}><T v="label" color={c.paper}>{ev.name}</T><T v="small" color="rgba(244,242,238,.7)">{`Préparation : ${rd.label.toLowerCase()}${ev.distanceKm ? ` · ${String(ev.distanceKm).replace('.', ',')} km` : ''}`}</T></View>
-        </Row>
-        <T v="small" color={c.paper} style={{ marginTop: space.s2, textDecorationLine: 'underline' }}>Préparer ma course</T>
+      <Pressable key="race" onPress={() => router.push({ pathname: '/race/[id]', params: { id: ev.id } })} accessibilityRole="button" style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderRadius: radius.r2, marginBottom: space.s3, overflow: 'hidden', opacity: pressed ? 0.88 : 1 })}>
+        <View style={{ width: 92, alignSelf: 'stretch', backgroundColor: c.stage, alignItems: 'center', justifyContent: 'center', paddingVertical: space.s4 }}>
+          <T v="display" color={c.stageInk} style={{ fontSize: 34, lineHeight: 36 }}>{`J-${n}`}</T>
+          <T v="overline" color={c.stageInk2}>{fmtShort(ev.date)}</T>
+        </View>
+        <View style={{ width: 4, alignSelf: 'stretch', backgroundColor: c.accent }} />
+        <View style={{ flex: 1, padding: space.s4 }}>
+          <T v="overline" color={c.accent}>Prochaine course</T>
+          <T v="label" style={{ marginTop: 2 }}>{ev.name}</T>
+          <T v="small" muted>{`Préparation : ${rd.label.toLowerCase()}${ev.distanceKm ? ` · ${String(ev.distanceKm).replace('.', ',')} km` : ''}`}</T>
+        </View>
+        <T v="h3" color={c.ink3} style={{ paddingRight: space.s4 }}>›</T>
       </Pressable>);
   }
   const pc = pendingClosure(s, addDays(d, -1), d);
@@ -37,9 +42,9 @@ export function ContextCards({ d }: { d: string }) {
 function Ctx({ tag, title, sub, onPress }: { tag: string; title: string; sub: string; onPress: () => void }) {
   const { c } = useTheme();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, backgroundColor: c.accentSoft, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3, opacity: pressed ? 0.85 : 1 })}>
-      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' }}><BrandMark size={20} /></View>
-      <View style={{ flex: 1 }}><Tag tone="accent">{tag}</Tag><T v="label" style={{ marginTop: 4 }}>{title}</T><T v="small" muted>{sub}</T></View>
+    <Pressable onPress={onPress} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3, opacity: pressed ? 0.85 : 1 })}>
+      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' }}><BrandMark size={20} /></View>
+      <View style={{ flex: 1 }}><T v="overline" color={c.accent}>{tag}</T><T v="label" style={{ marginTop: 2 }}>{title}</T><T v="small" muted>{sub}</T></View>
       <T v="h3" color={c.accent}>›</T>
     </Pressable>
   );

@@ -22,9 +22,9 @@ export function readiness(s: AppState, ev: SportEvent, d: ISODate): Readiness {
   const tired = recent.filter(c => c!.sleep === 'mal' || (c!.energy ?? 5) <= 2).length;
   let label: string, detail: string;
   if (!planned) { label = 'À construire'; detail = 'Pas encore assez de séances enregistrées pour juger ta préparation.'; }
-  else if (done / planned >= 0.75 && tired === 0) { label = 'Sur les rails'; detail = `${done} séances sur ${planned} réalisées ces deux dernières semaines, sans signal de fatigue.`; }
-  else if (done / planned >= 0.5) { label = 'Correcte'; detail = `${done} séances sur ${planned} ces deux dernières semaines.${tired ? ' Quelques nuits ou jours difficiles : priorité au repos.' : ''}`; }
-  else { label = 'Allégée'; detail = `${done} séances sur ${planned} ces deux dernières semaines. Ce n'est pas un problème : vise une course à l'effort, sans objectif de chrono.`; }
+  else if (done / planned >= 0.75 && tired === 0) { label = 'Sur les rails'; detail = `${done} séance${done > 1 ? 's' : ''} sur ${planned} réalisée${done > 1 ? 's' : ''} ces deux dernières semaines, sans signal de fatigue.`; }
+  else if (done / planned >= 0.5) { label = 'Correcte'; detail = `${done} séance${done > 1 ? 's' : ''} sur ${planned} ces deux dernières semaines.${tired ? ' Quelques nuits ou jours difficiles : priorité au repos.' : ''}`; }
+  else { label = 'Allégée'; detail = `${done} séance${done > 1 ? 's' : ''} sur ${planned} ces deux dernières semaines. Ce n'est pas un problème : vise une course à l'effort, sans objectif de chrono.`; }
   return { label, detail, remaining };
 }
 

@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import type React from 'react';
+import { Stage } from '@/components/brand';
 import { openDay, presetFor, TYPE_LABEL } from '@/components/plan-row';
 import { Button, Divider, ListGroup, ListRow, Meter, Row, Screen, T } from '@/components/ui';
 import { activitiesOn, adapted, doneOn, phaseOf, weekOf, weekStart } from '@/engine/coach';
@@ -118,8 +120,9 @@ function DayPanel({ a, today }: { a: AdaptedPlan; today: string }) {
   const acts = activitiesOn(s, a.date).filter(x => !x.complementary); const rel = a.date === today ? "Aujourd'hui" : a.date === addDays(today, 1) ? 'Demain' : DAY_NAMES[dow(a.date)];
   const bg = isEvent ? c.stage : c.surface; const fg = isEvent ? c.stageInk : c.ink; const fg2 = isEvent ? c.stageInk2 : c.ink2;
   const n = isEvent ? daysBetween(today, a.date) : 0;
+  const Wrap = ({ children }: { children: React.ReactNode }) => isEvent ? <Stage glow style={{ marginBottom: space.s5 }}>{children}</Stage> : <View style={{ backgroundColor: bg, borderRadius: radius.r2, padding: space.s5, marginBottom: space.s5 }}>{children}</View>;
   return (
-    <View style={{ backgroundColor: bg, borderRadius: radius.r2, padding: space.s5, marginBottom: space.s5 }}>
+    <Wrap>
       <Row between>
         <T v="overline" color={isEvent ? c.stageInk2 : c.accent}>{`${rel} · ${isEvent ? 'Compétition' : TYPE_LABEL[shown.type]}${a.optional ? ' · optionnel' : ''}`}</T>
         {isEvent && n >= 0 ? <T v="overline" color={c.stageInk}>{n === 0 ? 'Jour J' : `J-${n}`}</T> : done ? <T v="overline" color={c.ok}>Fait</T> : a.reason ? <T v="overline" color={c.warn}>Adaptée</T> : null}
@@ -142,7 +145,7 @@ function DayPanel({ a, today }: { a: AdaptedPlan; today: string }) {
           {a.alt && a.date >= today ? <Button small kind="ghost" label="Finalement, HYROX" style={{ paddingHorizontal: 0, marginLeft: 'auto' }} onPress={() => update(st => { delete st.overrides[a.date].noHyrox; })} /> : null}
         </Row>
       </View>
-    </View>
+    </Wrap>
   );
 }
 export const _d = Divider;
