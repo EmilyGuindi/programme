@@ -6,8 +6,9 @@ import { Wordmark } from '@/components/logo';
 import { UpdateBanner } from '@/components/update-banner';
 import { ActivityPrompts } from '@/components/activity-prompts';
 import { ContextCards } from '@/components/today-cards';
+import { ProposalCard } from '@/components/proposal-card';
 import { Button, Card, Coach, Gap, Pill, Row, Screen, T, Tag } from '@/components/ui';
-import { activitiesOn, adapted, coachLine, doneOn, recovery } from '@/engine/coach';
+import { activitiesOn, adapted, coachLine, doneOn, planFor, recovery } from '@/engine/coach';
 import { addDays, fmtLong, sportDay } from '@/engine/dates';
 import { update, useApp } from '@/store/store';
 import { space, useTheme } from '@/theme/tokens';
@@ -39,12 +40,15 @@ export default function Today() {
       <Row style={{ marginVertical: space.s3, flexWrap: 'wrap' }}><Pill level={r.level} /><View style={{ flex: 1, minWidth: 160 }}><T v="small" muted>{r.reasons[0]}</T></View></Row>
       {r.level === 'inconnu' ? <><Button kind="primary" block label="Faire mon check-in · 30 s" onPress={() => router.push('/checkin')} /><Gap /></> : null}
       <Coach>{coachLine(s, d)}</Coach>
+      <ProposalCard d={d} />
       <ContextCards d={d} />
       <ActivityPrompts />
 
       <Card tone={isEvent ? 'ink' : 'default'} onPress={isEvent ? undefined : () => openDay(d)}>
         <Row between><Tag tone={isEvent ? 'inverse' : undefined}>{`${TYPE_LABEL[shown.type]}${a.optional ? ' · optionnel' : ''}`}</Tag>{a.reason ? <Tag tone="accent">adaptée</Tag> : null}</Row>
         <T v="h2" color={fg} style={{ marginTop: space.s3, marginBottom: 4 }}>{shown.title}</T>
+        {a.reason && !s.overrides[d]?.adj && !s.overrides[d]?.keep && (r.level === 'orange' || r.level === 'rouge') && planFor(s, d).type !== 'box' ? <Button small kind="ghost" label="Garder ma séance prévue" style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }} onPress={() => update(st => { st.overrides[d] = { ...(st.overrides[d] || {}), keep: true }; })} /> : null}
+        {s.overrides[d]?.adj ? <Button small kind="ghost" label="Revenir à la séance prévue" style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }} onPress={() => update(st => { delete st.overrides[d].adj; })} /> : null}
         <T muted={!isEvent} color={isEvent ? 'rgba(244,242,238,.75)' : undefined}>{[a.replaced ? '' : a.dur, shown.goal, a.note].filter(Boolean).join(' · ')}</T>
         <Gap />
         {done && shown.type !== 'renfo' ? <T v="label" color={c.ok}>Séance validée</T>

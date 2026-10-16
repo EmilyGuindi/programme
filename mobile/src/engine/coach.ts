@@ -4,6 +4,7 @@ import type { Activity, AdaptedPlan, AppState, ISODate, Level, Measurement, Plan
 
 /* ---------- calendrier ---------- */
 export const DELOAD = [12];
+export const daysBetweenSafe = (a: ISODate, b: ISODate) => daysBetween(a, b);
 export const weekOf = (s: AppState, d: ISODate) => Math.floor(daysBetween(s.program.start, d) / 7) + 1;
 export const weekStart = (s: AppState, w: number) => addDays(s.program.start, (w - 1) * 7);
 export function phaseOf(w: number) {
@@ -88,9 +89,18 @@ export function recovery(s: AppState, d: ISODate): { level: Level; reasons: stri
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 export function adapted(s: AppState, d: ISODate): AdaptedPlan {
-  const p = planFor(s, d), r = recovery(s, d), lv = s.overrides[d]?.level || r.level;
+  const p = planFor(s, d), r = recovery(s, d), ov = s.overrides[d] || {};
+  const lv = ov.keep && !ov.level ? 'vert' : ov.level || r.level;
   const a: AdaptedPlan = { ...p, level: lv, reason: null };
   if (p.type === 'event' || p.type === 'rest') return a;
+  // Adaptation acceptée explicitement depuis une proposition du coach
+  if (ov.adj) {
+    const j = ov.adj;
+    if (j.kind === 'rest') { a.replaced = { type: 'recup', title: 'Récupération active', goal: 'Marche 30 min et 10 min de mobilité.' }; a.reason = j.reason; return a; }
+    if (j.kind === 'easy' && p.type === 'run' && p.run && p.run.kind !== 'facile' && p.run.kind !== 'recup') { a.run = RUN.easy(40, 4); a.title = a.run.title; a.dur = a.run.dur; a.goal = a.run.goal; a.reason = j.reason; return a; }
+    if ((j.kind === 'reduced' || j.kind === 'shoulder') && p.type === 'renfo') { a.level = 'orange'; a.reason = j.reason; return a; }
+    if (j.kind === 'easy' && p.type === 'box') { a.reason = j.reason; return a; }
+  }
   if (lv === 'rouge' && p.type !== 'box') { a.replaced = { type: 'recup', title: 'Récupération active', goal: 'Marche 30 min et 10 min de mobilité. Rien à rattraper.' }; a.reason = 'Rouge : ' + lc(r.reasons[0]); }
   else if (lv === 'rouge' && p.type === 'box') a.reason = `Rouge : va à la box si tu y tiens, effort ≤ 6/10, ou repos. ${r.reasons[0]}`;
   else if (lv === 'orange') {
@@ -99,6 +109,7 @@ export function adapted(s: AppState, d: ISODate): AdaptedPlan {
     else if (p.type === 'box') a.reason = `Orange : garde 1–2 reps en réserve, pas de record aujourd'hui. ${r.reasons[0]}`;
   }
   if (r.shoulder && p.type === 'renfo') a.reason = (a.reason ? a.reason + ' ' : '') + 'Variantes épaule activées.';
+  if (ov.keep && r.level !== 'vert' && r.level !== 'inconnu') a.reason = 'Séance gardée telle que prévue, à ta demande. Écoute tes sensations.';
   return a;
 }
 const lc = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);

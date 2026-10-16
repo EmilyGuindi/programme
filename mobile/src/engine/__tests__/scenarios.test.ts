@@ -188,3 +188,27 @@ test('V2 · lot C : parcours running, premier repère atteint après Lausanne', 
   const j = runningJourney(s, '2026-10-27'); assert.equal(j.find(x => x.id === 'r4')!.status, 'atteinte'); assert.equal(j.filter(x => x.status === 'en cours').length, 1);
   assert.equal(achievements(s, '2026-10-27').find(a => a.id === 'a-race')!.date, '2026-10-25');
 });
+
+import { acceptProposal, keepProgram, proposals } from '../proactive';
+test('V2 · lot D : course ajoutée → proposition, rien ne change avant « Accepter »', () => {
+  const s = fresh(); s.events.push({ id: 'ev-x', name: '5 km test', type: 'course', date: '2026-12-04', distanceKm: 5, priority: 'objectif', status: 'prévu' });
+  // S8 mercredi 2 déc : séance seuil
+  s.overrides = {}; const before = planFor(s, '2026-12-02').run!.kind;
+  const p = proposals(s, '2026-12-01').find(x => x.id === 'race-ev-x')!; assert.ok(p);
+  assert.equal(adapted(s, '2026-12-02').run!.kind, before);
+  acceptProposal(s, p); assert.equal(adapted(s, '2026-12-02').run!.kind, 'facile');
+  assert.ok(!proposals(s, '2026-12-01').some(x => x.id === 'race-ev-x'));
+});
+test('V2 · lot D : fatigue → proposition ; « Garder mon programme » ne change rien et ne revient pas', () => {
+  const s = fresh(); ['2026-11-30', '2026-12-01'].forEach(d => { s.checkins[d] = { sleep: 'mal', energy: 2, soreness: 'non', pain: 'non', motivation: 3 }; });
+  const p = proposals(s, '2026-12-01').find(x => x.id.startsWith('fatigue'))!; assert.ok(p);
+  keepProgram(s, p); assert.ok(!proposals(s, '2026-12-01').some(x => x.id === p.id)); assert.equal(s.overrides['2026-12-02']?.adj, undefined);
+});
+test('V2 · lot D : douleur récurrente → proposition avec mise en garde médicale', () => {
+  const s = fresh(); ['2026-12-01', '2026-12-03', '2026-12-05'].forEach(d => { s.checkins[d] = { sleep: 'bien', energy: 4, soreness: 'non', pain: 'oui', painZone: 'épaule', painLevel: 2, motivation: 4 }; });
+  const p = proposals(s, '2026-12-05').find(x => x.id.startsWith('pain'))!; assert.match(p.caution!, /médical/); assert.ok(p.changes.some(c => c.adj.kind === 'shoulder'));
+});
+test('V2 · lot D : garder sa séance malgré un check-in orange', () => {
+  const s = fresh(); s.checkins['2026-12-02'] = { sleep: 'mal', energy: 4, soreness: 'non', pain: 'non', motivation: 4 };
+  s.overrides['2026-12-02'] = { keep: true }; assert.equal(adapted(s, '2026-12-02').run!.kind, 'qualite');
+});

@@ -13,7 +13,7 @@ export default function Program() {
   const [w, setW] = useState(Math.min(s.program.weeks, Math.max(1, weekOf(s, today()))));
   const ws = weekStart(s, w); const ph = phaseOf(w);
   const days = Array.from({ length: 7 }, (_, i) => adapted(s, addDays(ws, i)));
-  const adj = days.flatMap(a => [a.reason && a.date <= today() ? [a.date, a.reason] : null, a.alt ? [a.date, `Pas de HYROX : ${a.title}`] : null]).filter(Boolean) as [string, string][];
+  const adj = days.flatMap(a => [a.reason && (a.date <= today() || s.overrides[a.date]?.adj) ? [a.date, a.reason] : null, a.alt ? [a.date, `Pas de HYROX : ${a.title}`] : null]).filter(Boolean) as [string, string][];
   const evs = s.events.filter(e => e.status !== 'annulé').sort((a, b) => a.date.localeCompare(b.date));
   return (
     <Screen>

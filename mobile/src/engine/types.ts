@@ -48,7 +48,8 @@ export interface ExerciseLog { kg: (string | null)[]; reps: (string | null)[]; d
 export interface StrengthLog { ex: Record<string, ExerciseLog>; warm?: Record<string, boolean>; leg?: string; level?: string }
 export interface RunLog { km?: string; min?: string; elev?: string; hr?: string; rpe?: number | null; test?: string; steps?: Record<string, boolean> }
 
-export interface Override { noHyrox?: boolean; level?: Level; skip?: boolean }
+export interface Adjustment { kind: 'easy' | 'reduced' | 'rest' | 'shoulder'; reason: string; proposalId: string }
+export interface Override { noHyrox?: boolean; level?: Level; skip?: boolean; /** Garder la séance prévue malgré le check-in. */ keep?: boolean; adj?: Adjustment }
 
 export interface AppState {
   v: number; updatedAt: number;
@@ -67,6 +68,8 @@ export interface AppState {
   closures?: Record<string, number>;
   /** Bilans hebdomadaires déjà ouverts. */
   recapsSeen?: Record<string, number>;
+  /** Décisions sur les propositions du coach : acceptée ou programme gardé. */
+  proposals?: Record<string, { decision: 'accepted' | 'kept'; at: number }>;
 }
 
 export type PlanType = 'box' | 'run' | 'renfo' | 'rest' | 'recup' | 'event';
