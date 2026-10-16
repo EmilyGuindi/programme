@@ -2,14 +2,14 @@
   "expo": {
     "name": "BYYND",
     "slug": "byynd",
-    "version": "2.5.0",
+    "version": "2.6.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "byynd",
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.emilyguindi.byynd",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
         "backgroundColor": "#111111",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -18,7 +18,10 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.RECEIVE_BOOT_COMPLETED"
       ]
     },
     "web": {

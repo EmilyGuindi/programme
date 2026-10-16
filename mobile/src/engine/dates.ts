@@ -9,6 +9,8 @@ export const parseISO = (s: ISODate): Date => { const [y, m, d] = s.split('-').m
 export const addDays = (s: ISODate, n: number): ISODate => { const d = parseISO(s); d.setDate(d.getDate() + n); return iso(d); };
 export const dow = (s: ISODate): number => (parseISO(s).getDay() + 6) % 7; // 0 = lundi
 export const today = (): ISODate => iso(new Date());
+/** Jour « sportif » : avant 4 h du matin, on est encore la veille (un check-in à 0 h 30 ne compte pas pour le lendemain). */
+export const sportDay = (d = new Date()): ISODate => iso(new Date(d.getTime() - 4 * 3600_000));
 export const daysBetween = (a: ISODate, b: ISODate) => Math.round((parseISO(b).getTime() - parseISO(a).getTime()) / 864e5);
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];

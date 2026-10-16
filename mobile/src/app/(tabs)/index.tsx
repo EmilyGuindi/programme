@@ -7,7 +7,7 @@ import { UpdateBanner } from '@/components/update-banner';
 import { ActivityPrompts } from '@/components/activity-prompts';
 import { Button, Card, Coach, Gap, Pill, Row, Screen, T, Tag } from '@/components/ui';
 import { activitiesOn, adapted, coachLine, doneOn, recovery } from '@/engine/coach';
-import { addDays, fmtLong, today } from '@/engine/dates';
+import { addDays, fmtLong, sportDay } from '@/engine/dates';
 import { update, useApp } from '@/store/store';
 import { space, useTheme } from '@/theme/tokens';
 
@@ -23,7 +23,7 @@ export default function Today() {
   const [, tick] = useState(0);
   useEffect(() => { const sub = AppState.addEventListener('change', st => { if (st === 'active') tick(x => x + 1); }); const t = setInterval(() => tick(x => x + 1), 5 * 60 * 1000); return () => { sub.remove(); clearInterval(t); }; }, []);
   const s = useApp(); const { c } = useTheme();
-  const d = today(); const a = adapted(s, d); const r = recovery(s, d); const acts = activitiesOn(s, d);
+  const d = sportDay(); const a = adapted(s, d); const r = recovery(s, d); const acts = activitiesOn(s, d);
   const shown = a.replaced || a; const tmr = adapted(s, addDays(d, 1)); const done = doneOn(s, d);
   const isEvent = a.type === 'event'; const fg = isEvent ? c.paper : undefined;
   return (

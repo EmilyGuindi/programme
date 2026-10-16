@@ -1,5 +1,6 @@
 /** Historique « Quoi de neuf ». La première entrée est la version en cours. */
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  { version: '2.6.0', date: '16 oct. 2026', items: ['Rappels à l\'heure exacte, même téléphone en veille prolongée.', 'Un check-in fait après minuit compte pour la veille : le rappel du matin reste programmé.'] },
   { version: '2.5.0', date: '16 oct. 2026', items: ['Bouton « Rechercher une mise à jour » dans Quoi de neuf.', 'Notifications : check-in chaque matin et pesée hebdo, même app fermée, sans doublon.', 'Notification de test dans Profil → Rappels.', 'Profil en cartes illustrées, comme Progression.'] },
   { version: '2.4.0', date: '16 oct. 2026', items: ['Icône de l\'app en version noire.', 'Wordmark BYYND redessiné fidèlement à la planche de marque (ligature N–D).', 'Salutation selon l\'heure : bonjour, bon après-midi, bonsoir, bonne nuit.'] },
   { version: '2.3.1', date: '16 oct. 2026', items: ['Progression : plus de chiffres affichés d\'emblée, quatre cartes illustrées à ouvrir quand tu veux.'] },

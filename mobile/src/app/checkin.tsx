@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Sheet } from '@/components/sheet';
 import { Button, Card, Choices, Field, Gap, Pill, T } from '@/components/ui';
 import { coachLine, recovery } from '@/engine/coach';
-import { fmtLong, today } from '@/engine/dates';
+import { fmtLong, sportDay } from '@/engine/dates';
 import type { CheckIn } from '@/engine/types';
 import { update, useApp } from '@/store/store';
 
@@ -10,7 +10,7 @@ const scale5: [number, string][] = [[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, 
 
 export default function CheckInScreen() {
   const { then } = useLocalSearchParams<{ then?: string }>();
-  const s = useApp(); const d = today(); const c: CheckIn = s.checkins[d] || {};
+  const s = useApp(); const d = sportDay(); const c: CheckIn = s.checkins[d] || {};
   const set = <K extends keyof CheckIn>(k: K, v: CheckIn[K]) => update(st => {
     const ci = (st.checkins[d] = st.checkins[d] || {}); ci[k] = v; ci.at = Date.now();
     if (k === 'soreness' && v !== 'fortes') ci.soreZone = null;

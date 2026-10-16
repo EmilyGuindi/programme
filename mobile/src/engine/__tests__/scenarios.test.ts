@@ -120,3 +120,8 @@ test('rappels : désactivés = aucun rappel', () => {
   const s = fresh(); s.user.prefs.notifCheckin = false; s.user.prefs.notifWeigh = false;
   assert.equal(planReminders(s, new Date(2026, 10, 3, 6, 0)).length, 0);
 });
+
+import { sportDay } from '../dates';
+test('un check-in fait à 0 h 30 compte pour la veille, pas pour le matin même', () => {
+  assert.equal(sportDay(new Date(2026, 9, 16, 0, 30)), '2026-10-15'); assert.equal(sportDay(new Date(2026, 9, 16, 7, 0)), '2026-10-16');
+});
