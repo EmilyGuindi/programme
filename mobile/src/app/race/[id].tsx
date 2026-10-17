@@ -17,7 +17,7 @@ export default function RaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>(); const s = useApp(); const { c } = useTheme();
   const ev = s.events.find(e => e.id === id);
   if (!ev) return <Sheet title="Événement introuvable"><T>Cet événement a été supprimé.</T></Sheet>;
-  const d = sportDay(); const n = daysBetween(d, ev.date); const past = n < 0 || !!ev.result;
+  const d = sportDay(); const n = daysBetween(d, ev.date); const act0 = eventActivity(s, ev); const past = n < 0 || !!ev.result || (n === 0 && !!act0);
   const rd = readiness(s, ev, d); const st = strategy(s, ev); const act = eventActivity(s, ev);
   const setEv = (fn: (e: NonNullable<typeof ev>) => void) => update(x => { const e = x.events.find(y => y.id === id); if (e) fn(e); });
   return (

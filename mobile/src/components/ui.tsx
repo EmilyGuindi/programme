@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import { type ReactNode } from 'react';
+import { useCallback, useRef, type ReactNode } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Level } from '@/engine/types';
@@ -31,9 +32,11 @@ export function T({ v = 'body', muted, color, style, children, numberOfLines }: 
 
 /* ---------- Mise en page ---------- */
 export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
-  const { c } = useTheme();
+  const { c } = useTheme(); const ref = useRef<ScrollView>(null);
+  // Chaque fois qu'on revient sur un écran (onglet ou retour), il repart en haut.
+  useFocusEffect(useCallback(() => { ref.current?.scrollTo({ y: 0, animated: false }); }, []));
   const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: space.s4, paddingBottom: 120 }}>{children}</View>;
-  return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}>{scroll ? <ScrollView keyboardShouldPersistTaps="handled">{inner}</ScrollView> : inner}</SafeAreaView>;
+  return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}>{scroll ? <ScrollView ref={ref} keyboardShouldPersistTaps="handled">{inner}</ScrollView> : inner}</SafeAreaView>;
 }
 export function Row({ children, gap = space.s3, between, style }: { children: ReactNode; gap?: number; between?: boolean; style?: StyleProp<ViewStyle> }) {
   return <View style={[{ flexDirection: 'row', alignItems: 'center', gap }, between && { justifyContent: 'space-between' }, style]}>{children}</View>;

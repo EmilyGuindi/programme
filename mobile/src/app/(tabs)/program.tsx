@@ -101,10 +101,10 @@ function DayPanel({ a, today }: { a: AdaptedPlan; today: string }) {
       {a.note && !a.reason ? <T v="small" color={fg2} style={{ marginTop: space.s2 }}>{a.note}</T> : null}
       {a.reason ? <T v="small" color={fg2} style={{ marginTop: space.s2 }}>{a.reason}</T> : null}
       {shown.type === 'rest' && !a.note && !shown.goal ? <T color={fg2} style={{ marginTop: 4 }}>Récupération. Une marche est bienvenue.</T> : null}
-      {done && acts.length ? <T v="small" color={c.ok} style={{ marginTop: space.s2 }}>{`Réalisé : ${acts.map(x => `${x.title}${x.durationMin ? ` · ${Math.round(x.durationMin)} min` : ''}`).join(', ')}`}</T> : null}
+      {done && acts.length ? <T v="small" color={c.ok} style={{ marginTop: space.s2 }}>{`Réalisé : ${acts.map(x => [x.title, x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.calories ? `${Math.round(x.calories)} kcal estimées` : ''].filter(Boolean).join(' · ')).join(', ')}`}</T> : null}
       {isEvent && a.event!.result ? <T v="small" color={c.stageInk} style={{ marginTop: space.s2 }}>{`Résultat : ${clock(a.event!.result.time)}`}</T> : null}
       <View style={{ marginTop: space.s4, gap: space.s2 }}>
-        {isEvent ? <Button kind="inverse" block label={a.event!.result ? 'Voir le débrief' : 'Préparer la course'} onPress={() => router.push({ pathname: '/race/[id]', params: { id: a.event!.id } })} />
+        {isEvent ? <Button kind="inverse" block label={a.event!.result ? 'Voir le débrief' : s.activities.some(x => x.eventId === a.event!.id) ? 'Saisir mon temps' : 'Préparer la course'} onPress={() => (!a.event!.result && s.activities.some(x => x.eventId === a.event!.id) ? router.push({ pathname: '/result/[id]', params: { id: a.event!.id } }) : router.push({ pathname: '/race/[id]', params: { id: a.event!.id } }))} />
           : shown.type === 'run' || shown.type === 'renfo' ? <Button kind="primary" block label={done && shown.type === 'renfo' ? 'Revoir la séance' : 'Voir la séance'} onPress={() => router.push({ pathname: shown.type === 'run' ? '/run/[date]' : '/renfo/[date]', params: { date: a.date } })} />
           : !done && (shown.type === 'box' || shown.type === 'recup') && a.date <= today ? <Button kind="primary" block label="Marquer comme fait" onPress={() => router.push({ pathname: '/activity', params: { date: a.date, preset: a.replaced ? 'marche' : presetFor(a) } })} />
           : null}

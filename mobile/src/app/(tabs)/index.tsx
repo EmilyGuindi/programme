@@ -69,7 +69,7 @@ export default function Today() {
             <T v="small" color={c.stageInk2} style={{ paddingBottom: 8 }}>{a.event!.result ? (a.event!.distanceKm ? `${mmss(a.event!.result.time / a.event!.distanceKm)} /km` : 'temps officiel') : 'durée Strava'}</T>
           </Row>
           <T color={c.stageInk} style={{ marginTop: space.s3, opacity: 0.9 }}>{a.event!.result?.feeling ? 'Débrief fait. Récupère bien, la suite s\'ajuste.' : 'Deux minutes pour ton débrief : il prépare la suite.'}</T>
-          <Button kind="inverse" block style={{ marginTop: space.s5 }} label={a.event!.result?.feeling ? 'Voir mon analyse' : a.event!.result ? 'Faire mon débrief' : 'Saisir mon temps officiel'} onPress={() => router.push({ pathname: '/race/[id]', params: { id: a.event!.id } })} />
+          <Button kind="inverse" block style={{ marginTop: space.s5 }} label={a.event!.result?.feeling ? 'Voir mon analyse' : a.event!.result ? 'Faire mon débrief' : 'Saisir mon temps officiel'} onPress={() => a.event!.result ? router.push({ pathname: '/race/[id]', params: { id: a.event!.id } }) : router.push({ pathname: '/result/[id]', params: { id: a.event!.id } })} />
         </Stage>
       ) : (
       <Stage mark={isEvent} glow={isEvent}>
@@ -79,6 +79,7 @@ export default function Today() {
         </Row>
         <T v="title" color={c.stageInk} style={{ fontSize: 30, lineHeight: 35, marginTop: space.s3, maxWidth: '88%' }}>{shown.title}</T>
         {(a.replaced ? '' : a.dur) ? <T color={c.stageInk2} style={{ marginTop: 4 }}>{a.dur}</T> : null}
+        {done ? <T v="small" color={c.stageInk2} style={{ marginTop: 4 }}>{`Réalisé : ${acts.filter(x => !x.complementary).map(x => [x.title, x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.calories ? `${Math.round(x.calories)} kcal estimées` : ''].filter(Boolean).join(' · ')).join(', ')}`}</T> : null}
         <T color={c.stageInk} style={{ marginTop: space.s3, opacity: 0.9 }}>{coachLine(s, d)}</T>
         <View style={{ marginTop: space.s5, gap: space.s2 }}>
           {done && shown.type !== 'renfo' ? null

@@ -15,7 +15,7 @@ const DAY = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'diman
 /** Statut d'un jour, identique partout (Aujourd'hui, Programme, Progression). */
 export function dayStatus(s: AppState, a: AdaptedPlan, today: string): Status {
   if (a.date < s.user.startDate) return 'none';
-  if (a.type === 'event') return 'race';
+  if (a.type === 'event') return a.event?.result || s.activities.some(x => x.eventId === a.event?.id) ? 'raceDone' : 'race';
   const acts = s.activities.filter(x => x.date === a.date && !x.complementary);
   if (doneOn(s, a.date)) return acts.some(x => x.source === 'strava') ? 'synced' : 'done';
   if (acts.some(x => x.needsConfirm)) return 'pending';
@@ -40,7 +40,7 @@ export function dayIcon(a: AdaptedPlan): IconName {
  *  plein = fait (avec coche), contour = prévu, pointillés = optionnel, cobalt = course, sans cercle = repos. */
 export function DayBadge({ status, icon, size = 32, onStage }: { status: Status; icon: IconName; size?: number; onStage?: boolean }) {
   const { c } = useTheme(); const ink = onStage ? c.stageInk : c.ink; const faint = onStage ? c.stageInk2 : c.ink3;
-  const filled = status === 'done' || status === 'synced'; const race = status === 'race';
+  const filled = status === 'done' || status === 'synced'; const race = status === 'race' || status === 'raceDone';
   if (status === 'rest' || status === 'none') return <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}><Icon name="moon" size={size * 0.55} color={faint} /></View>;
   const border = race || filled ? 'transparent' : status === 'adapted' ? c.warn : status === 'missed' ? (onStage ? c.stageInk2 : c.line2) : status === 'optional' ? faint : (onStage ? c.stageInk2 : c.ink2);
   const bg = race ? c.accent : filled ? ink : 'transparent'; const fg = race ? '#fff' : filled ? (onStage ? c.stage : c.paper) : status === 'missed' ? faint : ink;
@@ -49,7 +49,7 @@ export function DayBadge({ status, icon, size = 32, onStage }: { status: Status;
       <View style={{ width: size, height: size, borderRadius: size / 2, borderWidth: race || filled ? 0 : 1.5, borderStyle: status === 'optional' ? 'dashed' : 'solid', borderColor: border, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
         <Icon name={icon} size={size * 0.6} color={fg} />
       </View>
-      {filled ? <View style={{ position: 'absolute', right: -3, bottom: -3, width: 15, height: 15, borderRadius: 8, backgroundColor: c.ok, borderWidth: 2, borderColor: onStage ? c.stage : c.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={9} color="#fff" /></View> : null}
+      {filled || status === 'raceDone' ? <View style={{ position: 'absolute', right: -3, bottom: -3, width: 15, height: 15, borderRadius: 8, backgroundColor: c.ok, borderWidth: 2, borderColor: onStage ? c.stage : c.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={9} color="#fff" /></View> : null}
       {status === 'synced' ? <View style={{ position: 'absolute', right: -2, top: -2, width: 9, height: 9, borderRadius: 5, backgroundColor: c.accent, borderWidth: 1.5, borderColor: onStage ? c.stage : c.surface }} /> : null}
       {status === 'pending' ? <View style={{ position: 'absolute', right: -3, bottom: -3, width: 15, height: 15, borderRadius: 8, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' }}><T v="xs" color="#fff" style={{ fontSize: 10, lineHeight: 12, fontWeight: '700' }}>?</T></View> : null}
       {status === 'adapted' ? <View style={{ position: 'absolute', right: -2, bottom: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: c.warn, borderWidth: 2, borderColor: onStage ? c.stage : c.surface }} /> : null}
@@ -95,6 +95,6 @@ export function WeekTracker({ s, start, today, selected, onSelect }: { s: AppSta
 export function StatusLegend({ statuses }: { statuses: Status[] }) {
   const uniq = [...new Set(statuses.filter(x => x !== 'none'))];
   const { c } = useTheme();
-  const dot = (st: Status) => { const filled = st === 'done' || st === 'synced'; return <View style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: st === 'race' ? c.accent : filled ? c.ink : 'transparent', borderWidth: st === 'race' || filled ? 0 : 1.5, borderStyle: st === 'optional' ? 'dashed' : 'solid', borderColor: st === 'adapted' ? c.warn : st === 'missed' ? c.line2 : c.ink2 }} />; };
+  const dot = (st: Status) => { const filled = st === 'done' || st === 'synced'; return <View style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: st === 'race' || st === 'raceDone' ? c.accent : filled ? c.ink : 'transparent', borderWidth: st === 'race' || st === 'raceDone' || filled ? 0 : 1.5, borderStyle: st === 'optional' ? 'dashed' : 'solid', borderColor: st === 'adapted' ? c.warn : st === 'missed' ? c.line2 : c.ink2 }} />; };
   return <Row gap={12} style={{ flexWrap: 'wrap' }}>{uniq.filter(x => x !== 'rest').map(st => <Row key={st} gap={5}>{dot(st)}<T v="xs" muted>{STATUS_LABEL[st]}</T></Row>)}</Row>;
 }

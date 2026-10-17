@@ -138,8 +138,8 @@ export const _r = { Rect, radius };
    - en attente : tige vide avec point central
    - synchronisé: symbole plein + point cobalt
    ============================================================ */
-export type Status = 'planned' | 'done' | 'adapted' | 'optional' | 'rest' | 'race' | 'missed' | 'pending' | 'synced' | 'none';
-export const STATUS_LABEL: Record<Status, string> = { planned: 'prévu', done: 'fait', adapted: 'adapté', optional: 'optionnel', rest: 'repos', race: 'course', missed: 'non fait', pending: 'à confirmer', synced: 'synchronisé', none: '' };
+export type Status = 'planned' | 'done' | 'adapted' | 'optional' | 'rest' | 'race' | 'raceDone' | 'missed' | 'pending' | 'synced' | 'none';
+export const STATUS_LABEL: Record<Status, string> = { planned: 'prévu', done: 'fait', adapted: 'adapté', optional: 'optionnel', rest: 'repos', race: 'course', raceDone: 'course terminée', missed: 'non fait', pending: 'à confirmer', synced: 'synchronisé', none: '' };
 export function StatusMark({ status, size = 18, color, onStage }: { status: Status; size?: number; color?: string; onStage?: boolean }) {
   const { c } = useTheme(); const ink = color || (onStage ? c.stageInk : c.ink); const faint = onStage ? c.stageInk2 : c.ink3;
   const w = size, h = size * 1.2;
