@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import { useSyncExternalStore } from 'react';
-import { mergeStrava } from '@/engine/strava';
+import { fillEventResults, mergeStrava } from '@/engine/strava';
 import { mergeStates } from '@/engine/merge';
 import { DEFAULT_STATE, migrate, seed } from '@/engine/state';
 import type { AppState } from '@/engine/types';
@@ -28,6 +28,7 @@ export async function loadStore() {
     if (sv) server = JSON.parse(sv);
   } catch {}
   ready = true; emit();
+  if (fillEventResults(structuredClone(state))) update(st => { fillEventResults(st); });
   pull();
 }
 

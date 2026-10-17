@@ -18,13 +18,13 @@ export interface Activity {
   laps?: { km: number; s: number; hr: number | null; elev: number | null }[];
   needsConfirm?: boolean; userEdited?: boolean; askEffort?: boolean;
   /** Énergie estimée par la montre ou Strava (kcal). Une seule source de vérité : l'activité elle-même. */
-  calories?: number | null; caloriesStatus?: 'available' | 'absent' | 'pending'; caloriesAt?: number;
+  calories?: number | null; caloriesStatus?: 'available' | 'absent' | 'pending'; caloriesAt?: number; description?: string;
 }
 export interface StravaItem {
   stravaId: string; name: string; sportType: string; date: ISODate; startLocal?: string; distanceKm: number | null; movingMin: number | null;
   elapsedMin: number | null; elevM: number | null; avgHr: number | null; maxHr: number | null; perceived?: number | null; trainer?: boolean;
   laps?: { km: number; s: number; hr: number | null; elev: number | null }[]; deleted?: boolean; updatedAt: number;
-  calories?: number | null; caloriesChecked?: boolean; caloriesAt?: number;
+  calories?: number | null; caloriesChecked?: boolean; caloriesAt?: number; description?: string;
 }
 
 export interface SportEvent {
@@ -32,7 +32,9 @@ export interface SportEvent {
   distanceKm?: number | null; place?: string; priority: 'participation' | 'repère' | 'objectif'; goal?: string;
   status: 'prévu' | 'fait' | 'annulé';
   result?: { time: number; elevM?: number | null; avgHr?: number | null; effort?: number | null; notes?: string;
-    feeling?: number | null; pacing?: 'trop-vite' | 'regulier' | 'fini-fort' | null; conditions?: string[] };
+    feeling?: number | null; pacing?: 'trop-vite' | 'regulier' | 'fini-fort' | null; conditions?: string[];
+    /** D'où vient le temps : saisi, description Strava, ou chrono de la montre. */
+    source?: 'saisi' | 'description' | 'montre'; movingSec?: number; distanceKm?: number | null; maxHr?: number | null; calories?: number | null };
   checklist?: Record<string, boolean>;
 }
 

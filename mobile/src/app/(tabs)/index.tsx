@@ -66,7 +66,7 @@ export default function Today() {
           <T v="title" color={c.stageInk} style={{ fontSize: 30, lineHeight: 35, marginTop: space.s3, maxWidth: '85%' }}>{a.event!.name}</T>
           <Row gap={8} style={{ alignItems: 'flex-end', marginTop: space.s3 }}>
             <T v="display" color={c.stageInk}>{a.event!.result ? clock(a.event!.result.time) : finishedAct?.elapsedMin ? `${Math.floor(finishedAct.elapsedMin / 60) ? `${Math.floor(finishedAct.elapsedMin / 60)}h` : ''}${String(Math.round(finishedAct.elapsedMin % 60)).padStart(2, '0')}` : '—'}</T>
-            <T v="small" color={c.stageInk2} style={{ paddingBottom: 8 }}>{a.event!.result ? (a.event!.distanceKm ? `${mmss(a.event!.result.time / a.event!.distanceKm)} /km` : 'temps officiel') : 'durée Strava'}</T>
+            <T v="small" color={c.stageInk2} style={{ paddingBottom: 8 }}>{a.event!.result ? (a.event!.result.source === 'montre' ? 'temps montre' : a.event!.distanceKm ? `${mmss(a.event!.result.time / a.event!.distanceKm)} /km` : 'temps officiel') : 'durée Strava'}</T>
           </Row>
           <T color={c.stageInk} style={{ marginTop: space.s3, opacity: 0.9 }}>{a.event!.result?.feeling ? 'Débrief fait. Récupère bien, la suite s\'ajuste.' : 'Deux minutes pour ton débrief : il prépare la suite.'}</T>
           <Button kind="inverse" block style={{ marginTop: space.s5 }} label={a.event!.result?.feeling ? 'Voir mon analyse' : a.event!.result ? 'Faire mon débrief' : 'Saisir mon temps officiel'} onPress={() => a.event!.result ? router.push({ pathname: '/race/[id]', params: { id: a.event!.id } }) : router.push({ pathname: '/result/[id]', params: { id: a.event!.id } })} />

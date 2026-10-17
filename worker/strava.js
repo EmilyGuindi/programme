@@ -48,7 +48,7 @@ async function sget(env, path) {
 /** Ne garde que ce dont BYYND a besoin. */
 function normalize(a) {
   return {
-    stravaId: String(a.id), name: a.name, sportType: a.sport_type || a.type, date: String(a.start_date_local || '').slice(0, 10),
+    stravaId: String(a.id), name: a.name, ...(typeof a.description === 'string' ? { description: a.description.slice(0, 500) } : {}), sportType: a.sport_type || a.type, date: String(a.start_date_local || '').slice(0, 10),
     startLocal: a.start_date_local, distanceKm: a.distance ? Math.round(a.distance / 10) / 100 : null,
     movingMin: a.moving_time ? Math.round(a.moving_time / 6) / 10 : null, elapsedMin: a.elapsed_time ? Math.round(a.elapsed_time / 6) / 10 : null,
     elevM: a.total_elevation_gain != null ? Math.round(a.total_elevation_gain) : null, avgHr: a.average_heartrate ? Math.round(a.average_heartrate) : null,

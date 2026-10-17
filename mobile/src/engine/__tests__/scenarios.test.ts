@@ -234,3 +234,11 @@ test('énergie · la promenade compte dans le total sans valider l\'entraînemen
   const s = fresh(); mergeStrava(s, [itemK({ id: 'w9', sport: 'Walk', date: '2026-12-02', km: 3, min: 45, kcal: 150 })]);
   const e = energy(s, '2026-12-02', '2026-12-02'); assert.equal(e.byCat.promenade.kcal, 150); assert.equal(doneOn(s, '2026-12-02'), false);
 });
+
+import { fillEventResults, timeFromText } from '../strava';
+test('course : le résultat vient de la montre via Strava, ou de la description si un temps y est écrit', () => {
+  const s = fresh();
+  mergeStrava(s, [{ ...itemK({ id: 'mud', sport: 'Run', date: '2026-10-17', km: 4.83, min: 34.65, el: 72.23, kcal: 441, hr: 152 }) }]);
+  const e = s.events.find(x => x.id === 'ev-mudgirl')!; assert.equal(e.result!.time, 4334); assert.equal(e.result!.source, 'montre'); assert.equal(e.result!.calories, 441);
+  assert.equal(timeFromText("Temps officiel 1h10'05 !"), 4205); assert.equal(timeFromText('chrono 58:30'), 3510); assert.equal(timeFromText(''), null);
+});

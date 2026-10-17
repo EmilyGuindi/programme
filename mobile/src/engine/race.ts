@@ -76,7 +76,14 @@ export function eventActivity(s: AppState, ev: SportEvent): Activity | undefined
 /** Analyse factuelle après la course. */
 export function raceAnalysis(s: AppState, ev: SportEvent): string[] {
   const out: string[] = []; const r = ev.result; if (!r) return out;
-  if (ev.distanceKm) out.push(`${mmss(r.time / ev.distanceKm)} /km de moyenne sur ${String(ev.distanceKm).replace('.', ',')} km.`);
+  const clk = (x: number) => { const h = Math.floor(x / 3600), m = Math.floor((x % 3600) / 60), sec = x % 60; return `${h ? `${h}h` : ''}${String(m).padStart(h ? 2 : 1, '0')}:${String(sec).padStart(2, '0')}`; };
+  if (r.source === 'montre') out.push(`Temps relevé par ta montre : ${clk(r.time)} au total${r.movingSec ? `, dont ${clk(r.movingSec)} en mouvement` : ''}. Remplace-le par le temps officiel si tu l'as.`);
+  if (r.source === 'description') out.push('Temps repris de la description de ton activité Strava.');
+  const dist = ev.distanceKm || r.distanceKm;
+  if (dist && ev.type === 'course') out.push(`${mmss(r.time / dist)} /km de moyenne sur ${String(dist).replace('.', ',')} km.`);
+  else if (r.distanceKm && r.movingSec) out.push(`${String(r.distanceKm).replace('.', ',')} km parcourus, ${mmss(r.movingSec / r.distanceKm)} /km quand tu courais.`);
+  if (r.avgHr) out.push(`Fréquence cardiaque : ${r.avgHr} bpm en moyenne${r.maxHr ? `, ${r.maxHr} au maximum` : ''}.`);
+  if (r.calories) out.push(`${r.calories} kcal estimées par ta montre.`);
   const act = eventActivity(s, ev);
   if (act?.laps && act.laps.length >= 4) {
     const half = Math.floor(act.laps.length / 2); const t = (ls: typeof act.laps) => ls!.reduce((x, l) => x + l.s, 0) / ls!.reduce((x, l) => x + l.km, 0);

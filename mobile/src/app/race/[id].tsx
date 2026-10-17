@@ -33,7 +33,7 @@ export default function RaceScreen() {
         </Row>
         {past ? <View style={{ marginTop: space.s4 }}>
           <T v="display" color={c.stageInk}>{ev.result ? clock(ev.result.time) : 'Terminé'}</T>
-          <T color={c.stageInk2}>{ev.result && ev.distanceKm ? `${mmss(ev.result.time / ev.distanceKm)} /km de moyenne` : 'Saisis ton résultat pour le débrief'}</T>
+          <T color={c.stageInk2}>{ev.result ? (ev.result.source === 'montre' ? 'temps relevé par ta montre' : ev.distanceKm ? `${mmss(ev.result.time / ev.distanceKm)} /km de moyenne` : 'temps officiel') : 'Saisis ton résultat pour le débrief'}</T>
         </View> : ev.goal ? <View style={{ marginTop: space.s4, borderTopWidth: 1, borderTopColor: 'rgba(244,242,238,0.14)', paddingTop: space.s3 }}><T v="overline" color={c.stageInk2}>Objectif</T><T color={c.stageInk} style={{ marginTop: 2 }}>{ev.goal}</T></View> : null}
       </Stage>
 
