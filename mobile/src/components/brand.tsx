@@ -15,27 +15,26 @@ import { Row, T } from './ui';
 const P1 = 'M12 12 L58 46 L58 114 L43 99 L43 54 L12 31 Z';
 const P2 = 'M114 12 L68 46 L68 114 L83 99 L83 54 L114 31 Z';
 
-/** Surface « scène » : charcoal, coin supérieur droit coupé, filigrane du symbole. Réservée aux moments importants. */
-/** Règles du motif : uniquement sur les moments importants (compétition, objectif majeur, cycle, record, palier).
- *  Cadrage : coin inférieur droit, rogné, hauteur ≈ 1,35 × 102 px ; opacité 7 % sur charcoal, 12 % sur cobalt.
- *  Le coin coupé accompagne toujours le motif, jamais seul. Le halo (glow) est réservé aux compétitions. */
-export function Stage({ children, cut = 28, mark = false, tone = 'ink', style, glow }: { children: ReactNode; cut?: number; mark?: boolean; tone?: 'ink' | 'cobalt'; style?: StyleProp<ViewStyle>; glow?: boolean }) {
+/** BrandedCard — la carte signature BYYND.
+ *  Motif : le symbole officiel (tracés du kit), très grand, rogné à droite, opacité 6 % sur sombre, 10 % sur lime.
+ *  Usage réservé : séance du jour, course, record, accomplissement de la semaine, temps fort du coach.
+ *  Pas de bordure, pas de halo : la profondeur vient du contraste de surface. */
+export function Stage({ children, mark = false, tone = 'ink', style, glow }: { children: ReactNode; cut?: number; mark?: boolean; tone?: 'ink' | 'lime' | 'cobalt'; style?: StyleProp<ViewStyle>; glow?: boolean }) {
   const { c } = useTheme(); const [sz, setSz] = useState({ w: 0, h: 0 });
   const onLayout = (e: LayoutChangeEvent) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
-  const { w, h } = sz; const r = 18; const bg = tone === 'cobalt' ? c.accent : c.stage;
-  const d = mark ? `M${r},0 H${w - cut} L${w},${cut} V${h - r} Q${w},${h} ${w - r},${h} H${r} Q0,${h} 0,${h - r} V${r} Q0,0 ${r},0 Z` : `M${r},0 H${w - r} Q${w},0 ${w},${r} V${h - r} Q${w},${h} ${w - r},${h} H${r} Q0,${h} 0,${h - r} V${r} Q0,0 ${r},0 Z`;
+  const lime = tone === 'lime' || tone === 'cobalt'; const bg = lime ? c.accent : c.stage;
+  const scale = Math.max(1.6, sz.h / 70);
   return (
-    <View onLayout={onLayout} style={[{ padding: space.s5, marginBottom: space.s3 }, style]}>
-      {w > 0 ? <Svg width={w} height={h} style={{ position: 'absolute', left: 0, top: 0 }}>
-        <Defs><RadialGradient id="g" cx="100%" cy="0%" r="90%"><Stop offset="0" stopColor={c.accent} stopOpacity={tone === 'cobalt' ? 0 : 0.28} /><Stop offset="1" stopColor={c.accent} stopOpacity={0} /></RadialGradient></Defs>
-        <Path d={d} fill={bg} />
-        {glow ? <Path d={d} fill="url(#g)" /> : null}
-        {mark ? <G opacity={tone === 'cobalt' ? 0.12 : 0.07} transform={`translate(${w - 150},${h - 120}) scale(1.35)`}><Path d={P1} fill="#FFFFFF" /><Path d={P2} fill="#FFFFFF" /></G> : null}
+    <View onLayout={onLayout} style={[{ padding: space.s5, marginBottom: space.s3, borderRadius: radius.r3, overflow: 'hidden', backgroundColor: bg }, style]}>
+      {sz.w > 0 ? <Svg width={sz.w} height={sz.h} style={{ position: 'absolute', left: 0, top: 0 }}>
+        {glow && !lime ? <><Defs><RadialGradient id="g" cx="100%" cy="0%" r="80%"><Stop offset="0" stopColor={c.accent} stopOpacity={0.16} /><Stop offset="1" stopColor={c.accent} stopOpacity={0} /></RadialGradient></Defs><Rect width={sz.w} height={sz.h} fill="url(#g)" /></> : null}
+        {mark ? <G opacity={lime ? 0.1 : 0.06} transform={`translate(${sz.w - 102 * scale * 0.62},${sz.h * 0.08}) scale(${scale})`}><Path d={P1} fill={lime ? '#0B0D0A' : '#F5F7F2'} transform="translate(-12,-12)" /><Path d={P2} fill={lime ? '#0B0D0A' : '#F5F7F2'} transform="translate(-12,-12)" /></G> : null}
       </Svg> : null}
       {children}
     </View>
   );
 }
+export const BrandedCard = Stage;
 
 /** Surtitre : capitales espacées sur les scènes, micro-label ailleurs. */
 export function Kicker({ children, color, onStage }: { children: string; color?: string; onStage?: boolean }) {

@@ -3,10 +3,10 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useTheme } from '@/theme/tokens';
 
 /** Icônes linéaires 22 px, trait 1,8 : un seul jeu pour les accès secondaires et les réglages. */
-export type IconName = 'calendar' | 'run' | 'body' | 'dumbbell' | 'path' | 'peak' | 'story' | 'target' | 'bell' | 'link' | 'cycle' | 'data' | 'spark' | 'shoe' | 'kettlebell' | 'sled' | 'walk' | 'moon' | 'flag' | 'flame' | 'check';
+export type IconName = 'calendar' | 'run' | 'body' | 'dumbbell' | 'path' | 'peak' | 'story' | 'target' | 'bell' | 'link' | 'cycle' | 'data' | 'spark' | 'shoe' | 'kettlebell' | 'sled' | 'walk' | 'moon' | 'flag' | 'flame' | 'check' | 'today' | 'chevrons' | 'person' | 'coach' | 'play' | 'pause' | 'stop' | 'swap' | 'plus' | 'next';
 type N = IconName;
-export function Icon({ name, size = 22, color }: { name: N; size?: number; color?: string }) {
-  const { c } = useTheme(); const s = color || c.ink; const p = { stroke: s, strokeWidth: 1.8, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+export function Icon({ name, size = 22, color, filled }: { name: N; size?: number; color?: string; filled?: boolean }) {
+  const { c } = useTheme(); const s = color || c.ink; const p = { stroke: s, strokeWidth: 1.8, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }; const f = filled ? s : 'none';
   const shapes: Record<N, React.ReactElement> = {
     calendar: <><Rect x={3.5} y={5} width={17} height={15} rx={3} {...p} /><Path d="M3.5 10h17M8 3v4M16 3v4" {...p} /><Path d="M8.5 14.5l2 2 4-4" {...p} /></>,
     run: <><Circle cx={4.5} cy={19} r={1.6} fill={s} /><Path d="M7 18c4 0 3.5-6 8-6s3-6 4.5-8" {...p} strokeDasharray="0.1 3.4" /><Path d="M19.5 10V3.5h-0M19.5 4h4" {...p} /></>,
@@ -28,6 +28,16 @@ export function Icon({ name, size = 22, color }: { name: N; size?: number; color
     flag: <><Path d="M6 21V3.5" {...p} /><Path d="M6 4.2h11.5l-2.6 3.7 2.6 3.7H6" {...p} /></>,
     flame: <Path d="M12 3c.4 3 4.8 4.9 4.8 9.8A4.8 4.8 0 0 1 12 17.6a4.8 4.8 0 0 1-4.8-4.8c0-2.1 1-3.4 2.1-4.2.2 1.6 1 2.6 2.1 2.7-.3-3.1.4-5.8.6-8.3z" {...p} />,
     check: <Path d="M5 12.5l4.3 4.3L19 7.2" {...p} />,
+    today: <><Circle cx={12} cy={12} r={8.5} {...p} fill={filled ? s : 'none'} /><Circle cx={12} cy={12} r={2.6} fill={filled ? c.paper : s} /></>,
+    chevrons: <><Path d="M4 13l8-6 8 6v-3.5l-8-6-8 6z" {...p} fill={f} /><Path d="M4 20l8-6 8 6v-3.5l-8-6-8 6z" {...p} fill={f} /></>,
+    person: <><Circle cx={12} cy={7.5} r={3.8} {...p} fill={f} /><Path d="M4.5 20.5c.8-4 3.8-6 7.5-6s6.7 2 7.5 6z" {...p} fill={f} /></>,
+    coach: <><Path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17h0A1.5 1.5 0 0 1 4 15.5z" {...p} /><Path d="M8.5 9.5h7M8.5 12.5h4.5" {...p} /></>,
+    play: <Path d="M7.5 5.2v13.6c0 .8.9 1.3 1.6.8l10-6.8a1 1 0 0 0 0-1.6l-10-6.8c-.7-.5-1.6 0-1.6.8z" fill={s} />,
+    pause: <><Rect x={6} y={5} width={4} height={14} rx={1.4} fill={s} /><Rect x={14} y={5} width={4} height={14} rx={1.4} fill={s} /></>,
+    stop: <Rect x={6} y={6} width={12} height={12} rx={2.5} fill={s} />,
+    next: <><Path d="M5.5 5.8v12.4c0 .8.9 1.2 1.5.7l8-6.2a.9.9 0 0 0 0-1.4l-8-6.2c-.6-.5-1.5-.1-1.5.7z" fill={s} /><Rect x={16.5} y={5} width={2.5} height={14} rx={1.2} fill={s} /></>,
+    plus: <Path d="M12 5v14M5 12h14" {...p} />,
+    swap: <><Path d="M7 7h11l-3-3M17 17H6l3 3" {...p} /></>,
     spark: <><Path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z" {...p} /><Path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" {...p} /></>,
   };
   return <Svg width={size} height={size} viewBox="0 0 24 24">{shapes[name]}</Svg>;

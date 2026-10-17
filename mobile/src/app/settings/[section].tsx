@@ -127,7 +127,7 @@ function Program() {
       <ListGroup title="Phases">
         {PH.map((p, i) => { const st = w > p.to ? 'terminée' : w >= p.from ? 'en cours' : 'à venir'; return (
           <ListRow key={p.n + i} last={i === PH.length - 1} chevron={false} title={`${p.name}`} sub={`S${p.from}${p.to !== p.from ? `–S${p.to}` : ''} · ${p.what}`}
-            left={<View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: st === 'en cours' ? c.accent : st === 'terminée' ? c.ink : c.surface2 }}><T v="label" color={st === 'à venir' ? c.ink2 : '#fff'}>{p.n}</T></View>}
+            left={<View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: st === 'en cours' ? c.accent : st === 'terminée' ? c.ink : c.surface2 }}><T v="label" color={st === 'à venir' ? c.ink2 : st === 'en cours' ? c.accentInk : c.paper}>{p.n}</T></View>}
             right={<T v="xs" color={st === 'en cours' ? c.accent : c.ink3}>{st}</T>} />); })}
       </ListGroup>
       <ListGroup title="Compétitions du cycle">

@@ -1,5 +1,5 @@
-import { Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold, Archivo_900Black } from '@expo-google-fonts/archivo';
-import { ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold } from '@expo-google-fonts/archivo-narrow';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { InterTight_600SemiBold, InterTight_700Bold, InterTight_800ExtraBold } from '@expo-google-fonts/inter-tight';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -15,7 +15,7 @@ SplashScreen.preventAutoHideAsync();
 loadStore();
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({ Archivo_900Black, Archivo_400Regular, Archivo_500Medium, Archivo_600SemiBold, Archivo_700Bold, ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold });
+  const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, InterTight_600SemiBold, InterTight_700Bold, InterTight_800ExtraBold });
   const ready = useReady();
   const { c, dark } = useTheme();
   useEffect(() => { if (fontsLoaded && ready) SplashScreen.hideAsync(); }, [fontsLoaded, ready]);
@@ -27,7 +27,7 @@ export default function RootLayout() {
   const sheet = { presentation: 'modal' as const, headerShown: false };
   return (
     <ThemeProvider value={theme}>
-      <StatusBar style={dark ? 'light' : 'dark'} />
+      <StatusBar style="light" />
       <ReminderSync />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.paper } }}>
         <Stack.Screen name="(tabs)" />
@@ -43,6 +43,8 @@ export default function RootLayout() {
         <Stack.Screen name="day/[date]" options={sheet} />
         <Stack.Screen name="settings/[section]" />
         <Stack.Screen name="race/[id]" options={sheet} />
+        <Stack.Screen name="run-live/[date]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="coach" options={sheet} />
         <Stack.Screen name="done/[id]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="recap/[week]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
       </Stack>

@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { Bullets, Disclosure, MoveList } from '@/components/guide';
 import { Sheet } from '@/components/sheet';
+import { BrandedCard } from '@/components/brand';
+import { segments, totalSec } from '@/engine/segments';
+import { radius } from '@/theme/tokens';
 import { RPE_SCALE, RUN_COOLDOWN, RUN_TERMS, RUN_WARMUP, ZONE_GUIDE } from '@/engine/guides';
 import { Button, Card, Choices, Coach, Field, Gap, Input, KV, Row, T, Tick } from '@/components/ui';
 import { adapted, ZONE_NAME, zones, zoneText } from '@/engine/coach';
@@ -13,7 +16,7 @@ import { getState, update, useApp } from '@/store/store';
 import { space, useTheme } from '@/theme/tokens';
 
 export default function RunScreen() {
-  const { date } = useLocalSearchParams<{ date: string }>(); const s = useApp(); const { c } = useTheme();
+  const { date, finished } = useLocalSearchParams<{ date: string; finished?: string }>(); const s = useApp(); const { c } = useTheme();
   const a = adapted(s, date); const run = a.replaced ? undefined : a.run; const R: RunLog = s.runs[date] || {};
   const [live, setLive] = useState<number | null>(null);
   const set = (patch: Partial<RunLog>) => update(st => { st.runs[date] = { ...(st.runs[date] || {}), ...patch }; });
@@ -30,35 +33,28 @@ export default function RunScreen() {
     const act = getState().activities.find(x => x.date === date && x.type === 'running' && x.source === 'manuel');
     if (act && !getState().closures?.[act.id]) router.replace({ pathname: '/done/[id]', params: { id: act.id } }); else router.back();
   }
+  const sg = segments(run); const total = Math.round(totalSec(sg) / 60);
   return (
-    <Sheet title={run.title} sub={`${fmtDay(date)} · ${run.dur}`}>
-      {a.reason ? <Coach>{a.reason}</Coach> : null}
-      <T><T v="label">Objectif : </T>{run.goal}</T><Gap />
-      {zs.length ? <Card><T v="h3">Allures cibles</T>{zs.map(z => <KV key={z} k={ZONE_NAME[z]} v={zoneText(s, z)} />)}<T v="xs" muted style={{ marginTop: 8 }}>{`Depuis ${zones(s).src}. En côte ou par vent, suis l'effort : les répétitions se font sur du plat ou en boucle.`}</T></Card> : null}
-      {live != null ? (
-        <Card tone="ink">
-          <View style={{ alignItems: 'center', gap: space.s3, paddingVertical: space.s4 }}>
-            <T v="small" color="rgba(244,242,238,.7)">{`Étape ${live + 1} / ${run.steps.length}`}</T>
-            <T v="title" color={c.paper} style={{ textAlign: 'center' }}>{run.steps[live].text}</T>
-            {run.steps[live].zone ? <><T v="mega" color={c.paper}>{zoneText(s, run.steps[live].zone!).replace(' /km', '')}</T><T v="small" color="rgba(244,242,238,.7)">{ZONE_NAME[run.steps[live].zone!]}</T></> : null}
-          </View>
-          <Row>{live > 0 ? <Button kind="inverse" label="Précédente" onPress={() => setLive(live - 1)} /> : null}
-            <Button kind="primary" style={{ flex: 1 }} label={live < run.steps.length - 1 ? 'Étape suivante' : 'Terminer'} onPress={() => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-              if (live < run.steps.length - 1) setLive(live + 1); else { set({ steps: Object.fromEntries(run.steps.map((_, i) => [i, true])) }); setLive(null); }
-            }} /></Row>
-        </Card>
-      ) : (
-        <>
-          <Card>{run.steps.map((st, i) => (
-            <Row key={i} style={{ paddingVertical: space.s3, borderTopWidth: i ? 1 : 0, borderTopColor: c.line, alignItems: 'flex-start' }}>
-              <Tick on={!!R.steps?.[i]} label="Étape faite" onPress={() => set({ steps: { ...(R.steps || {}), [i]: !R.steps?.[i] } })} />
-              <View style={{ flex: 1 }}><T>{st.text}</T>{st.zone && st.zone !== 'easy' ? <T v="small" color={c.accent}>{zoneText(s, st.zone)}</T> : null}</View>
-            </Row>))}
-          </Card>
-          <Button kind="primary" block label="Commencer en mode guidé" onPress={() => setLive(0)} />
-        </>
-      )}
+    <Sheet title={run.title} sub={fmtDay(date)} footer={<Button kind="primary" block label="Démarrer la séance" onPress={() => router.push({ pathname: '/run-live/[date]', params: { date } })} />}>
+      {finished ? <View style={{ backgroundColor: c.accentSoft, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3 }}><T v="label" color={c.accent}>Séance terminée</T><T v="small">Ton temps est noté. La distance et l'allure de ta montre arrivent par Strava ; tu peux aussi les saisir dans « Bilan » plus bas.</T></View> : null}
+      <BrandedCard mark>
+        <T v="overline" color={c.stageInk2}>{run.kind === 'facile' ? 'Endurance' : run.kind === 'qualite' ? 'Séance d\'allure' : run.kind === 'test' ? 'Test' : 'Récupération'}</T>
+        <T v="title" color={c.stageInk} style={{ marginTop: space.s2 }}>{run.goal}</T>
+        <Row gap={space.s5} style={{ marginTop: space.s5 }}>
+          <View><T v="overline" color={c.stageInk2}>Durée</T><T v="hero" color={c.stageInk}>{total || '—'}<T v="small" color={c.stageInk2}> min</T></T></View>
+          {zs.filter(z => z !== 'easy')[0] || zs[0] ? <View><T v="overline" color={c.stageInk2}>Allure cible</T><T v="hero" color={c.accent}>{zoneText(s, (zs.filter(z => z !== 'easy')[0] || zs[0])!).replace(' /km', '').split('–')[0]}<T v="small" color={c.stageInk2}> /km</T></T></View> : null}
+        </Row>
+        {a.reason ? <T v="small" color={c.warn} style={{ marginTop: space.s3 }}>{a.reason}</T> : null}
+      </BrandedCard>
+      <T v="small" muted style={{ fontWeight: '600', marginTop: space.s3, marginBottom: space.s2 }}>Déroulé</T>
+      <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, paddingVertical: space.s2 }}>
+        {run.steps.map((st, i) => (
+          <Row key={i} gap={space.s3} style={{ paddingHorizontal: space.s4, paddingVertical: space.s3, alignItems: 'flex-start' }}>
+            <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: R.steps?.[i] ? c.ok : st.zone && st.zone !== 'easy' ? c.accent : c.surface2 }}><T v="xs" color={R.steps?.[i] || (st.zone && st.zone !== 'easy') ? c.accentInk : c.ink2} style={{ fontWeight: '700' }}>{R.steps?.[i] ? '✓' : String(i + 1)}</T></View>
+            <View style={{ flex: 1 }}><T>{st.text}</T>{st.zone ? <T v="small" color={st.zone === 'easy' ? c.ink2 : c.accent}>{`${zoneText(s, st.zone)} · ${ZONE_NAME[st.zone].split(' ·')[0].toLowerCase()}`}</T> : null}</View>
+          </Row>))}
+      </View>
+      <T v="xs" muted style={{ marginTop: space.s2 }}>{`Allures calculées depuis ${zones(s).src}. En côte ou par vent, suis l'effort.`}</T>
       <T v="overline" muted style={{ marginTop: space.s5, marginBottom: space.s2 }}>Pour bien la faire</T>
       <Disclosure title="Comprendre la séance" sub="Les termes utilisés, expliqués">
         <Bullets items={[...new Set(run.steps.flatMap(st => RUN_TERMS.filter(([re]) => re.test(st.text)).map(([, t]) => t)))].concat(run.kind === 'facile' || run.kind === 'recup' ? ['Le seul piège d\'un footing facile, c\'est d\'aller trop vite. Si tu ne peux pas parler, ralentis : c\'est cette allure lente qui fait progresser ton endurance.'] : [])} />

@@ -14,18 +14,18 @@ type TV = 'mega' | 'hero' | 'display' | 'title' | 'h2' | 'h3' | 'body' | 'small'
 export function T({ v = 'body', muted, color, style, children, numberOfLines }: { v?: TV; muted?: boolean; color?: string; style?: StyleProp<TextStyle>; children: ReactNode; numberOfLines?: number }) {
   const { c } = useTheme();
   const base: Record<TV, TextStyle> = {
-    mega: { fontFamily: font.condensed, fontSize: size.mega, lineHeight: 62, fontVariant: ['tabular-nums'] },
-    hero: { fontFamily: font.condensed, fontSize: size.hero, lineHeight: 42, fontVariant: ['tabular-nums'] },
-    display: { fontFamily: font.condensedBold, fontSize: 52, lineHeight: 52, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
-    overline: { fontFamily: font.semibold, fontSize: size.xxs, lineHeight: 14, letterSpacing: 1.2, textTransform: 'uppercase' },
-    num: { fontFamily: font.condensedBold, fontSize: size.xl, lineHeight: 24, fontVariant: ['tabular-nums'] },
-    title: { fontFamily: font.semibold, fontSize: size.xxl, lineHeight: 34 },
-    h2: { fontFamily: font.semibold, fontSize: size.xl, lineHeight: 27 },
-    h3: { fontFamily: font.semibold, fontSize: size.lg, lineHeight: 23 },
-    body: { fontFamily: font.regular, fontSize: size.md, lineHeight: 23 },
+    mega: { fontFamily: font.display, fontSize: size.mega, lineHeight: 58, letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
+    hero: { fontFamily: font.display, fontSize: size.hero, lineHeight: 44, letterSpacing: -1, fontVariant: ['tabular-nums'] },
+    display: { fontFamily: font.display, fontSize: 52, lineHeight: 54, letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
+    overline: { fontFamily: font.semibold, fontSize: size.xxs, lineHeight: 14, letterSpacing: 0.8, textTransform: 'uppercase' },
+    num: { fontFamily: font.display, fontSize: size.xl, lineHeight: 26, letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
+    title: { fontFamily: font.display, fontSize: size.xxl, lineHeight: 33, letterSpacing: -0.6 },
+    h2: { fontFamily: font.displayMedium, fontSize: size.xl, lineHeight: 28, letterSpacing: -0.3 },
+    h3: { fontFamily: font.semibold, fontSize: 17, lineHeight: 23, letterSpacing: -0.1 },
+    body: { fontFamily: font.regular, fontSize: size.md, lineHeight: 24 },
     small: { fontFamily: font.regular, fontSize: size.sm, lineHeight: 20 },
     xs: { fontFamily: font.regular, fontSize: size.xs, lineHeight: 16 },
-    label: { fontFamily: font.semibold, fontSize: size.md, lineHeight: 22 },
+    label: { fontFamily: font.semibold, fontSize: 15, lineHeight: 21 },
   };
   return <Text numberOfLines={numberOfLines} style={[base[v], { color: color || (muted ? c.ink2 : c.ink) }, style]}>{children}</Text>;
 }
@@ -35,7 +35,7 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
   const { c } = useTheme(); const ref = useRef<ScrollView>(null);
   // Chaque fois qu'on revient sur un écran (onglet ou retour), il repart en haut.
   useFocusEffect(useCallback(() => { ref.current?.scrollTo({ y: 0, animated: false }); }, []));
-  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: space.s4, paddingBottom: 120 }}>{children}</View>;
+  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: space.s5 - 4, paddingBottom: 132 }}>{children}</View>;
   return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}>{scroll ? <ScrollView ref={ref} keyboardShouldPersistTaps="handled">{inner}</ScrollView> : inner}</SafeAreaView>;
 }
 export function Row({ children, gap = space.s3, between, style }: { children: ReactNode; gap?: number; between?: boolean; style?: StyleProp<ViewStyle> }) {
@@ -69,7 +69,7 @@ export function Tick({ on, onPress, label, sizePx = 36 }: { on: boolean; onPress
     <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={label} hitSlop={8}
       onPress={() => { Haptics.impactAsync(on ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onPress(); }}
       style={{ width: sizePx, height: sizePx, borderRadius: sizePx / 2, borderWidth: 2, borderColor: on ? c.ok : c.line2, backgroundColor: on ? c.ok : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-      {on ? <Text style={{ color: '#fff', fontFamily: font.bold, fontSize: 16 }}>✓</Text> : null}
+      {on ? <Text style={{ color: c.paper, fontFamily: font.bold, fontSize: 16 }}>✓</Text> : null}
     </Pressable>
   );
 }
@@ -175,7 +175,7 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
   return (
     <Pressable accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: value }} hitSlop={10} onPress={() => { tap(); onChange(!value); }}
       style={{ width: 50, height: 30, borderRadius: 15, padding: 3, backgroundColor: value ? c.accent : c.line2, justifyContent: 'center' }}>
-      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', transform: [{ translateX: value ? 20 : 0 }] }} />
+      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: value ? c.accentInk : c.ink, transform: [{ translateX: value ? 20 : 0 }] }} />
     </Pressable>
   );
 }

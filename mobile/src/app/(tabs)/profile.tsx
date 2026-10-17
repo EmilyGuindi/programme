@@ -40,7 +40,7 @@ export default function Profile() {
       </ListGroup>
       <ListGroup title="Application">
         <ListRow title="Mes données" sub="Sauvegarde, import, préférences" left={<Icon name="data" />} onPress={() => open('data')} />
-        <ListRow last title="Quoi de neuf" sub={`Version ${APP_VERSION}`} left={<Icon name="spark" />} onPress={() => open('news')} />
+        <ListRow last title="Quoi de neuf" sub={`Version ${APP_VERSION}`} left={<Icon name="story" />} onPress={() => open('news')} />
       </ListGroup>
       <View style={{ alignItems: 'center', marginTop: space.s4, gap: 6 }}><Wordmark height={12} tagline /></View>
     </Screen>

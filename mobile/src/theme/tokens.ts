@@ -1,35 +1,42 @@
-import { useColorScheme } from 'react-native';
+/* ============================================================
+   BYYND — design tokens
+   Direction : dark performance (fond quasi noir, accent lime), profondeur en verre maîtrisée.
+   Thème unique sombre : l'identité ne dépend plus du réglage système.
+   ============================================================ */
 
-/** Couleurs de marque, issues du kit BYYND. */
-export const brand = { blue: '#0047FF', ink: '#111111', stone: '#EAE8E4', white: '#FFFFFF' };
+/** Couleurs de marque. Le cobalt reste dans le kit d'origine ; l'app passe au lime. */
+export const brand = { lime: '#B8F20D', limeMuted: '#91C51A', limeSoft: '#DFFF83', ink: '#0B0D0A', white: '#F5F7F2', cobalt: '#0047FF', stone: '#EAE8E4', blue: '#0047FF' };
 
-export type Palette = { [K in 'paper'|'surface'|'surface2'|'ink'|'ink2'|'ink3'|'line'|'line2'|'accent'|'accentInk'|'accentSoft'|'ok'|'warn'|'stop'|'okSoft'|'warnSoft'|'stopSoft'|'stage'|'stageInk'|'stageInk2']: string };
-const light: Palette = {
-  paper: '#F2F1EE', surface: '#FFFFFF', surface2: brand.stone, ink: brand.ink, ink2: '#5E6066', ink3: '#9A9CA1', line: '#E2E0DB', line2: '#CFCCC6',
-  /** « Scène » : fond charcoal réservé aux moments expressifs (compétitions, records, indicateur principal). */
-  stage: brand.ink, stageInk: '#F4F2EE', stageInk2: 'rgba(244,242,238,0.62)',
-  accent: brand.blue, accentInk: '#FFFFFF', accentSoft: '#E3EAFF',
-  ok: '#1F8A5B', warn: '#C7791A', stop: '#C23B4C', okSoft: '#E3F3EA', warnSoft: '#FAEEDD', stopSoft: '#F8E3E6',
-};
+export type Palette = { [K in 'paper' | 'paper2' | 'surface' | 'surface2' | 'ink' | 'ink2' | 'ink3' | 'line' | 'line2' | 'accent' | 'accentInk' | 'accentSoft' | 'ok' | 'warn' | 'stop' | 'info' | 'okSoft' | 'warnSoft' | 'stopSoft' | 'stage' | 'stageInk' | 'stageInk2' | 'glass' | 'glassBorder' | 'disabled' | 'series1' | 'series2' | 'series3' | 'series4']: string };
+
 const dark: Palette = {
-  paper: brand.ink, surface: '#1A1B1E', surface2: '#232428', ink: brand.stone, ink2: '#A2A3A8', ink3: '#6E7076', line: '#2B2C31', line2: '#3A3B41',
-  stage: '#1E2433', stageInk: '#F4F2EE', stageInk2: 'rgba(244,242,238,0.62)',
-  accent: '#4D7BFF', accentInk: '#FFFFFF', accentSoft: '#16224A',
-  ok: '#4CC27D', warn: '#E9A23B', stop: '#F06478', okSoft: '#1B2E24', warnSoft: '#33271A', stopSoft: '#36202A',
+  paper: '#0B0D0A', paper2: '#11150F',
+  surface: '#171B15', surface2: '#20261D',
+  ink: '#F5F7F2', ink2: '#A3AD9D', ink3: '#737D70',
+  line: 'rgba(245,247,242,0.07)', line2: 'rgba(245,247,242,0.14)',
+  accent: brand.lime, accentInk: '#0B0D0A', accentSoft: 'rgba(184,242,13,0.12)',
+  ok: '#4FD1A1', warn: '#F2B33D', stop: '#FF7A6B', info: '#7AB7FF',
+  okSoft: 'rgba(79,209,161,0.14)', warnSoft: 'rgba(242,179,61,0.14)', stopSoft: 'rgba(255,122,107,0.14)',
+  stage: '#11150F', stageInk: '#F5F7F2', stageInk2: '#A3AD9D',
+  glass: 'rgba(23,27,21,0.72)', glassBorder: 'rgba(245,247,242,0.12)',
+  disabled: '#3A4136',
+  series1: brand.lime, series2: '#7AB7FF', series3: '#F2B33D', series4: '#A3AD9D',
 };
 
+/** Espacements : base 4, rythme 8. */
 export const space = { s1: 4, s2: 8, s3: 12, s4: 16, s5: 24, s6: 32, s7: 48 } as const;
-export const radius = { r1: 8, r2: 14, pill: 999 } as const;
+export const radius = { r1: 12, r2: 20, r3: 24, pill: 999 } as const;
 export const font = {
-  regular: 'Archivo_400Regular', black: 'Archivo_900Black', medium: 'Archivo_500Medium', semibold: 'Archivo_600SemiBold', bold: 'Archivo_700Bold',
-  condensed: 'ArchivoNarrow_600SemiBold', condensedBold: 'ArchivoNarrow_700Bold',
+  regular: 'Inter_400Regular', medium: 'Inter_500Medium', semibold: 'Inter_600SemiBold', bold: 'Inter_700Bold',
+  display: 'InterTight_700Bold', displayHeavy: 'InterTight_800ExtraBold', displayMedium: 'InterTight_600SemiBold',
+  // alias historiques
+  condensed: 'InterTight_700Bold', condensedBold: 'InterTight_800ExtraBold', black: 'InterTight_800ExtraBold',
 } as const;
-export const size = { xxs: 11, xs: 12, sm: 14, md: 16, lg: 18, xl: 22, xxl: 28, hero: 40, mega: 64 } as const;
-/** Densités : compact pour plannings et réglages, expressif pour performances et moments forts. */
+/** Échelle typographique unique. */
+export const size = { xxs: 11, xs: 12, sm: 14, md: 16, lg: 18, xl: 22, xxl: 28, hero: 40, mega: 56 } as const;
 export const density = { compactRow: 52, expressivePad: 24 } as const;
+export const glass = { blur: 24, radius: 24 } as const;
+export const motion = { fast: 140, base: 220, slow: 360 } as const;
 export const touch = 48;
 
-export function useTheme() {
-  const scheme = useColorScheme();
-  return { c: scheme === 'dark' ? dark : light, dark: scheme === 'dark' };
-}
+export function useTheme() { return { c: dark, dark: true }; }

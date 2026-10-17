@@ -26,8 +26,8 @@ export default function DoneScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}>
       <Row style={{ justifyContent: 'flex-end', padding: space.s4 }}><Button small kind="ghost" label="Fermer" onPress={close} /></Row>
       <Animated.ScrollView style={{ opacity: fade }} contentContainerStyle={{ paddingHorizontal: space.s4, paddingBottom: 60, maxWidth: 560, width: '100%', alignSelf: 'center' }}>
-        <Animated.View style={{ alignSelf: 'center', transform: [{ scale }], backgroundColor: c.ink, borderRadius: 999, width: 96, height: 96, alignItems: 'center', justifyContent: 'center', marginBottom: space.s4 }}>
-          <BrandMark size={46} color={c.paper} />
+        <Animated.View style={{ alignSelf: 'center', transform: [{ scale }], backgroundColor: c.accent, borderRadius: 999, width: 96, height: 96, alignItems: 'center', justifyContent: 'center', marginBottom: space.s4 }}>
+          <BrandMark size={46} color={c.accentInk} />
         </Animated.View>
         <T v="title" style={{ textAlign: 'center' }}>Séance terminée</T>
         <T muted style={{ textAlign: 'center', marginBottom: space.s4 }}>{cl.title}</T>

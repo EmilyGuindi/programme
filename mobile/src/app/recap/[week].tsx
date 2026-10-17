@@ -20,9 +20,9 @@ export default function RecapScreen() {
   useEffect(() => { fade.setValue(0); Animated.timing(fade, { toValue: 1, duration: 280, useNativeDriver: true }).start(); }, [i]);
   const go = (n: number) => { if (n < 0) return; if (n >= r.cards.length) { router.back(); return; } Haptics.selectionAsync().catch(() => {}); list.current?.scrollToIndex({ index: n }); setI(n); };
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.ink }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}>
       <View style={{ flexDirection: 'row', gap: 4, paddingHorizontal: space.s4, paddingTop: space.s3 }}>
-        {r.cards.map((_, k) => <View key={k} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: k <= i ? c.paper : 'rgba(244,242,238,.25)' }} />)}
+        {r.cards.map((_, k) => <View key={k} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: k <= i ? c.accent : c.line2 }} />)}
       </View>
       <Row between style={{ paddingHorizontal: space.s4, paddingVertical: space.s3 }}>
         <Wordmark height={12} onDark />
@@ -30,13 +30,13 @@ export default function RecapScreen() {
       </Row>
       <FlatList<RecapCard> ref={list} data={r.cards} horizontal pagingEnabled showsHorizontalScrollIndicator={false} keyExtractor={(_, k) => String(k)}
         onMomentumScrollEnd={e => setI(Math.round(e.nativeEvent.contentOffset.x / width))}
-        renderItem={({ item, index }) => { const Illu = ILLU[item.kind]; return (
+        renderItem={({ item, index }) => { return (
           <Animated.View style={{ width, paddingHorizontal: space.s5, justifyContent: 'center', flex: 1, opacity: index === i ? fade : 1 }}>
-            <View style={{ alignSelf: 'flex-start', backgroundColor: c.accent, borderRadius: radius.r2, padding: space.s3, marginBottom: space.s5 }}><Illu size={56} /></View>
-            {index === 0 ? <T v="small" color="rgba(244,242,238,.6)" style={{ marginBottom: 6 }}>{`${fmtShort(r.from)} – ${fmtShort(r.to)}`}</T> : null}
-            <T v="title" color={c.paper}>{item.title}</T>
-            {item.big ? <><T v="mega" color={c.paper} style={{ marginTop: space.s4 }}>{item.big}</T><T color="rgba(244,242,238,.7)">{item.bigLabel}</T></> : null}
-            <View style={{ marginTop: space.s4, gap: 10 }}>{item.lines.map(l => <T key={l} color={c.paper}>{l}</T>)}</View>
+            
+            {index === 0 ? <T v="small" color={c.ink2} style={{ marginBottom: 6 }}>{`${fmtShort(r.from)} – ${fmtShort(r.to)}`}</T> : null}
+            <T v="title" color={c.ink}>{item.title}</T>
+            {item.big ? <><T v="mega" color={c.accent} style={{ marginTop: space.s4, fontSize: 88, lineHeight: 92 }}>{item.big}</T><T color={c.ink2}>{item.bigLabel}</T></> : null}
+            <View style={{ marginTop: space.s4, gap: 10 }}>{item.lines.map(l => <T key={l} color={c.ink}>{l}</T>)}</View>
           </Animated.View>); }} />
       <Row style={{ padding: space.s4 }}>
         <Button label="Précédent" kind="inverse" disabled={i === 0} onPress={() => go(i - 1)} />

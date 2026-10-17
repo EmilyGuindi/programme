@@ -242,3 +242,11 @@ test('course : le résultat vient de la montre via Strava, ou de la description 
   const e = s.events.find(x => x.id === 'ev-mudgirl')!; assert.equal(e.result!.time, 4334); assert.equal(e.result!.source, 'montre'); assert.equal(e.result!.calories, 441);
   assert.equal(timeFromText("Temps officiel 1h10'05 !"), 4205); assert.equal(timeFromText('chrono 58:30'), 3510); assert.equal(timeFromText(''), null);
 });
+
+import { segments, totalSec } from '../segments';
+import { RUN } from '../library';
+test('mode course : les consignes deviennent des segments chronométrés', () => {
+  const sg = segments({ kind: 'qualite', title: 'x', dur: '', goal: '', steps: [{ text: '12 min facile', zone: 'easy' }, { text: '4 × 1 min à allure 10 km, récup 2 min de trot', zone: '10k' }, { text: '10 min facile', zone: 'easy' }] });
+  assert.equal(sg.filter(x => x.kind === 'work').length, 4); assert.equal(sg.filter(x => x.kind === 'rec').length, 3); assert.equal(totalSec(sg), (12 + 4 + 6 + 10) * 60);
+  const easy = segments(RUN.easy(35, 4)); assert.equal(Math.round(totalSec(easy) / 60), 42);
+});
