@@ -17,7 +17,7 @@ jobs:
       - name: Requêtes
         shell: bash {0}
         run: |
-          q(){ R=$(wrangler d1 execute byynd --remote --json --command "$2" 2>&1 | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log(JSON.stringify(j[0].results))}catch(e){console.log(s.slice(-400))}})'); echo "::notice title=$1::$R"; }
+          q(){ wrangler d1 execute byynd --remote --json --command "$2" > /tmp/o.txt 2>&1; R=$(tr '\n' ' ' < /tmp/o.txt | tr -s ' ' | tail -c 900); echo "::warning title=$1::${R:-vide}"; }
           q "Strava connecté" "SELECT name, json_extract(json,'$.athleteName') AS athlete, json_extract(json,'$.error') AS err, json_extract(json,'$.lastSync') AS lastSync FROM integrations"
           q "Activités Strava" "SELECT count(*) AS total, sum(CASE WHEN json LIKE '%\"caloriesChecked\":true%' THEN 1 ELSE 0 END) AS verifiees, sum(CASE WHEN json_extract(json,'$.calories') > 0 THEN 1 ELSE 0 END) AS avec_kcal FROM strava_activities WHERE deleted=0"
           q "Dernières" "SELECT json_extract(json,'$.date') AS d, json_extract(json,'$.sportType') AS t, json_extract(json,'$.calories') AS kcal, json_extract(json,'$.caloriesChecked') AS ok FROM strava_activities ORDER BY updated_at DESC LIMIT 8"
