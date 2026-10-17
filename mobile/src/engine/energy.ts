@@ -14,7 +14,7 @@ export function energy(s: AppState, from: ISODate, to: ISODate): EnergySummary {
   const byType: Record<string, number> = {}; let total = 0, withData = 0, pending = 0;
   for (const a of acts) {
     if (a.calories && a.calories > 0) { total += a.calories; withData++; const k = categoryOf(a); byCat[k].kcal += a.calories; byCat[k].n++; byType[a.type] = (byType[a.type] || 0) + a.calories; }
-    else if (a.caloriesStatus === 'pending') pending++;
+    else if (a.source === 'strava' && (a.caloriesStatus === 'pending' || a.caloriesStatus === undefined)) pending++;
   }
   return { total: Math.round(total), withData, count: acts.length, pending, byCat, byType };
 }

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import type React from 'react';
 import { Stage, StatusMark } from '@/components/brand';
-import { dayStatus, StatusLegend, WeekTracker } from '@/components/week-tracker';
+import { DayBadge, dayIcon, dayStatus, StatusLegend, WeekTracker } from '@/components/week-tracker';
 import { openDay, presetFor, TYPE_LABEL } from '@/components/plan-row';
 import { Button, Divider, ListGroup, ListRow, Meter, Row, Screen, T } from '@/components/ui';
 import { activitiesOn, adapted, doneOn, phaseOf, weekOf, weekStart } from '@/engine/coach';
@@ -64,7 +64,7 @@ export default function Program() {
           return (
             <ListRow key={a.date} last={i === arr.length - 1} title={shown.title} sub={sub || undefined}
               left={<View style={{ width: 36 }}><T v="overline" color={a.date === today ? c.accent : c.ink3}>{DAY_NAMES[dow(a.date)].slice(0, 3)}</T><T v="num" style={{ fontSize: 18, lineHeight: 20 }} color={k === 'rest' ? c.ink3 : c.ink}>{parseISO(a.date).getDate()}</T></View>}
-              right={<StatusMark status={dayStatus(s, a, today)} />} onPress={() => (a.type === 'event' && a.event ? router.push({ pathname: '/race/[id]', params: { id: a.event.id } }) : openDay(a.date))} />
+              right={<DayBadge status={dayStatus(s, a, today)} icon={dayIcon(a)} size={28} />} onPress={() => (a.type === 'event' && a.event ? router.push({ pathname: '/race/[id]', params: { id: a.event.id } }) : openDay(a.date))} />
           );
         })}
       </ListGroup>

@@ -37,13 +37,13 @@ export function Stage({ children, cut = 28, mark = false, tone = 'ink', style, g
   );
 }
 
-/** Surtitre éditorial : petit trait cobalt + capitales espacées. */
+/** Surtitre : capitales espacées sur les scènes, micro-label ailleurs. */
 export function Kicker({ children, color, onStage }: { children: string; color?: string; onStage?: boolean }) {
   const { c } = useTheme();
   // Capitales espacées seulement sur les scènes ; ailleurs, un micro-label en casse normale.
   return onStage
-    ? <Row gap={8}><View style={{ width: 14, height: 2, backgroundColor: c.accent }} /><T v="overline" color={color || c.stageInk2}>{children}</T></Row>
-    : <Row gap={8}><View style={{ width: 10, height: 2, backgroundColor: c.accent }} /><T v="small" color={color || c.ink2} style={{ fontWeight: '600' }}>{children}</T></Row>;
+    ? <T v="overline" color={color || c.stageInk2}>{children}</T>
+    : <T v="small" color={color || c.ink2} style={{ fontWeight: '600' }}>{children}</T>;
 }
 
 /** Repère d'étape : chevron (bras du Y). Plein = franchi, cobalt = en cours, contour = à venir. */

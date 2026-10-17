@@ -93,7 +93,7 @@ export async function pull(): Promise<SyncStatus> {
     if (d.json && d.updatedAt !== (server.version ?? 0)) { absorb(d); await push(); }
     else if (!d.json || (state.updatedAt || 0) > (d.updatedAt || 0)) await push();
     setSync({ status: 'ok', at: Date.now(), msg: '' });
-    stravaStatus(); pullStrava();
+    stravaStatus(); pullStrava().then(() => autoFillCalories());
   } catch { setSync({ status: 'off', at: Date.now(), msg: 'Serveur injoignable' }); }
   return sync;
 }
@@ -150,4 +150,12 @@ export async function fillCaloriesNow(): Promise<string> {
   if (!configured()) return 'Serveur non configuré.';
   try { const r = await api('/api/strava/calories', { method: 'POST' }); if (!r.ok) return 'Strava indisponible pour le moment, réessaie plus tard.'; const d = await r.json(); await pullStrava(); return d.completed ? `${d.completed} activité${d.completed > 1 ? 's' : ''} vérifiée${d.completed > 1 ? 's' : ''}.` : 'Rien de plus à récupérer pour l\'instant.'; }
   catch { return 'Serveur injoignable.'; }
+}
+
+/** Au plus toutes les 6 h : si des activités Strava n'ont pas encore leur estimation, on demande au serveur de les compléter. */
+async function autoFillCalories() {
+  const pending = state.activities.some(a => a.source === 'strava' && (a.caloriesStatus === 'pending' || a.caloriesStatus === undefined));
+  if (!pending || Date.now() - (state.strava?.fillAt || 0) < 6 * 3600_000) return;
+  update(st => { st.strava = { since: st.strava?.since || 0, fillAt: Date.now() }; });
+  try { const r = await api('/api/strava/calories', { method: 'POST' }); if (r.ok) await pullStrava(); } catch {}
 }

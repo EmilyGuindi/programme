@@ -50,7 +50,7 @@ export function toggleDone(a: AdaptedPlan) {
 
 export function ActivityRow({ x }: { x: Activity }) {
   const { c } = useTheme();
-  const meta = [x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.distanceKm ? `${String(x.distanceKm).replace('.', ',')} km` : '', x.effort ? `effort ${x.effort}/10` : ''].filter(Boolean).join(' · ');
+  const meta = [x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.distanceKm ? `${String(x.distanceKm).replace('.', ',')} km` : '', x.effort ? `effort ${x.effort}/10` : '', x.calories ? `${Math.round(x.calories)} kcal estimées` : ''].filter(Boolean).join(' · ');
   return (
     <Pressable onPress={() => router.push({ pathname: '/activity', params: { id: x.id } })} style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: radius.r2, padding: space.s3, paddingHorizontal: space.s4, marginBottom: space.s2 }}>
       <Row between><View style={{ flex: 1 }}><Row gap={6}><T v="label">{x.title}</T>{x.complementary ? <Tag>complémentaire</Tag> : null}</Row>{meta ? <T v="small" muted>{meta}</T> : null}</View><T v="small" color={c.accent}>Modifier</T></Row>

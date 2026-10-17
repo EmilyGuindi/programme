@@ -69,7 +69,7 @@ export default function Progress() {
         <ListRow title="Mon parcours" sub={runStep ? `Running : ${runStep.title.toLowerCase()}` : undefined} left={<Icon name="path" />} onPress={() => go('journey')} />
         <ListRow title="Records et paliers" sub={recs.length ? `${recs.length} record${recs.length > 1 ? 's' : ''}` : 'Tes premiers records arrivent avec tes séances'} left={<Icon name="peak" />} onPress={() => go('records')} />
         <ListRow title="Régularité" left={<Icon name="calendar" />} onPress={() => go('regularity')} />
-        <ListRow title="Dépense des activités" sub={(() => { const e = energy(s, addDays(today, -6), today); return e.withData ? `${e.total.toLocaleString('fr-FR')} kcal estimées sur 7 jours` : 'Estimations de ta montre via Strava'; })()} left={<Icon name="spark" />} onPress={() => go('energy')} />
+        <ListRow title="Dépense des activités" sub={(() => { const e = energy(s, addDays(today, -6), today); return e.withData ? `${e.total.toLocaleString('fr-FR')} kcal estimées sur 7 jours` : 'Estimations de ta montre via Strava'; })()} left={<Icon name="flame" />} onPress={() => go('energy')} />
         <ListRow last title="Renforcement" sub={Object.keys(s.strength).length ? `${Object.keys(s.strength).length} séance${Object.keys(s.strength).length > 1 ? 's' : ''} enregistrée${Object.keys(s.strength).length > 1 ? 's' : ''}` : 'Charges notées le dimanche'} left={<Icon name="dumbbell" />} onPress={() => go('strength')} />
       </ListGroup>
     </Screen>

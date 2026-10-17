@@ -66,7 +66,7 @@ export interface AppState {
   events: SportEvent[]; activities: Activity[]; checkins: Record<ISODate, CheckIn>; measurements: Measurement[];
   strength: Record<ISODate, StrengthLog>; runs: Record<ISODate, RunLog>; overrides: Record<ISODate, Override>;
   migrated: boolean;
-  strava?: { since: number };
+  strava?: { since: number; fillAt?: number };
   /** Écrans de fin de séance déjà montrés (une seule fois par activité). */
   closures?: Record<string, number>;
   /** Bilans hebdomadaires déjà ouverts. */

@@ -107,7 +107,7 @@ export default function Today() {
       </View>
 
       <ListGroup title="Aujourd'hui">
-        {acts.map(x => <ListRow key={x.id} title={x.title} sub={[x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.distanceKm ? `${String(x.distanceKm).replace('.', ',')} km` : '', x.complementary ? 'complémentaire' : '', x.source === 'strava' ? 'Strava' : ''].filter(Boolean).join(' · ')} onPress={() => router.push({ pathname: '/activity', params: { id: x.id } })} />)}
+        {acts.map(x => <ListRow key={x.id} title={x.title} sub={[x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.distanceKm ? `${String(x.distanceKm).replace('.', ',')} km` : '', x.calories ? `${Math.round(x.calories)} kcal estimées` : '', x.complementary ? 'complémentaire' : '', x.source === 'strava' ? 'Strava' : ''].filter(Boolean).join(' · ')} onPress={() => router.push({ pathname: '/activity', params: { id: x.id } })} />)}
         <ListRow last title="Ajouter une activité" left={<T v="h3" color={c.accent}>+</T>} chevron={false} onPress={() => router.push({ pathname: '/activity', params: { date: d } })} />
       </ListGroup>
       {tmr.type === 'event' ? null : <ListGroup title="Demain">

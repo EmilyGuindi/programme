@@ -226,6 +226,7 @@ function Energy() {
     <>
       <T v="title" style={{ fontSize: 30, lineHeight: 36 }}>Dépense des activités</T>
       <T muted style={{ marginTop: 4, marginBottom: space.s5 }}>Estimations de ta montre, transmises par Strava. Une indication, pas une mesure exacte.</T>
+      {!sv.url ? <T v="small" style={{ marginBottom: space.s4 }}>Connecte le serveur et Strava (Profil → Serveur et Strava) pour récupérer ces données.</T> : null}
       <Row gap={space.s3} style={{ alignItems: 'stretch' }}>
         {[['7 derniers jours', wk], ['30 derniers jours', mo]].map(([l, e]: any) => (
           <View key={l} style={{ flex: 1, backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4 }}>
