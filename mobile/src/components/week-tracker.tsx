@@ -10,6 +10,7 @@ import { Icon, type IconName } from './icons';
 import { Row, T } from './ui';
 
 const LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const DAY = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 
 /** Statut d'un jour, identique partout (Aujourd'hui, Programme, Progression). */
@@ -63,27 +64,37 @@ function Mark({ status, onStage, icon }: { status: Status; onStage?: boolean; ic
     if (first.current) { first.current = false; return; }
     AccessibilityInfo.isReduceMotionEnabled().then(r => { if (r) return; v.setValue(0.5); Animated.spring(v, { toValue: 1, friction: 5, tension: 160, useNativeDriver: true }).start(); }).catch(() => {});
   }, [status]);
-  return <Animated.View style={{ transform: [{ scale: v }] }}><DayBadge status={status} icon={icon} onStage={onStage} /></Animated.View>;
+  const { c } = useTheme();
+  return <Animated.View style={{ transform: [{ scale: v }] }}>{icon === 'check' ? <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: status === 'synced' ? c.accent : c.accent, alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={11} color={c.accentInk} /></View> : <DayBadge status={status} icon={icon} onStage={onStage} />}</Animated.View>;
 }
 
-/** Le tracker hebdomadaire BYYND. Aujourd'hui = chiffre cobalt souligné ; sélection = colonne charcoal. */
+/** Le tracker hebdomadaire BYYND : une colonne par jour.
+ *  En haut, la coche lime = fait. Au centre, la date ; aujourd'hui en lime plein. En bas, le pictogramme de la séance prévue.
+ *  Le jour sélectionné est cerclé de lime. */
 export function WeekTracker({ s, start, today, selected, onSelect }: { s: AppState; start: string; today: string; selected?: string; onSelect?: (d: string) => void }) {
   const { c } = useTheme();
   const days = Array.from({ length: 7 }, (_, i) => adapted(s, addDays(start, i)));
   return (
-    <Row gap={0} style={{ justifyContent: 'space-between' }}>
+    <Row gap={6} style={{ justifyContent: 'space-between' }}>
       {days.map(a => {
         const st = dayStatus(s, a, today); const isToday = a.date === today; const isSel = a.date === selected; const pre = st === 'none';
-        const fg = isSel ? c.stageInk : pre ? c.ink3 : c.ink;
+        const doneish = st === 'done' || st === 'synced' || st === 'raceDone';
+        const iconCol = st === 'race' || st === 'raceDone' ? c.accent : doneish ? c.ink : st === 'optional' || st === 'rest' || st === 'missed' ? c.ink3 : c.ink2;
         return (
           <Pressable key={a.date} disabled={pre || !onSelect} accessibilityRole="button" accessibilityState={{ selected: isSel }}
             accessibilityLabel={`${DAY[dow(a.date)]} ${parseISO(a.date).getDate()}${isToday ? ", aujourd'hui" : ''} : ${(a.replaced || a).title}, ${STATUS_LABEL[st]}`}
             onPress={() => { Haptics.selectionAsync().catch(() => {}); onSelect?.(a.date); }}
-            style={({ pressed }) => ({ flex: 1, alignItems: 'center', paddingVertical: space.s2, marginHorizontal: 2, borderRadius: 14, backgroundColor: isSel ? c.stage : pressed ? c.surface2 : 'transparent', opacity: pre ? 0.4 : 1 })}>
-            <T v="xs" color={isSel ? c.stageInk2 : isToday ? c.accent : c.ink3} style={{ fontWeight: '600' }}>{LETTERS[dow(a.date)]}</T>
-            <T v="num" color={isToday && !isSel ? c.accent : fg} style={{ fontSize: 19, lineHeight: 22, marginTop: 2 }}>{parseISO(a.date).getDate()}</T>
-            <View style={{ height: 3, width: 14, borderRadius: 2, marginTop: 3, backgroundColor: isToday ? (isSel ? c.stageInk : c.accent) : 'transparent' }} />
-            <View style={{ height: 36, justifyContent: 'center', marginTop: 4 }}>{st !== 'none' ? <Mark status={st} icon={dayIcon(a)} onStage={isSel} /> : null}</View>
+            style={({ pressed }) => ({ flex: 1, alignItems: 'center', opacity: pre ? 0.35 : pressed ? 0.8 : 1 })}>
+            <View style={{ height: 18, justifyContent: 'center', marginBottom: 4 }}>
+              {doneish ? <Mark status={st} icon="check" /> : st === 'pending' ? <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: c.warn, alignItems: 'center', justifyContent: 'center' }}><T v="xs" color={c.paper} style={{ fontSize: 10, lineHeight: 12, fontWeight: '700' }}>?</T></View> : null}
+            </View>
+            <View style={{ alignSelf: 'stretch', alignItems: 'center', paddingVertical: 8, borderRadius: 18, backgroundColor: c.surface2, borderWidth: 1.5, borderColor: isSel ? c.accent : 'transparent' }}>
+              <T v="xs" color={isToday ? c.ink : c.ink3} style={{ fontWeight: '600', fontSize: 11 }}>{SHORT[dow(a.date)]}</T>
+              <View style={{ width: 34, height: 34, borderRadius: 12, marginTop: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: isToday ? c.accent : c.surface }}>
+                <T v="num" color={isToday ? c.accentInk : c.ink} style={{ fontSize: 16, lineHeight: 19 }}>{parseISO(a.date).getDate()}</T>
+              </View>
+              <View style={{ height: 22, justifyContent: 'center', marginTop: 6 }}>{!pre ? <Icon name={dayIcon(a)} size={17} color={iconCol} /> : null}</View>
+            </View>
           </Pressable>
         );
       })}
@@ -93,8 +104,24 @@ export function WeekTracker({ s, start, today, selected, onSelect }: { s: AppSta
 
 /** Légende compacte, seulement les états présents. */
 export function StatusLegend({ statuses }: { statuses: Status[] }) {
-  const uniq = [...new Set(statuses.filter(x => x !== 'none'))];
-  const { c } = useTheme();
-  const dot = (st: Status) => { const filled = st === 'done' || st === 'synced'; return <View style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: st === 'race' || st === 'raceDone' ? c.accent : filled ? c.ink : 'transparent', borderWidth: st === 'race' || st === 'raceDone' || filled ? 0 : 1.5, borderStyle: st === 'optional' ? 'dashed' : 'solid', borderColor: st === 'adapted' ? c.warn : st === 'missed' ? c.line2 : c.ink2 }} />; };
-  return <Row gap={12} style={{ flexWrap: 'wrap' }}>{uniq.filter(x => x !== 'rest').map(st => <Row key={st} gap={5}>{dot(st)}<T v="xs" muted>{STATUS_LABEL[st]}</T></Row>)}</Row>;
+  const { c } = useTheme(); const has = (x: Status[]) => statuses.some(st => x.includes(st));
+  return (
+    <Row gap={14} style={{ flexWrap: 'wrap' }}>
+      {has(['done', 'synced', 'raceDone']) ? <Row gap={5}><View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={8} color={c.accentInk} /></View><T v="xs" muted>fait</T></Row> : null}
+      <Row gap={5}><Icon name="shoe" size={13} color={c.ink2} /><T v="xs" muted>pictogramme = séance prévue</T></Row>
+      {has(['race', 'raceDone']) ? <Row gap={5}><Icon name="flag" size={13} color={c.accent} /><T v="xs" muted>course</T></Row> : null}
+    </Row>
+  );
+}
+
+/** Version ligne : pictogramme de la séance + coche lime si faite (même langage que le tracker). */
+export function DayMini({ status, a }: { status: Status; a: AdaptedPlan }) {
+  const { c } = useTheme(); const done = status === 'done' || status === 'synced' || status === 'raceDone';
+  const col = status === 'race' || status === 'raceDone' ? c.accent : done ? c.ink : status === 'rest' || status === 'optional' || status === 'missed' ? c.ink3 : c.ink2;
+  return (
+    <Row gap={6}>
+      <View style={{ width: 34, height: 34, borderRadius: 12, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}><Icon name={dayIcon(a)} size={18} color={col} /></View>
+      <View style={{ width: 18 }}>{done ? <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={12} color={c.accentInk} /></View> : null}</View>
+    </Row>
+  );
 }

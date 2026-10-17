@@ -39,7 +39,7 @@ export default function CoachScreen() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: space.s5 }}>
         {TOPICS.map(([k, l]) => (
           <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: topic === k }} onPress={() => { setTopic(k); setSaved(''); Haptics.selectionAsync().catch(() => {}); }}>
-            <GlassSurface r={20} style={topic === k ? { borderColor: c.accent } : undefined}><T v="small" color={topic === k ? c.accent : c.ink} style={{ paddingHorizontal: 14, paddingVertical: 9, fontWeight: '600' }}>{l}</T></GlassSurface>
+            <View style={{ borderRadius: 20, backgroundColor: topic === k ? c.accent : c.surface2 }}><T v="small" color={topic === k ? c.accentInk : c.ink} style={{ paddingHorizontal: 16, paddingVertical: 10, fontWeight: '600' }}>{l}</T></View>
           </Pressable>))}
       </View>
 

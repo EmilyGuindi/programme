@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import type React from 'react';
 import { Stage, StatusMark } from '@/components/brand';
-import { DayBadge, dayIcon, dayStatus, StatusLegend, WeekTracker } from '@/components/week-tracker';
+import { DayMini, dayStatus, StatusLegend, WeekTracker } from '@/components/week-tracker';
 import { openDay, presetFor, TYPE_LABEL } from '@/components/plan-row';
 import { Button, Divider, ListGroup, ListRow, Meter, Row, Screen, T } from '@/components/ui';
 import { activitiesOn, adapted, doneOn, phaseOf, weekOf, weekStart } from '@/engine/coach';
@@ -64,7 +64,7 @@ export default function Program() {
           return (
             <ListRow key={a.date} last={i === arr.length - 1} title={shown.title} sub={sub || undefined}
               left={<View style={{ width: 36 }}><T v="overline" color={a.date === today ? c.accent : c.ink3}>{DAY_NAMES[dow(a.date)].slice(0, 3)}</T><T v="num" style={{ fontSize: 18, lineHeight: 20 }} color={k === 'rest' ? c.ink3 : c.ink}>{parseISO(a.date).getDate()}</T></View>}
-              right={<DayBadge status={dayStatus(s, a, today)} icon={dayIcon(a)} size={28} />} onPress={() => (a.type === 'event' && a.event ? router.push({ pathname: '/race/[id]', params: { id: a.event.id } }) : openDay(a.date))} />
+              right={<DayMini status={dayStatus(s, a, today)} a={a} />} onPress={() => (a.type === 'event' && a.event ? router.push({ pathname: '/race/[id]', params: { id: a.event.id } }) : openDay(a.date))} />
           );
         })}
       </ListGroup>
@@ -101,7 +101,7 @@ function DayPanel({ a, today }: { a: AdaptedPlan; today: string }) {
       {a.note && !a.reason ? <T v="small" color={fg2} style={{ marginTop: space.s2 }}>{a.note}</T> : null}
       {a.reason ? <T v="small" color={fg2} style={{ marginTop: space.s2 }}>{a.reason}</T> : null}
       {shown.type === 'rest' && !a.note && !shown.goal ? <T color={fg2} style={{ marginTop: 4 }}>Récupération. Une marche est bienvenue.</T> : null}
-      {done && acts.length ? <T v="small" color={c.ok} style={{ marginTop: space.s2 }}>{`Réalisé : ${acts.map(x => [x.title, x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.calories ? `${Math.round(x.calories)} kcal estimées` : ''].filter(Boolean).join(' · ')).join(', ')}`}</T> : null}
+      {done && acts.length ? <T v="small" color={c.accent} style={{ marginTop: space.s2 }}>{`Réalisé : ${acts.map(x => [x.title, x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.calories ? `${Math.round(x.calories)} kcal estimées` : ''].filter(Boolean).join(' · ')).join(', ')}`}</T> : null}
       {isEvent && a.event!.result ? <T v="small" color={c.stageInk} style={{ marginTop: space.s2 }}>{`Résultat : ${clock(a.event!.result.time)}`}</T> : null}
       <View style={{ marginTop: space.s4, gap: space.s2 }}>
         {isEvent ? <Button kind="primary" block label={a.event!.result ? 'Voir le débrief' : s.activities.some(x => x.eventId === a.event!.id) ? 'Saisir mon temps' : 'Préparer la course'} onPress={() => (!a.event!.result && s.activities.some(x => x.eventId === a.event!.id) ? router.push({ pathname: '/result/[id]', params: { id: a.event!.id } }) : router.push({ pathname: '/race/[id]', params: { id: a.event!.id } }))} />

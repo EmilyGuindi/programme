@@ -33,18 +33,18 @@ export default function Progress() {
       <T v="title" style={{ paddingTop: space.s4, marginBottom: space.s4, fontSize: 32, lineHeight: 38 }}>Progression</T>
 
       {/* Indicateur principal : la régularité du cycle, en vraies données */}
-      <Pressable onPress={() => go('regularity')} accessibilityRole="button" style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}><Stage mark style={{ marginBottom: 0 }}>
-        <Kicker onStage>{`Cycle 1 · semaine ${w} sur ${s.program.weeks}`}</Kicker>
+      <Pressable onPress={() => go('regularity')} accessibilityRole="button" style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}><Stage mark tone="lime" style={{ marginBottom: 0 }}>
+        <Kicker onStage color={c.accentInk}>{`Cycle 1 · semaine ${w} sur ${s.program.weeks}`}</Kicker>
         <Row style={{ alignItems: 'flex-end', marginTop: space.s3 }} gap={space.s3}>
-          <T v="display" color={c.stageInk}>{planned ? `${done}/${planned}` : '—'}</T>
-          <T v="small" color={c.stageInk2} style={{ flex: 1, paddingBottom: 6 }}>{planned ? 'séances prévues réalisées cette semaine' : 'aucune séance prévue jusqu\'ici cette semaine'}</T>
+          <T v="display" color={c.accentInk}>{planned ? `${done}/${planned}` : '—'}</T>
+          <T v="small" color={c.accentInk} style={{ flex: 1, paddingBottom: 6 }}>{planned ? 'séances prévues réalisées cette semaine' : 'aucune séance prévue jusqu\'ici cette semaine'}</T>
         </Row>
         <View style={{ flexDirection: 'row', gap: 3, marginTop: space.s4 }}>
           {Array.from({ length: s.program.weeks }, (_, i) => { const p = past.find(x => x.w === i + 1); const cur = i + 1 === w;
-            return <View key={i} style={{ flex: 1, height: cur ? 10 : 6, borderRadius: 3, alignSelf: 'flex-end', backgroundColor: p ? (p.ok ? c.stageInk : 'rgba(244,242,238,0.35)') : cur ? c.accent : 'rgba(244,242,238,0.12)' }} />; })}
+            return <View key={i} style={{ flex: 1, height: cur ? 10 : 6, borderRadius: 3, alignSelf: 'flex-end', backgroundColor: p ? (p.ok ? c.accentInk : 'rgba(11,13,10,0.4)') : cur ? c.accentInk : 'rgba(11,13,10,0.15)' }} />; })}
         </View>
-        <Row between style={{ marginTop: 6 }}><T v="xs" color={c.stageInk2}>14 oct.</T><T v="xs" color={c.stageInk2}>28 févr.</T></Row>
-        {runStep || bodyStep ? <Row gap={8} style={{ marginTop: space.s4 }}><StepMark state="current" size={16} /><T v="small" color={c.stageInk}>{`Étape en cours : ${(runStep || bodyStep)!.title.toLowerCase()}`}</T></Row> : null}
+        <Row between style={{ marginTop: 6 }}><T v="xs" color={c.accentInk} style={{ opacity: 0.7 }}>14 oct.</T><T v="xs" color={c.accentInk} style={{ opacity: 0.7 }}>28 févr.</T></Row>
+        {runStep || bodyStep ? <Row gap={8} style={{ marginTop: space.s4 }}><Icon name="chevrons" size={16} color={c.accentInk} filled /><T v="small" color={c.accentInk} style={{ fontWeight: '600' }}>{`Étape en cours : ${(runStep || bodyStep)!.title.toLowerCase()}`}</T></Row> : null}
       </Stage></Pressable>
 
       {fresh ? <Pressable onPress={() => go('records')} style={{ flexDirection: 'row', alignItems: 'center', gap: space.s3, marginTop: space.s3, padding: space.s4, borderRadius: radius.r2, backgroundColor: c.surface }}>

@@ -157,3 +157,13 @@ export function StatusMark({ status, size = 18, color, onStage }: { status: Stat
   return <Svg width={w} height={h} accessibilityLabel={STATUS_LABEL[status]}>{body}</Svg>;
 }
 
+
+/** Pastille de métrique en verre (durée, kcal, allure…), posée sur une carte signature. */
+export function MetricPill({ icon, label, onLime }: { icon?: React.ReactNode; label: string; onLime?: boolean }) {
+  const { c } = useTheme();
+  return (
+    <Row gap={6} style={{ paddingHorizontal: 12, height: 34, borderRadius: 17, backgroundColor: onLime ? 'rgba(11,13,10,0.12)' : 'rgba(245,247,242,0.08)', borderWidth: 0.5, borderColor: onLime ? 'rgba(11,13,10,0.18)' : 'rgba(245,247,242,0.14)' }}>
+      {icon}<T v="small" color={onLime ? c.accentInk : c.ink} style={{ fontWeight: '600' }}>{label}</T>
+    </Row>
+  );
+}

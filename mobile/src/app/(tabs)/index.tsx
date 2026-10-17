@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { AppState, Pressable, View } from 'react-native';
 import { ActivityPrompts } from '@/components/activity-prompts';
-import { Badge, Kicker, Stage } from '@/components/brand';
+import { Badge, Kicker, MetricPill, Stage } from '@/components/brand';
 import { ActivityEnergyCard } from '@/components/energy-card';
 import { GlassSurface } from '@/components/glass';
 import { Icon, type IconName } from '@/components/icons';
@@ -54,12 +54,14 @@ export default function Today() {
       {/* A · En-tête */}
       <Row between style={{ paddingTop: space.s4, paddingBottom: space.s5 }}>
         <Wordmark height={13} />
-        <Row gap={8}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`État du jour : ${LEVEL[r.level]}`} onPress={() => router.push('/checkin')} hitSlop={6}>
-            <GlassSurface r={18}><Row gap={6} style={{ paddingHorizontal: 12, height: 36 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: lvlCol }} /><T v="small" style={{ fontWeight: '600' }}>{LEVEL[r.level]}</T></Row></GlassSurface>
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Profil" onPress={() => router.push('/profile')} hitSlop={6} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}><T v="label">{s.user.name.charAt(0)}</T></Pressable>
-        </Row>
+        <GlassSurface r={24}>
+          <Row gap={4} style={{ padding: 4 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`État du jour : ${LEVEL[r.level]}. Ouvrir le check-in`} onPress={() => router.push('/checkin')} hitSlop={4} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 40, borderRadius: 20, backgroundColor: 'rgba(245,247,242,0.06)' }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: lvlCol }} /><T v="small" style={{ fontWeight: '600' }}>{LEVEL[r.level]}</T>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Profil" onPress={() => router.push('/profile')} hitSlop={4} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' }}><T v="label" color={c.accentInk}>{s.user.name.charAt(0)}</T></Pressable>
+          </Row>
+        </GlassSurface>
       </Row>
       <UpdateBanner />
       <T v="small" muted>{`${fmtLong(d)} · semaine ${w} · ${ph.name}`}</T>
@@ -83,8 +85,11 @@ export default function Today() {
             {done ? <T v="overline" color={c.ok}>Fait</T> : a.reason ? <T v="overline" color={c.warn}>Adaptée</T> : null}
           </Row>
           <T v="title" color={c.stageInk} style={{ fontSize: 32, lineHeight: 37, marginTop: space.s3, maxWidth: '88%' }}>{shown.title}</T>
-          {a.dur && !a.replaced ? <T color={c.stageInk2} style={{ marginTop: 4 }}>{a.dur}</T> : null}
-          {done ? <T v="small" color={c.ok} style={{ marginTop: space.s2 }}>{acts.filter(x => !x.complementary).map(x => [x.title, x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.calories ? `${Math.round(x.calories)} kcal estimées` : ''].filter(Boolean).join(' · ')).join(', ')}</T>
+          {(a.dur && !a.replaced) || (done && acts.some(x => x.calories)) ? <Row gap={8} style={{ marginTop: space.s3, flexWrap: 'wrap' }}>
+            {a.dur && !a.replaced ? <MetricPill icon={<Icon name="clock" size={15} color={c.accent} />} label={a.dur.replace(' au total', '')} /> : null}
+            {done && acts.some(x => x.calories) ? <MetricPill icon={<Icon name="flame" size={15} color={c.accent} />} label={`${Math.round(acts.reduce((t, x) => t + (x.calories || 0), 0))} kcal`} /> : null}
+          </Row> : null}
+          {done ? <T v="small" color={c.accent} style={{ marginTop: space.s3 }}>{`Fait · ${acts.filter(x => !x.complementary).map(x => [x.title, x.durationMin ? `${Math.round(x.durationMin)} min` : ''].filter(Boolean).join(' · ')).join(', ')}`}</T>
             : <T color={c.stageInk} style={{ marginTop: space.s3, opacity: 0.85 }}>{coachLine(s, d)}</T>}
           <View style={{ marginTop: space.s5, gap: space.s2 }}>
             {checkinFirst ? <Button kind="primary" block label="Faire mon check-in · 30 s" onPress={() => router.push('/checkin')} />

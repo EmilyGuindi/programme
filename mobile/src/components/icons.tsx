@@ -3,7 +3,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useTheme } from '@/theme/tokens';
 
 /** Icônes linéaires 22 px, trait 1,8 : un seul jeu pour les accès secondaires et les réglages. */
-export type IconName = 'calendar' | 'run' | 'body' | 'dumbbell' | 'path' | 'peak' | 'story' | 'target' | 'bell' | 'link' | 'cycle' | 'data' | 'spark' | 'shoe' | 'kettlebell' | 'sled' | 'walk' | 'moon' | 'flag' | 'flame' | 'check' | 'today' | 'chevrons' | 'person' | 'coach' | 'play' | 'pause' | 'stop' | 'swap' | 'plus' | 'next';
+export type IconName = 'calendar' | 'run' | 'body' | 'dumbbell' | 'path' | 'peak' | 'story' | 'target' | 'bell' | 'link' | 'cycle' | 'data' | 'spark' | 'shoe' | 'kettlebell' | 'sled' | 'walk' | 'moon' | 'flag' | 'flame' | 'check' | 'today' | 'chevrons' | 'person' | 'coach' | 'play' | 'pause' | 'stop' | 'swap' | 'plus' | 'next' | 'clock';
 type N = IconName;
 export function Icon({ name, size = 22, color, filled }: { name: N; size?: number; color?: string; filled?: boolean }) {
   const { c } = useTheme(); const s = color || c.ink; const p = { stroke: s, strokeWidth: 1.8, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }; const f = filled ? s : 'none';
@@ -36,6 +36,7 @@ export function Icon({ name, size = 22, color, filled }: { name: N; size?: numbe
     pause: <><Rect x={6} y={5} width={4} height={14} rx={1.4} fill={s} /><Rect x={14} y={5} width={4} height={14} rx={1.4} fill={s} /></>,
     stop: <Rect x={6} y={6} width={12} height={12} rx={2.5} fill={s} />,
     next: <><Path d="M5.5 5.8v12.4c0 .8.9 1.2 1.5.7l8-6.2a.9.9 0 0 0 0-1.4l-8-6.2c-.6-.5-1.5-.1-1.5.7z" fill={s} /><Rect x={16.5} y={5} width={2.5} height={14} rx={1.2} fill={s} /></>,
+    clock: <><Circle cx={12} cy={12} r={8.5} {...p} /><Path d="M12 7.5V12l3 2" {...p} /></>,
     plus: <Path d="M12 5v14M5 12h14" {...p} />,
     swap: <><Path d="M7 7h11l-3-3M17 17H6l3 3" {...p} /></>,
     spark: <><Path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z" {...p} /><Path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" {...p} /></>,

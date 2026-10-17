@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { Bullets, Disclosure, MoveList } from '@/components/guide';
 import { Sheet } from '@/components/sheet';
-import { BrandedCard } from '@/components/brand';
+import { BrandedCard, MetricPill } from '@/components/brand';
+import { Icon } from '@/components/icons';
 import { segments, totalSec } from '@/engine/segments';
 import { radius } from '@/theme/tokens';
 import { RPE_SCALE, RUN_COOLDOWN, RUN_TERMS, RUN_WARMUP, ZONE_GUIDE } from '@/engine/guides';
@@ -35,14 +36,14 @@ export default function RunScreen() {
   }
   const sg = segments(run); const total = Math.round(totalSec(sg) / 60);
   return (
-    <Sheet title={run.title} sub={fmtDay(date)} footer={<Button kind="primary" block label="Démarrer la séance" onPress={() => router.push({ pathname: '/run-live/[date]', params: { date } })} />}>
+    <Sheet title={run.title} sub={fmtDay(date)} footer={<Button kind="primary" block icon={<Icon name="play" size={18} color="#0B0D0A" />} label="Démarrer la séance" onPress={() => router.push({ pathname: '/run-live/[date]', params: { date } })} />}>
       {finished ? <View style={{ backgroundColor: c.accentSoft, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3 }}><T v="label" color={c.accent}>Séance terminée</T><T v="small">Ton temps est noté. La distance et l'allure de ta montre arrivent par Strava ; tu peux aussi les saisir dans « Bilan » plus bas.</T></View> : null}
       <BrandedCard mark>
         <T v="overline" color={c.stageInk2}>{run.kind === 'facile' ? 'Endurance' : run.kind === 'qualite' ? 'Séance d\'allure' : run.kind === 'test' ? 'Test' : 'Récupération'}</T>
         <T v="title" color={c.stageInk} style={{ marginTop: space.s2 }}>{run.goal}</T>
-        <Row gap={space.s5} style={{ marginTop: space.s5 }}>
-          <View><T v="overline" color={c.stageInk2}>Durée</T><T v="hero" color={c.stageInk}>{total || '—'}<T v="small" color={c.stageInk2}> min</T></T></View>
-          {zs.filter(z => z !== 'easy')[0] || zs[0] ? <View><T v="overline" color={c.stageInk2}>Allure cible</T><T v="hero" color={c.accent}>{zoneText(s, (zs.filter(z => z !== 'easy')[0] || zs[0])!).replace(' /km', '').split('–')[0]}<T v="small" color={c.stageInk2}> /km</T></T></View> : null}
+        <Row gap={8} style={{ marginTop: space.s4, flexWrap: 'wrap' }}>
+          <MetricPill icon={<Icon name="clock" size={15} color={c.accent} />} label={`${total} min`} />
+          {(zs.filter(z => z !== 'easy')[0] || zs[0]) ? <MetricPill icon={<Icon name="shoe" size={15} color={c.accent} />} label={zoneText(s, (zs.filter(z => z !== 'easy')[0] || zs[0])!)} /> : null}
         </Row>
         {a.reason ? <T v="small" color={c.warn} style={{ marginTop: space.s3 }}>{a.reason}</T> : null}
       </BrandedCard>
@@ -50,7 +51,7 @@ export default function RunScreen() {
       <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, paddingVertical: space.s2 }}>
         {run.steps.map((st, i) => (
           <Row key={i} gap={space.s3} style={{ paddingHorizontal: space.s4, paddingVertical: space.s3, alignItems: 'flex-start' }}>
-            <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: R.steps?.[i] ? c.ok : st.zone && st.zone !== 'easy' ? c.accent : c.surface2 }}><T v="xs" color={R.steps?.[i] || (st.zone && st.zone !== 'easy') ? c.accentInk : c.ink2} style={{ fontWeight: '700' }}>{R.steps?.[i] ? '✓' : String(i + 1)}</T></View>
+            <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: st.zone && st.zone !== 'easy' ? c.accent : c.line2, backgroundColor: R.steps?.[i] ? c.accent : 'transparent' }}>{R.steps?.[i] ? <Icon name="check" size={14} color={c.accentInk} /> : <T v="xs" color={st.zone && st.zone !== 'easy' ? c.accent : c.ink2} style={{ fontWeight: '700' }}>{String(i + 1)}</T>}</View>
             <View style={{ flex: 1 }}><T>{st.text}</T>{st.zone ? <T v="small" color={st.zone === 'easy' ? c.ink2 : c.accent}>{`${zoneText(s, st.zone)} · ${ZONE_NAME[st.zone].split(' ·')[0].toLowerCase()}`}</T> : null}</View>
           </Row>))}
       </View>

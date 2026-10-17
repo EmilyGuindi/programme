@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StylePro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Level } from '@/engine/types';
 import { font, radius, size, space, touch, useTheme } from '@/theme/tokens';
-import Svg, { Path as SvgPath } from 'react-native-svg';
+import Svg, { Defs, Path as SvgPath, RadialGradient, Rect as SvgRect, Stop } from 'react-native-svg';
 
 const tap = () => Haptics.selectionAsync().catch(() => {});
 
@@ -36,7 +36,7 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
   // Chaque fois qu'on revient sur un écran (onglet ou retour), il repart en haut.
   useFocusEffect(useCallback(() => { ref.current?.scrollTo({ y: 0, animated: false }); }, []));
   const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: space.s5 - 4, paddingBottom: 132 }}>{children}</View>;
-  return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}>{scroll ? <ScrollView ref={ref} keyboardShouldPersistTaps="handled">{inner}</ScrollView> : inner}</SafeAreaView>;
+  return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}><Ambient />{scroll ? <ScrollView ref={ref} keyboardShouldPersistTaps="handled">{inner}</ScrollView> : inner}</SafeAreaView>;
 }
 export function Row({ children, gap = space.s3, between, style }: { children: ReactNode; gap?: number; between?: boolean; style?: StyleProp<ViewStyle> }) {
   return <View style={[{ flexDirection: 'row', alignItems: 'center', gap }, between && { justifyContent: 'space-between' }, style]}>{children}</View>;
@@ -51,15 +51,16 @@ export function Card({ children, onPress, tone = 'default', style }: { children:
 }
 
 /* ---------- Actions ---------- */
-export function Button({ label, onPress, kind = 'secondary', small, disabled, block, style }: { label: string; onPress: () => void; kind?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'inverse'; small?: boolean; disabled?: boolean; block?: boolean; style?: StyleProp<ViewStyle> }) {
+export function Button({ label, onPress, kind = 'secondary', small, disabled, block, style, icon }: { label: string; onPress: () => void; kind?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'inverse'; small?: boolean; disabled?: boolean; block?: boolean; style?: StyleProp<ViewStyle>; icon?: ReactNode }) {
   const { c } = useTheme();
   const bg = kind === 'primary' ? c.accent : kind === 'inverse' ? c.stageInk : kind === 'ghost' ? 'transparent' : c.surface;
   const fg = kind === 'primary' ? c.accentInk : kind === 'inverse' ? c.stage : kind === 'ghost' ? c.accent : kind === 'danger' ? c.stop : c.ink;
-  const border = kind === 'primary' ? c.accent : kind === 'ghost' || kind === 'inverse' ? 'transparent' : c.line2;
+  const border = kind === 'primary' ? c.accent : kind === 'ghost' || kind === 'inverse' ? 'transparent' : c.surface2;
+  const tall = kind === 'primary' && !small;
   return (
     <Pressable accessibilityRole="button" disabled={disabled} onPress={() => { tap(); onPress(); }}
-      style={({ pressed }) => [{ minHeight: small ? 40 : touch, paddingHorizontal: small ? space.s4 : space.s5, borderRadius: radius.r1, borderWidth: 1, borderColor: border, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.4 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }, block && { alignSelf: 'stretch' }, style]}>
-      <Text style={{ fontFamily: font.semibold, fontSize: small ? size.sm : size.md, color: fg }}>{label}</Text>
+      style={({ pressed }) => [{ minHeight: small ? 40 : tall ? 56 : touch, paddingHorizontal: small ? space.s4 : space.s5, borderRadius: kind === 'ghost' ? radius.r1 : radius.pill, borderWidth: 1, borderColor: border, backgroundColor: kind === 'secondary' ? c.surface2 : bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, opacity: disabled ? 0.4 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }, block && { alignSelf: 'stretch' }, style]}>
+      {icon}<Text style={{ fontFamily: font.semibold, fontSize: small ? size.sm : tall ? 17 : size.md, color: fg }}>{label}</Text>
     </Pressable>
   );
 }
@@ -199,4 +200,13 @@ export function BackLink({ label, onPress }: { label: string; onPress: () => voi
 export function Chevron({ color, size = 14, open }: { color?: string; size?: number; open?: boolean }) {
   const { c } = useTheme();
   return <Svg width={size} height={size} viewBox="0 0 14 14" style={{ transform: [{ rotate: open ? '90deg' : '0deg' }] }}><SvgPath d="M5 2.5L9.5 7 5 11.5" stroke={color || c.ink3} strokeWidth={1.7} fill="none" strokeLinecap="round" strokeLinejoin="round" /></Svg>;
+}
+
+/** Lumière d'ambiance : un voile vert olive très sombre en haut de l'écran, la seule « atmosphère » de l'app. */
+export function Ambient() {
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 420 }}>
+      <Svg width="100%" height="100%"><Defs><RadialGradient id="amb" cx="50%" cy="0%" rx="85%" ry="100%"><Stop offset="0" stopColor="#3A5A0C" stopOpacity={0.55} /><Stop offset="0.55" stopColor="#1A260B" stopOpacity={0.35} /><Stop offset="1" stopColor="#0B0D0A" stopOpacity={0} /></RadialGradient></Defs><SvgRect width="100%" height="100%" fill="url(#amb)" /></Svg>
+    </View>
+  );
 }
