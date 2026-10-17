@@ -4,6 +4,8 @@ import { ScrollView, View } from 'react-native';
 import { BarChart, PaceChart, WeightChart } from '@/components/charts';
 import { Disclosure } from '@/components/guide';
 import { Insights } from '@/components/insights';
+import { coverage, energy, type EnergyCat } from '@/engine/energy';
+import { fillCaloriesNow, useServer } from '@/store/store';
 import { Badge, Kicker, Rail, Stage, StepMark } from '@/components/brand';
 import { Icon } from '@/components/icons';
 import { availableRecaps, buildRecap } from '@/engine/recap';
@@ -26,7 +28,7 @@ export default function Detail() {
   return (
     <Screen>
       <View style={{ paddingTop: space.s3, paddingBottom: space.s2 }}><BackLink label="Progression" onPress={() => router.back()} /></View>
-      {view === 'regularity' ? <Regularity /> : view === 'physique' ? <Physique /> : view === 'running' ? <Running /> : view === 'journey' ? <Journey /> : view === 'records' ? <Records /> : view === 'recaps' ? <Recaps /> : <Strength />}
+      {view === 'regularity' ? <Regularity /> : view === 'physique' ? <Physique /> : view === 'running' ? <Running /> : view === 'journey' ? <Journey /> : view === 'records' ? <Records /> : view === 'recaps' ? <Recaps /> : view === 'energy' ? <Energy /> : <Strength />}
     </Screen>
   );
 }
@@ -190,7 +192,7 @@ function Records() {
     <>
       <T v="title" style={{ fontSize: 32, lineHeight: 38, marginBottom: space.s4 }}>Records et paliers</T>
       {got.length ? got.map(a => (
-        <Stage key={a.id} glow mark={false}>
+        <Stage key={a.id} mark>
           <Row gap={space.s4}>
             <Badge achieved size={64} label={a.title} />
             <View style={{ flex: 1 }}><Kicker onStage>{`Palier atteint · ${fmtShort(a.date!)}`}</Kicker><T v="h2" color={c.stageInk} style={{ marginTop: 6 }}>{a.title}</T><T v="small" color={c.stageInk2} style={{ marginTop: 2 }}>{a.detail}</T></View>
@@ -212,4 +214,41 @@ function Recaps() {
   const s = useApp(); const { c } = useTheme(); const list = availableRecaps(s);
   return (<><T v="title" style={{ marginBottom: space.s4 }}>Bilans de la semaine</T>
     {list.length ? <ListGroup>{list.map((w, i) => { const r = buildRecap(s, w); const seen = !!s.recapsSeen?.[String(w)]; return <ListRow key={w} last={i === list.length - 1} title={`Semaine ${w}`} sub={`${fmtShort(r.from)} – ${fmtShort(r.to)}${seen ? '' : ' · nouveau'}`} left={<Icon name="story" color={seen ? undefined : c.accent} />} onPress={() => router.push({ pathname: '/recap/[week]', params: { week: String(w) } })} />; })}</ListGroup> : <T muted>Ton premier bilan arrivera dimanche soir.</T>}</>);
+}
+
+function Energy() {
+  const s = useApp(); const { c } = useTheme(); const t = sportDay(); const sv = useServer(); const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
+  const wk = energy(s, addDays(t, -6), t); const mo = energy(s, addDays(t, -29), t);
+  const weeks = Array.from({ length: 8 }, (_, i) => { const end = addDays(t, -7 * (7 - i)); const e = energy(s, addDays(end, -6), end); return { label: fmtShort(addDays(end, -6)), v: e.total, n: e.withData }; }).filter(x => x.n > 0);
+  const CAT: [EnergyCat, string][] = [['entraînement', 'Entraînements du programme'], ['complémentaire', 'Activités complémentaires'], ['promenade', 'Promenades'], ['récupération', 'Récupération active']];
+  const fmtK = (n: number) => n.toLocaleString('fr-FR');
+  return (
+    <>
+      <T v="title" style={{ fontSize: 30, lineHeight: 36 }}>Dépense des activités</T>
+      <T muted style={{ marginTop: 4, marginBottom: space.s5 }}>Estimations de ta montre, transmises par Strava. Une indication, pas une mesure exacte.</T>
+      <Row gap={space.s3} style={{ alignItems: 'stretch' }}>
+        {[['7 derniers jours', wk], ['30 derniers jours', mo]].map(([l, e]: any) => (
+          <View key={l} style={{ flex: 1, backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4 }}>
+            <T v="small" muted style={{ fontWeight: '600' }}>{l}</T>
+            {e.withData ? <><Row gap={4} style={{ alignItems: 'flex-end', marginTop: 6 }}><T v="hero">{fmtK(e.total)}</T><T v="small" muted style={{ paddingBottom: 6 }}>kcal</T></Row><T v="xs" muted>{coverage(e)}</T></>
+              : <T v="small" muted style={{ marginTop: 6 }}>{e.count ? `Aucune estimation sur ${e.count} activité${e.count > 1 ? 's' : ''}` : 'Aucune activité'}</T>}
+          </View>))}
+      </Row>
+      {mo.withData ? <ListGroup title="D'où vient la dépense (30 jours)">
+        {CAT.filter(([k]) => mo.byCat[k].n).map(([k, l], i, arr) => (
+          <View key={k} style={{ paddingHorizontal: space.s4, paddingVertical: space.s3 }}>
+            <Row between><T>{l}</T><T v="label" style={{ fontVariant: ['tabular-nums'] }}>{`${fmtK(Math.round(mo.byCat[k].kcal))} kcal`}</T></Row>
+            <View style={{ height: 4, borderRadius: 2, backgroundColor: c.line, marginTop: 8 }}><View style={{ width: `${(mo.byCat[k].kcal / mo.total) * 100}%`, height: 4, borderRadius: 2, backgroundColor: k === 'entraînement' ? c.ink : c.ink3 }} /></View>
+            <T v="xs" muted style={{ marginTop: 4 }}>{`${mo.byCat[k].n} activité${mo.byCat[k].n > 1 ? 's' : ''}`}</T>
+          </View>))}
+      </ListGroup> : null}
+      {weeks.length >= 3 ? <ListGroup title="Par semaine"><View style={{ padding: space.s3 }}><BarChart labels={weeks.map(w => w.label)} values={weeks.map(w => w.v)} unit="kcal" /></View></ListGroup> : null}
+      {mo.pending ? <View style={{ marginTop: space.s2 }}>
+        <T v="small" muted>{`${mo.pending} activité${mo.pending > 1 ? 's' : ''} Strava en attente de leur estimation.`}</T>
+        {sv.url ? <Button small kind="ghost" style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }} label={busy ? 'Récupération…' : 'Récupérer les valeurs disponibles'} disabled={busy} onPress={async () => { setBusy(true); setMsg(await fillCaloriesNow()); setBusy(false); }} /> : null}
+        {msg ? <T v="small">{msg}</T> : null}
+      </View> : null}
+      <T v="xs" muted style={{ marginTop: space.s4 }}>Les activités sans estimation (saisies à la main, ou sans donnée de la montre) ne sont pas comptées. Les promenades sont incluses mais ne valident aucune séance.</T>
+    </>
+  );
 }

@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 import { Icon } from '@/components/icons';
 import { Badge, Kicker, Stage, StepMark } from '@/components/brand';
 import { Insights } from '@/components/insights';
+import { energy } from '@/engine/energy';
 import { ListGroup, ListRow, Row, Screen, T } from '@/components/ui';
 import { adapted, doneOn, weekOf, weekStart, weightSeries } from '@/engine/coach';
 import { addDays, daysBetween, fmtShort, mmss, sportDay } from '@/engine/dates';
@@ -32,7 +33,7 @@ export default function Progress() {
       <T v="title" style={{ paddingTop: space.s4, marginBottom: space.s4, fontSize: 32, lineHeight: 38 }}>Progression</T>
 
       {/* Indicateur principal : la régularité du cycle, en vraies données */}
-      <Pressable onPress={() => go('regularity')} accessibilityRole="button" style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}><Stage glow style={{ marginBottom: 0 }}>
+      <Pressable onPress={() => go('regularity')} accessibilityRole="button" style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}><Stage mark style={{ marginBottom: 0 }}>
         <Kicker onStage>{`Cycle 1 · semaine ${w} sur ${s.program.weeks}`}</Kicker>
         <Row style={{ alignItems: 'flex-end', marginTop: space.s3 }} gap={space.s3}>
           <T v="display" color={c.stageInk}>{planned ? `${done}/${planned}` : '—'}</T>
@@ -68,6 +69,7 @@ export default function Progress() {
         <ListRow title="Mon parcours" sub={runStep ? `Running : ${runStep.title.toLowerCase()}` : undefined} left={<Icon name="path" />} onPress={() => go('journey')} />
         <ListRow title="Records et paliers" sub={recs.length ? `${recs.length} record${recs.length > 1 ? 's' : ''}` : 'Tes premiers records arrivent avec tes séances'} left={<Icon name="peak" />} onPress={() => go('records')} />
         <ListRow title="Régularité" left={<Icon name="calendar" />} onPress={() => go('regularity')} />
+        <ListRow title="Dépense des activités" sub={(() => { const e = energy(s, addDays(today, -6), today); return e.withData ? `${e.total.toLocaleString('fr-FR')} kcal estimées sur 7 jours` : 'Estimations de ta montre via Strava'; })()} left={<Icon name="spark" />} onPress={() => go('energy')} />
         <ListRow last title="Renforcement" sub={Object.keys(s.strength).length ? `${Object.keys(s.strength).length} séance${Object.keys(s.strength).length > 1 ? 's' : ''} enregistrée${Object.keys(s.strength).length > 1 ? 's' : ''}` : 'Charges notées le dimanche'} left={<Icon name="dumbbell" />} onPress={() => go('strength')} />
       </ListGroup>
     </Screen>

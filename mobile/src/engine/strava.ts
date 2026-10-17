@@ -46,10 +46,11 @@ export function mergeStrava(s: AppState, items: StravaItem[]) {
   for (const it of items) {
     const i = s.activities.findIndex(a => a.stravaId === it.stravaId);
     if (it.deleted) { if (i >= 0 && !s.activities[i].userEdited) s.activities.splice(i, 1); continue; }
-    const metrics = { date: it.date, durationMin: it.movingMin, elapsedMin: it.elapsedMin, distanceKm: it.distanceKm, elevM: it.elevM, avgHr: it.avgHr, maxHr: it.maxHr, sportType: it.sportType, startLocal: it.startLocal, laps: it.laps, effort: it.perceived ?? undefined };
+    const metrics = { date: it.date, durationMin: it.movingMin, elapsedMin: it.elapsedMin, distanceKm: it.distanceKm, elevM: it.elevM, avgHr: it.avgHr, maxHr: it.maxHr, sportType: it.sportType, startLocal: it.startLocal, laps: it.laps, effort: it.perceived ?? undefined,
+      calories: it.caloriesChecked ? it.calories ?? null : undefined, caloriesStatus: (it.caloriesChecked ? (it.calories ? 'available' : 'absent') : 'pending') as 'available' | 'absent' | 'pending', caloriesAt: it.caloriesAt };
     if (i >= 0) {
       const cur = s.activities[i];
-      Object.assign(cur, metrics, { effort: cur.effort ?? it.perceived ?? null });
+      Object.assign(cur, metrics, { effort: cur.effort ?? it.perceived ?? null, calories: it.caloriesChecked ? it.calories ?? null : cur.calories ?? null, caloriesStatus: it.caloriesChecked ? (it.calories ? 'available' : 'absent') : cur.caloriesStatus === 'available' ? 'available' : 'pending' });
       if (!cur.userEdited) Object.assign(cur, classify(s, it));
     } else {
       // une saisie manuelle du même jour et du même type est remplacée par la version Strava (pas de doublon)

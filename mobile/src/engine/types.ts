@@ -17,11 +17,14 @@ export interface Activity {
   stravaId?: string; sportType?: string; startLocal?: string; elapsedMin?: number | null; maxHr?: number | null;
   laps?: { km: number; s: number; hr: number | null; elev: number | null }[];
   needsConfirm?: boolean; userEdited?: boolean; askEffort?: boolean;
+  /** Énergie estimée par la montre ou Strava (kcal). Une seule source de vérité : l'activité elle-même. */
+  calories?: number | null; caloriesStatus?: 'available' | 'absent' | 'pending'; caloriesAt?: number;
 }
 export interface StravaItem {
   stravaId: string; name: string; sportType: string; date: ISODate; startLocal?: string; distanceKm: number | null; movingMin: number | null;
   elapsedMin: number | null; elevM: number | null; avgHr: number | null; maxHr: number | null; perceived?: number | null; trainer?: boolean;
   laps?: { km: number; s: number; hr: number | null; elev: number | null }[]; deleted?: boolean; updatedAt: number;
+  calories?: number | null; caloriesChecked?: boolean; caloriesAt?: number;
 }
 
 export interface SportEvent {

@@ -22,7 +22,7 @@ export default function RaceScreen() {
   const setEv = (fn: (e: NonNullable<typeof ev>) => void) => update(x => { const e = x.events.find(y => y.id === id); if (e) fn(e); });
   return (
     <Sheet title={past ? 'Débrief' : 'Préparation'} sub={fmtLong(ev.date)}>
-      <Stage glow>
+      <Stage glow mark>
         <Row between style={{ alignItems: 'flex-start' }}>
           <View style={{ flex: 1, paddingRight: space.s3 }}>
             <Kicker onStage>{`${TYPE[ev.type]}${ev.distanceKm ? ` · ${String(ev.distanceKm).replace('.', ',')} km` : ''}`}</Kicker>

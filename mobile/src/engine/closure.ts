@@ -13,6 +13,7 @@ export function buildClosure(s: AppState, a: Activity): Closure {
   if (a.distanceKm) stats.push(`${String(a.distanceKm).replace('.', ',')} km`);
   if (a.distanceKm && a.durationMin) { const sec = pace(a); stats.push(`${Math.floor(sec / 60)}'${String(Math.round(sec % 60)).padStart(2, '0')} /km`); }
   if (a.elevM) stats.push(`${a.elevM} m D+`);
+  if (a.calories && a.calories > 0) stats.push(`${Math.round(a.calories)} kcal estimées`);
   const goal = p.run?.goal || p.goal || (a.type === 'crossfit' || a.type === 'hyrox' ? 'Force, puissance et capacité de travail.' : '');
   if (a.type === 'running' && a.distanceKm && a.durationMin) {
     facts.push(p.run?.kind === 'facile' ? `Tu as couru ${Math.round(a.durationMin)} minutes en endurance. Ce type de séance construit ta base aérobie.` : `Séance terminée : ${p.run?.title || a.title}.`);

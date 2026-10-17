@@ -2,7 +2,7 @@ import type React from 'react';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { pendingClosure } from '@/engine/closure';
-import { addDays, daysBetween, fmtShort } from '@/engine/dates';
+import { addDays, clock as clockS, daysBetween, fmtShort } from '@/engine/dates';
 import { nextEvent, pendingDebrief, readiness } from '@/engine/race';
 import { availableRecaps } from '@/engine/recap';
 import { useApp } from '@/store/store';
@@ -14,7 +14,7 @@ import { Row, T, Tag } from './ui';
 export function ContextCards({ d }: { d: string }) {
   const s = useApp(); const { c } = useTheme(); const cards: React.ReactElement[] = [];
   const deb = pendingDebrief(s, d);
-  if (deb) cards.push(<Ctx key="deb" tag="Débrief" title={`${deb.name} : comment ça s'est passé ?`} sub={deb.result ? 'Deux questions, puis ton analyse.' : 'Saisis ton résultat pour ton analyse.'} onPress={() => router.push({ pathname: '/race/[id]', params: { id: deb.id } })} />);
+  if (deb && deb.date !== d) cards.push(<Ctx key="deb" tag="Course terminée" title={`${deb.name}${deb.result ? ` · ${clockS(deb.result.time)}` : ''}`} sub={deb.result ? 'Deux questions, puis ton analyse.' : 'Saisis ton résultat pour ton analyse.'} onPress={() => router.push({ pathname: '/race/[id]', params: { id: deb.id } })} />);
   const ev = nextEvent(s, d, 21);
   if (ev && ev.date !== d) {
     const n = daysBetween(d, ev.date); const rd = readiness(s, ev, d);

@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react';
 import { AppState, Pressable, View } from 'react-native';
 import { ActivityPrompts } from '@/components/activity-prompts';
 import { Kicker, Stage } from '@/components/brand';
+import { WeekTracker } from '@/components/week-tracker';
+import { eventActivity } from '@/engine/race';
+import { clock, mmss } from '@/engine/dates';
 import { Wordmark } from '@/components/logo';
 import { openDay, openPlan, presetFor, TYPE_LABEL } from '@/components/plan-row';
 import { ProposalCard } from '@/components/proposal-card';
@@ -10,7 +13,7 @@ import { ContextCards } from '@/components/today-cards';
 import { Button, ListGroup, ListRow, Row, Screen, T } from '@/components/ui';
 import { UpdateBanner } from '@/components/update-banner';
 import { activitiesOn, adapted, coachLine, doneOn, phaseOf, planFor, recovery, weekOf, weekStart } from '@/engine/coach';
-import { addDays, dow, fmtLong, sportDay } from '@/engine/dates';
+import { addDays, fmtLong, sportDay } from '@/engine/dates';
 import { update, useApp } from '@/store/store';
 import { radius, space, useTheme } from '@/theme/tokens';
 
@@ -28,7 +31,8 @@ export default function Today() {
   const s = useApp(); const { c } = useTheme();
   const d = sportDay(); const a = adapted(s, d); const r = recovery(s, d); const acts = activitiesOn(s, d);
   const shown = a.replaced || a; const tmr = adapted(s, addDays(d, 1)); const done = doneOn(s, d);
-  const isEvent = a.type === 'event'; const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, d))); const ph = phaseOf(w);
+  const isEvent = a.type === 'event';
+  const finishedAct = isEvent && a.event ? eventActivity(s, a.event) : undefined; const finished = isEvent && !!(a.event?.result || finishedAct); const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, d))); const ph = phaseOf(w);
   const lvlCol = { vert: c.ok, orange: c.warn, rouge: c.stop, inconnu: c.ink3 }[r.level];
   const isRest = shown.type === 'rest';
   const ws = weekStart(s, w);
@@ -56,7 +60,19 @@ export default function Today() {
       ) : null}
 
       {/* La séance du jour : la scène de l'écran */}
-      <Stage glow={!isRest} mark>
+      {finished ? (
+        <Stage mark glow>
+          <Kicker onStage>Course terminée</Kicker>
+          <T v="title" color={c.stageInk} style={{ fontSize: 30, lineHeight: 35, marginTop: space.s3, maxWidth: '85%' }}>{a.event!.name}</T>
+          <Row gap={8} style={{ alignItems: 'flex-end', marginTop: space.s3 }}>
+            <T v="display" color={c.stageInk}>{a.event!.result ? clock(a.event!.result.time) : finishedAct?.elapsedMin ? `${Math.floor(finishedAct.elapsedMin / 60) ? `${Math.floor(finishedAct.elapsedMin / 60)}h` : ''}${String(Math.round(finishedAct.elapsedMin % 60)).padStart(2, '0')}` : '—'}</T>
+            <T v="small" color={c.stageInk2} style={{ paddingBottom: 8 }}>{a.event!.result ? (a.event!.distanceKm ? `${mmss(a.event!.result.time / a.event!.distanceKm)} /km` : 'temps officiel') : 'durée Strava'}</T>
+          </Row>
+          <T color={c.stageInk} style={{ marginTop: space.s3, opacity: 0.9 }}>{a.event!.result?.feeling ? 'Débrief fait. Récupère bien, la suite s\'ajuste.' : 'Deux minutes pour ton débrief : il prépare la suite.'}</T>
+          <Button kind="inverse" block style={{ marginTop: space.s5 }} label={a.event!.result?.feeling ? 'Voir mon analyse' : a.event!.result ? 'Faire mon débrief' : 'Saisir mon temps officiel'} onPress={() => router.push({ pathname: '/race/[id]', params: { id: a.event!.id } })} />
+        </Stage>
+      ) : (
+      <Stage mark={isEvent} glow={isEvent}>
         <Row between>
           <Kicker onStage>{isEvent ? 'Compétition' : `Ta journée · ${TYPE_LABEL[shown.type]}${a.optional ? ' · optionnel' : ''}`}</Kicker>
           {done && !isEvent ? <T v="overline" color={c.ok}>Fait</T> : a.reason ? <T v="overline" color={c.warn}>Adaptée</T> : null}
@@ -77,36 +93,26 @@ export default function Today() {
             {s.overrides[d]?.adj ? <Button small kind="ghost" label="Revenir au prévu" style={{ paddingHorizontal: 0, marginLeft: 'auto' }} onPress={() => update(st => { delete st.overrides[d].adj; })} /> : null}
           </Row>
         </View>
-      </Stage>
+      </Stage>)}
       {r.level !== 'inconnu' ? <T v="small" muted style={{ marginBottom: space.s4 }}>{r.reasons[0]}</T> : <View style={{ height: space.s2 }} />}
 
       <ProposalCard d={d} />
       <ContextCards d={d} />
       <ActivityPrompts />
 
-      {/* La semaine en un coup d'œil */}
-      <Pressable onPress={() => router.push('/program')} accessibilityRole="button" style={({ pressed }) => ({ backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3, opacity: pressed ? 0.85 : 1 })}>
-        <Row between><Kicker>Ta semaine</Kicker><T v="small" muted>{plannedW.length ? `${doneW} sur ${plannedW.length}` : ''}</T></Row>
-        <Row style={{ marginTop: space.s3, justifyContent: 'space-between' }}>
-          {week.map(q => { const today = q.x === d; const pre = q.x < s.user.startDate; const ev = q.p.type === 'event';
-            return (
-              <View key={q.x} style={{ alignItems: 'center', gap: 6, opacity: pre ? 0.35 : 1 }}>
-                <T v="overline" color={today ? c.accent : c.ink3}>{['L', 'M', 'M', 'J', 'V', 'S', 'D'][dow(q.x)]}</T>
-                <View style={{ width: 28, height: 28, borderRadius: ev ? 6 : 14, transform: ev ? [{ rotate: '45deg' }] : [], alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: q.done ? c.ink : ev ? c.accent : 'transparent', borderWidth: q.done || ev ? 0 : 1.5, borderColor: q.p.type === 'rest' ? c.line2 : today ? c.accent : c.ink3, borderStyle: q.p.optional && !q.done ? 'dashed' : 'solid' }}>
-                  {q.done ? <T v="xs" color={c.paper} style={{ fontWeight: '700' }}>✓</T> : null}
-                </View>
-              </View>); })}
-        </Row>
-      </Pressable>
+      {/* La semaine : le même tracker que Programme */}
+      <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, paddingVertical: space.s3, paddingHorizontal: space.s2, marginBottom: space.s3 }}>
+        <Row between style={{ paddingHorizontal: space.s2, marginBottom: space.s2 }}><T v="label">Ta semaine</T><T v="small" muted>{plannedW.length ? `${doneW} sur ${plannedW.length}` : ''}</T></Row>
+        <WeekTracker s={s} start={ws} today={d} onSelect={x => openDay(x)} />
+      </View>
 
       <ListGroup title="Aujourd'hui">
         {acts.map(x => <ListRow key={x.id} title={x.title} sub={[x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.distanceKm ? `${String(x.distanceKm).replace('.', ',')} km` : '', x.complementary ? 'complémentaire' : '', x.source === 'strava' ? 'Strava' : ''].filter(Boolean).join(' · ')} onPress={() => router.push({ pathname: '/activity', params: { id: x.id } })} />)}
         <ListRow last title="Ajouter une activité" left={<T v="h3" color={c.accent}>+</T>} chevron={false} onPress={() => router.push({ pathname: '/activity', params: { date: d } })} />
       </ListGroup>
-      <ListGroup title="Demain">
+      {tmr.type === 'event' ? null : <ListGroup title="Demain">
         <ListRow last title={(tmr.replaced || tmr).title} sub={[tmr.dur, tmr.optional ? 'optionnel' : ''].filter(Boolean).join(' · ') || undefined} onPress={() => openDay(addDays(d, 1))} />
-      </ListGroup>
+      </ListGroup>}
     </Screen>
   );
 }

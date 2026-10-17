@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import type React from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, G, Line, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { radius, space, useTheme } from '@/theme/tokens';
@@ -15,11 +16,14 @@ const P1 = 'M12 12 L58 46 L58 114 L43 99 L43 54 L12 31 Z';
 const P2 = 'M114 12 L68 46 L68 114 L83 99 L83 54 L114 31 Z';
 
 /** Surface « scène » : charcoal, coin supérieur droit coupé, filigrane du symbole. Réservée aux moments importants. */
-export function Stage({ children, cut = 28, mark = true, tone = 'ink', style, glow }: { children: ReactNode; cut?: number; mark?: boolean; tone?: 'ink' | 'cobalt'; style?: StyleProp<ViewStyle>; glow?: boolean }) {
+/** Règles du motif : uniquement sur les moments importants (compétition, objectif majeur, cycle, record, palier).
+ *  Cadrage : coin inférieur droit, rogné, hauteur ≈ 1,35 × 102 px ; opacité 7 % sur charcoal, 12 % sur cobalt.
+ *  Le coin coupé accompagne toujours le motif, jamais seul. Le halo (glow) est réservé aux compétitions. */
+export function Stage({ children, cut = 28, mark = false, tone = 'ink', style, glow }: { children: ReactNode; cut?: number; mark?: boolean; tone?: 'ink' | 'cobalt'; style?: StyleProp<ViewStyle>; glow?: boolean }) {
   const { c } = useTheme(); const [sz, setSz] = useState({ w: 0, h: 0 });
   const onLayout = (e: LayoutChangeEvent) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
   const { w, h } = sz; const r = 18; const bg = tone === 'cobalt' ? c.accent : c.stage;
-  const d = `M${r},0 H${w - cut} L${w},${cut} V${h - r} Q${w},${h} ${w - r},${h} H${r} Q0,${h} 0,${h - r} V${r} Q0,0 ${r},0 Z`;
+  const d = mark ? `M${r},0 H${w - cut} L${w},${cut} V${h - r} Q${w},${h} ${w - r},${h} H${r} Q0,${h} 0,${h - r} V${r} Q0,0 ${r},0 Z` : `M${r},0 H${w - r} Q${w},0 ${w},${r} V${h - r} Q${w},${h} ${w - r},${h} H${r} Q0,${h} 0,${h - r} V${r} Q0,0 ${r},0 Z`;
   return (
     <View onLayout={onLayout} style={[{ padding: space.s5, marginBottom: space.s3 }, style]}>
       {w > 0 ? <Svg width={w} height={h} style={{ position: 'absolute', left: 0, top: 0 }}>
@@ -36,7 +40,10 @@ export function Stage({ children, cut = 28, mark = true, tone = 'ink', style, gl
 /** Surtitre éditorial : petit trait cobalt + capitales espacées. */
 export function Kicker({ children, color, onStage }: { children: string; color?: string; onStage?: boolean }) {
   const { c } = useTheme();
-  return <Row gap={8}><View style={{ width: 14, height: 2, backgroundColor: c.accent }} /><T v="overline" color={color || (onStage ? c.stageInk2 : c.ink2)}>{children}</T></Row>;
+  // Capitales espacées seulement sur les scènes ; ailleurs, un micro-label en casse normale.
+  return onStage
+    ? <Row gap={8}><View style={{ width: 14, height: 2, backgroundColor: c.accent }} /><T v="overline" color={color || c.stageInk2}>{children}</T></Row>
+    : <Row gap={8}><View style={{ width: 10, height: 2, backgroundColor: c.accent }} /><T v="small" color={color || c.ink2} style={{ fontWeight: '600' }}>{children}</T></Row>;
 }
 
 /** Repère d'étape : chevron (bras du Y). Plein = franchi, cobalt = en cours, contour = à venir. */
@@ -117,3 +124,37 @@ export function Rail({ done, height }: { done: boolean; height: number | string 
   return <Row gap={3} style={{ height: height as any }}><View style={{ width: 2, height: '100%', backgroundColor: col }} /><View style={{ width: 2, height: '100%', backgroundColor: done ? c.accent : c.line2 }} /></Row>;
 }
 export const _r = { Rect, radius };
+
+/* ============================================================
+   États BYYND — un seul vocabulaire, identique sur tous les écrans.
+   Forme d'abord (lisible sans couleur), couleur ensuite.
+   - prévu      : tige vide (le fût du Y)
+   - fait       : le symbole plein
+   - adapté     : tige à moitié pleine
+   - optionnel  : tige en pointillés
+   - repos      : trait horizontal
+   - course     : carré à coin coupé, cobalt
+   - manqué     : tige vide barrée, atténuée (jamais rouge)
+   - en attente : tige vide avec point central
+   - synchronisé: symbole plein + point cobalt
+   ============================================================ */
+export type Status = 'planned' | 'done' | 'adapted' | 'optional' | 'rest' | 'race' | 'missed' | 'pending' | 'synced' | 'none';
+export const STATUS_LABEL: Record<Status, string> = { planned: 'prévu', done: 'fait', adapted: 'adapté', optional: 'optionnel', rest: 'repos', race: 'course', missed: 'non fait', pending: 'à confirmer', synced: 'synchronisé', none: '' };
+export function StatusMark({ status, size = 18, color, onStage }: { status: Status; size?: number; color?: string; onStage?: boolean }) {
+  const { c } = useTheme(); const ink = color || (onStage ? c.stageInk : c.ink); const faint = onStage ? c.stageInk2 : c.ink3;
+  const w = size, h = size * 1.2;
+  const stem = (extra: any = {}) => <Rect x={w * 0.36} y={h * 0.1} width={w * 0.28} height={h * 0.8} rx={w * 0.14} fill="none" stroke={ink} strokeWidth={1.6} {...extra} />;
+  const mark = (fill: string) => <G transform={`translate(${w * 0.05},${h * 0.12}) scale(${(w * 0.9) / 102}) translate(-12,-12)`}><Path d={P1} fill={fill} /><Path d={P2} fill={fill} /></G>;
+  let body: React.ReactNode = null;
+  if (status === 'planned') body = stem();
+  else if (status === 'optional') body = stem({ strokeDasharray: '2.2 2.2', stroke: faint });
+  else if (status === 'done') body = mark(ink);
+  else if (status === 'synced') body = <>{mark(ink)}<Circle cx={w * 0.9} cy={h * 0.12} r={w * 0.13} fill={c.accent} /></>;
+  else if (status === 'adapted') body = <>{stem()}<Rect x={w * 0.36} y={h * 0.5} width={w * 0.28} height={h * 0.4} rx={w * 0.14} fill={c.warn} /></>;
+  else if (status === 'rest') body = <Rect x={w * 0.2} y={h * 0.46} width={w * 0.6} height={2} rx={1} fill={faint} />;
+  else if (status === 'race') { const s = w * 0.7, x = (w - s) / 2, y = (h - s) / 2, k = s * 0.32; body = <Path d={`M${x},${y} H${x + s - k} L${x + s},${y + k} V${y + s} H${x} Z`} fill={c.accent} />; }
+  else if (status === 'missed') body = <>{stem({ stroke: faint })}<Line x1={w * 0.2} y1={h * 0.8} x2={w * 0.8} y2={h * 0.2} stroke={faint} strokeWidth={1.4} strokeLinecap="round" /></>;
+  else if (status === 'pending') body = <>{stem()}<Circle cx={w / 2} cy={h / 2} r={w * 0.07} fill={c.accent} /></>;
+  return <Svg width={w} height={h} accessibilityLabel={STATUS_LABEL[status]}>{body}</Svg>;
+}
+

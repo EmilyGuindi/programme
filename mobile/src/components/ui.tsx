@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StylePro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Level } from '@/engine/types';
 import { font, radius, size, space, touch, useTheme } from '@/theme/tokens';
+import Svg, { Path as SvgPath } from 'react-native-svg';
 
 const tap = () => Haptics.selectionAsync().catch(() => {});
 
@@ -49,8 +50,8 @@ export function Card({ children, onPress, tone = 'default', style }: { children:
 /* ---------- Actions ---------- */
 export function Button({ label, onPress, kind = 'secondary', small, disabled, block, style }: { label: string; onPress: () => void; kind?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'inverse'; small?: boolean; disabled?: boolean; block?: boolean; style?: StyleProp<ViewStyle> }) {
   const { c } = useTheme();
-  const bg = kind === 'primary' ? c.accent : kind === 'inverse' ? c.paper : kind === 'ghost' ? 'transparent' : c.surface;
-  const fg = kind === 'primary' ? c.accentInk : kind === 'ghost' ? c.accent : kind === 'danger' ? c.stop : c.ink;
+  const bg = kind === 'primary' ? c.accent : kind === 'inverse' ? c.stageInk : kind === 'ghost' ? 'transparent' : c.surface;
+  const fg = kind === 'primary' ? c.accentInk : kind === 'inverse' ? c.stage : kind === 'ghost' ? c.accent : kind === 'danger' ? c.stop : c.ink;
   const border = kind === 'primary' ? c.accent : kind === 'ghost' || kind === 'inverse' ? 'transparent' : c.line2;
   return (
     <Pressable accessibilityRole="button" disabled={disabled} onPress={() => { tap(); onPress(); }}
@@ -143,7 +144,7 @@ export function ListGroup({ children, title }: { children: ReactNode; title?: st
   const { c } = useTheme();
   return (
     <View style={{ marginBottom: space.s5, marginTop: space.s2 }}>
-      {title ? <T v="overline" muted style={{ marginBottom: space.s2, marginLeft: space.s1 }}>{title}</T> : null}
+      {title ? <T v="small" muted style={{ marginBottom: space.s2, marginLeft: space.s1, fontWeight: '600' }}>{title}</T> : null}
       <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, overflow: 'hidden' }}>{children}</View>
     </View>
   );
@@ -155,13 +156,13 @@ export function ListRow({ title, sub, left, right, onPress, last, chevron = true
       {left}
       <View style={{ flex: 1 }}><T v="label">{title}</T>{sub ? <T v="small" muted numberOfLines={2}>{sub}</T> : null}</View>
       {right}
-      {onPress && chevron ? <T v="h3" color={c.ink3}>›</T> : null}
+      {onPress && chevron ? <Chevron /> : null}
     </View>
   );
   return (
     <View>
       {onPress ? <Pressable accessibilityRole="button" onPress={() => { tap(); onPress(); }} style={({ pressed }) => ({ backgroundColor: pressed ? c.surface2 : 'transparent' })}>{body}</Pressable> : body}
-      {!last ? <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.line2, marginLeft: space.s4 }} /> : null}
+      {!last ? <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.line, marginLeft: left ? 56 : space.s4, marginRight: space.s4 }} /> : null}
     </View>
   );
 }
@@ -189,4 +190,10 @@ export function Divider({ inset = 0 }: { inset?: number }) {
 export function BackLink({ label, onPress }: { label: string; onPress: () => void }) {
   const { c } = useTheme();
   return <Pressable accessibilityRole="button" accessibilityLabel={`Retour : ${label}`} hitSlop={12} onPress={() => { tap(); onPress(); }} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 8, opacity: pressed ? 0.6 : 1 })}><T v="h3" color={c.accent} style={{ lineHeight: 22 }}>‹</T><T v="label" color={c.accent}>{label}</T></Pressable>;
+}
+
+/** Chevron de navigation BYYND : fin, à l'angle du logo. */
+export function Chevron({ color, size = 14, open }: { color?: string; size?: number; open?: boolean }) {
+  const { c } = useTheme();
+  return <Svg width={size} height={size} viewBox="0 0 14 14" style={{ transform: [{ rotate: open ? '90deg' : '0deg' }] }}><SvgPath d="M5 2.5L9.5 7 5 11.5" stroke={color || c.ink3} strokeWidth={1.7} fill="none" strokeLinecap="round" strokeLinejoin="round" /></Svg>;
 }

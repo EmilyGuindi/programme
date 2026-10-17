@@ -53,15 +53,25 @@ function normalize(a) {
     movingMin: a.moving_time ? Math.round(a.moving_time / 6) / 10 : null, elapsedMin: a.elapsed_time ? Math.round(a.elapsed_time / 6) / 10 : null,
     elevM: a.total_elevation_gain != null ? Math.round(a.total_elevation_gain) : null, avgHr: a.average_heartrate ? Math.round(a.average_heartrate) : null,
     maxHr: a.max_heartrate ? Math.round(a.max_heartrate) : null, perceived: a.perceived_exertion ?? null, trainer: !!a.trainer,
+    // Énergie : uniquement dans le détail d'une activité (DetailedActivity.calories), estimée par la montre ou Strava.
+    // Strava ne précise pas s'il s'agit de calories actives ou totales : on la garde comme « kcal estimées ».
+    ...('calories' in a ? { calories: a.calories > 0 ? Math.round(a.calories) : null, caloriesChecked: true, caloriesAt: Date.now() } : {}),
     laps: Array.isArray(a.laps) ? a.laps.slice(0, 40).map(l => ({ km: Math.round(l.distance / 10) / 100, s: l.moving_time, hr: l.average_heartrate ? Math.round(l.average_heartrate) : null, elev: l.total_elevation_gain ?? null })) : undefined,
   };
 }
 async function upsert(env, n) {
+  // Un résumé de liste ne contient pas l'énergie : on conserve la valeur déjà connue au lieu de l'effacer.
+  if (!('caloriesChecked' in n)) {
+    const row = await env.DB.prepare('SELECT json FROM strava_activities WHERE id=?').bind(n.stravaId).first();
+    if (row) { const old = JSON.parse(row.json); if (old.caloriesChecked) Object.assign(n, { calories: old.calories ?? null, caloriesChecked: true, caloriesAt: old.caloriesAt }); }
+  }
   await env.DB.prepare('INSERT INTO strava_activities (id,updated_at,deleted,json) VALUES (?1,?2,0,?3) ON CONFLICT(id) DO UPDATE SET updated_at=?2, deleted=0, json=?3').bind(n.stravaId, Date.now(), JSON.stringify(n)).run();
 }
 async function importOne(env, id) {
   const a = await sget(env, `/activities/${id}?include_all_efforts=false`);
-  await upsert(env, normalize(a));
+  const n = normalize(a);
+  if (!('caloriesChecked' in n)) Object.assign(n, { calories: null, caloriesChecked: true, caloriesAt: Date.now() });
+  await upsert(env, n);
 }
 /** Liste les activités depuis `afterSec` ; les détails (FC, tours) seulement pour les nouvelles ou modifiées. */
 export async function backfill(env, afterSec, maxDetail = 25) {
@@ -135,6 +145,10 @@ export async function stravaApi(req, env, ctx, url, json, c) {
     try { const r = await backfill(env, Math.floor(Date.now() / 1000) - days * 86400, 15); return json({ ok: true, ...r }, 200, c); }
     catch (e) { return json({ error: String(e.message) }, e.message === 'rate_limited' ? 429 : 502, c); }
   }
+  if (p === '/api/strava/calories' && req.method === 'POST') {
+    try { const n = await fillCalories(env, 25); return json({ ok: true, completed: n }, 200, c); }
+    catch (e) { return json({ error: String(e.message) }, 502, c); }
+  }
   if (p === '/api/strava/disconnect' && req.method === 'POST') {
     const conn = await getConn(env);
     if (conn) { const t = await token(env).catch(() => null); if (t) await fetch(`${OAUTH}/deauthorize`, { method: 'POST', headers: { Authorization: `Bearer ${t}` } }).catch(() => {}); }
@@ -150,9 +164,17 @@ export async function stravaApi(req, env, ctx, url, json, c) {
   return null;
 }
 
-/** Cron horaire : rattrape un webhook manqué. */
+/** Complète l'énergie des activités importées sans détail, par petits lots pour rester loin des quotas. */
+export async function fillCalories(env, max = 8) {
+  const rows = await env.DB.prepare("SELECT id, json FROM strava_activities WHERE deleted=0 AND json NOT LIKE '%\"caloriesChecked\":true%' ORDER BY updated_at DESC LIMIT ?").bind(max).all();
+  let n = 0;
+  for (const r of rows.results) { try { await importOne(env, r.id); n++; } catch (e) { if (String(e.message) === 'rate_limited') break; } }
+  return n;
+}
+/** Cron horaire : rattrape un webhook manqué, puis complète l'énergie manquante. */
 export async function hourly(env) {
   if (!env.STRAVA_CLIENT_ID) return;
   const c = await getConn(env); if (!c || c.error) return;
   await backfill(env, Math.floor(Date.now() / 1000) - 3 * 86400, 10).catch(() => {});
+  await fillCalories(env, 8).catch(() => {});
 }

@@ -212,3 +212,25 @@ test('V2 · lot D : garder sa séance malgré un check-in orange', () => {
   const s = fresh(); s.checkins['2026-12-02'] = { sleep: 'mal', energy: 4, soreness: 'non', pain: 'non', motivation: 4 };
   s.overrides['2026-12-02'] = { keep: true }; assert.equal(adapted(s, '2026-12-02').run!.kind, 'qualite');
 });
+
+import { energy, coverage } from '../energy';
+const itemK = (o: any) => ({ ...item(o), calories: o.kcal ?? null, caloriesChecked: o.checked ?? ('kcal' in o), caloriesAt: 1 });
+test('énergie · import avec et sans calories, couverture partielle indiquée', () => {
+  const s = fresh(); mergeStrava(s, [itemK({ id: 'e1', sport: 'Run', date: '2026-12-02', km: 6, min: 40, kcal: 420 }), itemK({ id: 'e2', sport: 'Crossfit', date: '2026-12-01', min: 60, checked: true })]);
+  const e = energy(s, '2026-11-30', '2026-12-06'); assert.equal(e.total, 420); assert.equal(e.withData, 1); assert.equal(e.count, 2);
+  assert.equal(coverage(e), '1 activité sur 2 avec données énergétiques');
+  assert.equal(s.activities.find(a => a.stravaId === 'e2')!.caloriesStatus, 'absent');
+});
+test('énergie · nouvelle valeur, suppression, double import sans doublon', () => {
+  const s = fresh(); mergeStrava(s, [itemK({ id: 'e3', sport: 'Run', date: '2026-12-02', km: 6, min: 40 })]);
+  assert.equal(s.activities.find(a => a.stravaId === 'e3')!.caloriesStatus, 'pending');
+  mergeStrava(s, [itemK({ id: 'e3', sport: 'Run', date: '2026-12-02', km: 6, min: 40, kcal: 400 })]); mergeStrava(s, [itemK({ id: 'e3', sport: 'Run', date: '2026-12-02', km: 6, min: 40, kcal: 410 })]);
+  assert.equal(energy(s, '2026-12-02', '2026-12-02').total, 410); assert.equal(s.activities.filter(a => a.stravaId === 'e3').length, 1);
+  // un résumé sans détail ne doit pas effacer la valeur connue
+  mergeStrava(s, [item({ id: 'e3', sport: 'Run', date: '2026-12-02', km: 6, min: 40 })]); assert.equal(energy(s, '2026-12-02', '2026-12-02').total, 410);
+  mergeStrava(s, [{ ...item({ id: 'e3', sport: 'Run', date: '2026-12-02' }), deleted: true }]); assert.equal(energy(s, '2026-12-02', '2026-12-02').total, 0);
+});
+test('énergie · la promenade compte dans le total sans valider l\'entraînement', () => {
+  const s = fresh(); mergeStrava(s, [itemK({ id: 'w9', sport: 'Walk', date: '2026-12-02', km: 3, min: 45, kcal: 150 })]);
+  const e = energy(s, '2026-12-02', '2026-12-02'); assert.equal(e.byCat.promenade.kcal, 150); assert.equal(doneOn(s, '2026-12-02'), false);
+});

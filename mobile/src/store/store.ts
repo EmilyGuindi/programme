@@ -144,3 +144,10 @@ export async function connectStrava(): Promise<string> {
   } catch { return 'Serveur injoignable.'; }
 }
 export async function disconnectStrava() { try { await api('/api/strava/disconnect', { method: 'POST' }); } catch {} await stravaStatus(); }
+
+/** Demande au serveur de compléter l'énergie des activités Strava (par petits lots), puis récupère les valeurs. */
+export async function fillCaloriesNow(): Promise<string> {
+  if (!configured()) return 'Serveur non configuré.';
+  try { const r = await api('/api/strava/calories', { method: 'POST' }); if (!r.ok) return 'Strava indisponible pour le moment, réessaie plus tard.'; const d = await r.json(); await pullStrava(); return d.completed ? `${d.completed} activité${d.completed > 1 ? 's' : ''} vérifiée${d.completed > 1 ? 's' : ''}.` : 'Rien de plus à récupérer pour l\'instant.'; }
+  catch { return 'Serveur injoignable.'; }
+}
