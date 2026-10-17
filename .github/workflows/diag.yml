@@ -22,7 +22,6 @@ jobs:
         shell: bash {0}
         run: |
           q(){ wrangler d1 execute byynd --remote --json --command "$2" > /tmp/o.txt 2>&1; R=$(tr '\n' ' ' < /tmp/o.txt | tr -s ' ' | tail -c 900); echo "::warning title=$1::${R:-vide}"; }
-          q "Strava connecté" "SELECT name, json_extract(json,'$.athleteName') AS athlete, json_extract(json,'$.error') AS err, json_extract(json,'$.lastSync') AS lastSync FROM integrations"
-          q "Activités Strava" "SELECT count(*) AS total, sum(CASE WHEN json LIKE '%\"caloriesChecked\":true%' THEN 1 ELSE 0 END) AS verifiees, sum(CASE WHEN json_extract(json,'$.calories') > 0 THEN 1 ELSE 0 END) AS avec_kcal FROM strava_activities WHERE deleted=0"
-          q "Dernières" "SELECT json_extract(json,'$.date') AS d, json_extract(json,'$.sportType') AS t, json_extract(json,'$.calories') AS kcal, json_extract(json,'$.caloriesChecked') AS ok FROM strava_activities ORDER BY updated_at DESC LIMIT 8"
-          q "Etat app" "SELECT updated_at, length(json) AS taille, json_extract(json,'$.strava.since') AS since FROM state"
+          q "Recentes" "SELECT json_extract(json,'$.date') AS d, json_extract(json,'$.sportType') AS t, json_extract(json,'$.calories') AS kcal, updated_at FROM strava_activities WHERE json_extract(json,'$.date') >= '2026-10-01' ORDER BY json_extract(json,'$.date') DESC LIMIT 10"
+          q "Etat app activites" "SELECT (length(json)-length(replace(json,'\"stravaId\"','')))/10 AS strava_acts, (length(json)-length(replace(json,'\"calories\":','')))/11 AS avec_cal, json_extract(json,'$.strava.since') AS since FROM state"
+          q "Max update" "SELECT max(updated_at) AS maxu, min(updated_at) AS minu FROM strava_activities"
