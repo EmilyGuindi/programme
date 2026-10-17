@@ -14,6 +14,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm install -g wrangler@4 > /dev/null
+      - name: ID base
+        run: |
+          ID=$(wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const a=JSON.parse(s);const x=a.find(d=>d.name==="byynd");console.log(x?x.uuid:"")})')
+          sed -i "s/D1_PLACEHOLDER/$ID/" wrangler.toml
       - name: Requêtes
         shell: bash {0}
         run: |
