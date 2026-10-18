@@ -50,3 +50,14 @@ test('refus du modèle : message neutre, aucune proposition', async () => {
   const r = await coachChat({ DB: d1() }, { userId: 'u1' }, ok, fake([], 'refusal'));
   assert.equal(r.status, 200); assert.equal(r.body.calls.length, 0);
 });
+
+test('clé historique sans compte Google : le coach répond (propriétaire de l\'instance)', async () => {
+  const r = await coachChat({ DB: d1() }, { userId: null, legacy: true }, ok, fake([{ type: 'text', text: 'ok' }]));
+  assert.equal(r.status, 200);
+  assert.equal((await coachChat({ DB: d1() }, { userId: null, legacy: false }, ok, fake([]))).status, 403);
+});
+test('route : la clé historique donne accès au coach', async () => {
+  const e = { DB: d1(), APP_KEY: 'k' };
+  const r = await worker.fetch(new Request('https://b.test/api/coach/chat', { method: 'POST', headers: { Authorization: 'Bearer k' }, body: JSON.stringify(ok) }), e, { waitUntil() {} });
+  assert.equal(r.status, 503, 'authentifiée ; sans clé Anthropic en test, coach non configuré');
+});

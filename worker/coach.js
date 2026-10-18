@@ -58,9 +58,11 @@ export function sanitize(body) {
 /** Un tour de conversation. `client` injectable pour les tests. */
 export async function coachChat(env, who, body, client = null) {
   if (!env.ANTHROPIC_API_KEY && !client) return { status: 503, body: { error: "coach_not_configured" } };
-  if (!who.userId) return { status: 403, body: { error: "account_required" } };
+  // Session Google, ou clé historique de la propriétaire (avant tout compte, elle n'a pas encore d'identifiant d'utilisateur).
+  if (!who.userId && !who.legacy) return { status: 403, body: { error: "account_required" } };
+  const quotaId = who.userId || "owner";
   const s = sanitize(body); if (s.error) return { status: 400, body: { error: "bad_request", detail: s.error } };
-  const q = await takeQuota(env, who.userId); if (!q.ok) return { status: 429, body: { error: "daily_limit", limit: q.limit } };
+  const q = await takeQuota(env, quotaId); if (!q.ok) return { status: 429, body: { error: "daily_limit", limit: q.limit } };
   const messages = s.messages.map((m, i) => (i === s.messages.length - 1
     ? { role: "user", content: [{ type: "text", text: `Contexte BYYND (données de l'app, à jour) :\n${s.context}` }, { type: "text", text: m.text }] }
     : { role: m.role, content: m.text }));
