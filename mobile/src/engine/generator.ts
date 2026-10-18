@@ -41,16 +41,18 @@ export function keyRun(p: ProgramDef, w: number): RunSession {
   if (deloadWeeks(p).includes(w)) return RUN.easy(40);
   if (ph.kind === 'bilan') return p.spec?.tests === false ? RUN.easy(40) : focus === '5k' ? RUN.test5() : RUN.test10();
   if (p.spec?.tests !== false && w === 2) return RUN.test5(); // repère de départ
-  if (ph.kind === 'base' || focus === 'endurance' || focus === 'maintien') return RUN.easy(Math.min(55, 40 + 5 * k), 4 + Math.min(2, k));
+  if (ph.kind === 'base' || focus === 'endurance' || focus === 'maintien') return RUN.easy(Math.min(55, 40 + 5 * Math.floor(k / 2)), 4 + Math.min(2, k)); // +5 min toutes les deux semaines : la sortie longue progresse déjà
   if (ph.kind === 'dev') return [RUN.seuil(3, 6, 2), RUN.seuil(4, 6, 1.5), RUN.seuil(3, 8, 2), RUN.seuil(4, 8, 2), RUN.seuil(3, 10, 2)][Math.min(4, k)];
   if (focus === '5k') return [RUN.seuil(6, 3, 1.5), RUN.seuil(5, 4, 2), RUN.seuil(8, 2, 1)][Math.min(2, k)];
   return [RUN.k10('3 × 8 min', 46), RUN.k10('4 × 1 km', 48), RUN.k10('3 × 2 km', 55), RUN.k10('5 × 1 km', 52)][Math.min(3, k)];
 }
-/** Sortie longue : +5 min par semaine, plafonnée, réduite en semaine allégée. */
+/** Sortie longue : +5 min toutes les deux semaines, plafonnée, courte en semaine allégée ou de bilan. */
 export function longRun(p: ProgramDef, w: number): RunSession {
   const cap = p.spec?.focus === 'endurance' ? 90 : 70;
   const n = Array.from({ length: w - 1 }, (_, i) => i + 1).filter(x => !deloadWeeks(p).includes(x)).length;
-  return deloadWeeks(p).includes(w) ? RUN.easy(40) : RUN.easy(Math.min(cap, 50 + 5 * n));
+  const bilan = phasesFor(p).find(x => x.kind === 'bilan');
+  if (deloadWeeks(p).includes(w) || (bilan && w >= bilan.from)) return RUN.easy(40); // semaine allégée ou de test : sortie courte
+  return RUN.easy(Math.min(cap, 50 + 5 * Math.floor(n / 2)));
 }
 
 type DayPlan = { type: 'box' | 'run' | 'renfo' | 'rest' | 'recup'; title: string; dur?: string; goal?: string; note?: string; run?: RunSession; hyrox?: boolean; optional?: boolean; short?: boolean };

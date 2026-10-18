@@ -49,6 +49,7 @@ export default function Progress() {
       </Pressable>
 
       <NextProgram />
+      <Panel onPress={() => router.push({ pathname: '/coach', params: { context: 'progress' } })} accessibilityLabel="Demander au coach"><T v="label">Demander au coach</T><T v="small" muted>Allure, dernières sorties, prochain objectif.</T></Panel>
 
       {/* 2 · Accomplissements : les réussites d'abord, un seul prochain jalon */}
       <UnlockMoment />

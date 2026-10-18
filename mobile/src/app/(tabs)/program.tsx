@@ -42,7 +42,7 @@ export default function Program() {
     <Screen>
       <View style={{ paddingTop: space.s4 }}>
         <Row between><Row gap={space.s2} style={{ flex: 1 }}><T v="small" muted>{`Semaine ${w} sur ${s.program.weeks}`}</T><Chip label={ph.name} /></Row>
-          <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="Mes programmes" onPress={() => router.push('/programs')} /></Row>
+          <Row gap={space.s3}><Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="Coach" onPress={() => router.push({ pathname: '/coach', params: { context: 'program' } })} /><Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="Mes programmes" onPress={() => router.push('/programs')} /></Row></Row>
         <Row between style={{ marginTop: space.s1 }}>
           <T v="title" style={{ flex: 1 }} numberOfLines={1}>{range}</T>
           <Row gap={6}>

@@ -92,6 +92,8 @@ export interface AppState {
   reschedule?: Reschedule;
   /** Accomplissements déjà mis en scène (id → date) : l'animation de déverrouillage n'est jouée qu'une fois. */
   celebrated?: Record<string, number>;
+  /** Coach Studio : permissions, conversations, décisions. */
+  coach?: CoachMemory;
 }
 
 export interface Reschedule {
@@ -143,3 +145,19 @@ export interface ProgramDef {
   basedOn?: string;
   createdAt?: number; updatedAt?: number; activatedAt?: number;
 }
+
+/* ---------- Coach Studio ---------- */
+/** Catégories de données que le coach peut lire. Chacune se révoque séparément. */
+export type DataScope = 'programs' | 'history' | 'strava' | 'recovery' | 'body' | 'sensitive';
+export interface ToolCall { name: string; args: Record<string, unknown> }
+/** Cartes structurées : des données affichées par des composants natifs, jamais du HTML ni du code. */
+export type CoachCard =
+  | { kind: 'facts'; id: string; title: string; items: string[] }
+  | { kind: 'week'; id: string; title: string; days: { date: ISODate; label: string; title: string; changed?: boolean }[] }
+  | { kind: 'compare'; id: string; title: string; head: string[]; rows: string[][] }
+  | { kind: 'action'; id: string; title: string; summary: string; consequences: string[]; issues: { severity: 'block' | 'warn' | 'info' | 'ok'; text: string }[]; call: ToolCall; modify?: { pathname: string; params: Record<string, string> } }
+  | { kind: 'program'; id: string; title: string; summary: string; phases: string[]; week: { label: string; detail: string }[]; issues: { severity: 'block' | 'warn' | 'info' | 'ok'; text: string }[]; call: ToolCall; modify?: { pathname: string; params: Record<string, string> } };
+export interface CoachMsg { id: string; role: 'user' | 'coach'; at: number; text: string; cards?: CoachCard[]; scopes?: DataScope[]; tools?: string[]; decisions?: Record<string, 'accepted' | 'refused'> }
+export interface CoachThread { id: string; title: string; at: number; messages: CoachMsg[] }
+export interface CoachDecision { id: string; at: number; text: string; outcome: 'accepted' | 'refused' }
+export interface CoachMemory { perms: Partial<Record<DataScope, boolean>>; threads: CoachThread[]; decisions: CoachDecision[]; provider?: 'local' | 'chatgpt'; /** « Tout oublier » : rien d'antérieur ne revient par la synchro. */ clearedAt?: number }

@@ -89,3 +89,11 @@ test('bilan du cycle : constats tirés des données', () => {
   assert.ok(an.findings.length >= 1);
   assert.equal(an.byDay.length, 7);
 });
+
+test('le générateur respecte ses propres règles de progression', () => {
+  const s = fresh();
+  for (const focus of ['10k', '5k', 'endurance', 'maintien'] as const) for (const weeks of [6, 10, 16, 24]) {
+    const d = makeDraft({ start: '2027-03-01', weeks, spec: { ...SPEC, focus } });
+    assert.ok(!validateProgram(s, d, '2026-10-18').some(i => i.code === 'ramp'), `${focus} ${weeks}`);
+  }
+});
