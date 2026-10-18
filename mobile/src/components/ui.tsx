@@ -1,6 +1,6 @@
-import { useCallback, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
+import { Animated, Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { navLayout } from '@/theme/nav-layout';
 import { haptic, reducedMotion } from '@/feedback';
@@ -48,8 +48,8 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
   // Chaque fois qu'on revient sur un écran (onglet ou retour), il repart en haut.
   useFocusEffect(useCallback(() => { ref.current?.scrollTo({ y: 0, animated: false }); }, []));
   // Espace sous le contenu = hauteur réelle du socle de navigation (barre + zone système) + respiration : le dernier élément reste toujours atteignable.
-  const nav = useNavLayout();
-  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: layout.gutter, paddingBottom: nav.contentInset }}>{children}</View>;
+  const nav = useNavLayout(); const kb = useKeyboardLift();
+  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: layout.gutter, paddingBottom: nav.contentInset + kb }}>{children}</View>;
   return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}><Ambient />{scroll ? <ScrollView ref={ref} keyboardShouldPersistTaps="handled">{inner}</ScrollView> : inner}</SafeAreaView>;
 }
 export function Row({ children, gap = space.s3, between, style }: { children: ReactNode; gap?: number; between?: boolean; style?: StyleProp<ViewStyle> }) {
@@ -266,4 +266,18 @@ export function Ambient() {
       <Svg width="100%" height="100%"><Defs><RadialGradient id="amb" cx="50%" cy="0%" rx="85%" ry="100%"><Stop offset="0" stopColor="#3A5A0C" stopOpacity={0.55} /><Stop offset="0.55" stopColor="#1A260B" stopOpacity={0.35} /><Stop offset="1" stopColor="#0B0D0A" stopOpacity={0} /></RadialGradient></Defs><SvgRect width="100%" height="100%" fill="url(#amb)" /></Svg>
     </View>
   );
+}
+
+/** Hauteur dont il faut remonter le contenu quand le clavier est ouvert.
+ *  Android affiche l'app bord à bord : la fenêtre ne rétrécit plus, le clavier recouvre le bas de l'écran.
+ *  On décale donc la barre d'action d'autant, moins la zone système déjà réservée en bas par SafeAreaView. iOS : géré par KeyboardAvoidingView. */
+export function useKeyboardLift() {
+  const insets = useSafeAreaInsets(); const [h, setH] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const a = Keyboard.addListener('keyboardDidShow', e => setH(e.endCoordinates.height));
+    const b = Keyboard.addListener('keyboardDidHide', () => setH(0));
+    return () => { a.remove(); b.remove(); };
+  }, []);
+  return Math.max(0, h - insets.bottom);
 }
