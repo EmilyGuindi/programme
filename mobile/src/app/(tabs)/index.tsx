@@ -9,7 +9,7 @@ import { Wordmark } from '@/components/logo';
 import { markDone, openDay, openPlan, TYPE_LABEL } from '@/components/plan-row';
 import { ProposalCard } from '@/components/proposal-card';
 import { ContextCards } from '@/components/today-cards';
-import { Button, Row, Screen, T } from '@/components/ui';
+import { Button, Chevron, Chip, Panel, Row, Screen, T } from '@/components/ui';
 import { UpdateBanner } from '@/components/update-banner';
 import { WeekMeter, WeekTracker } from '@/components/week-tracker';
 import { SessionProgressLine } from '@/components/session-progress';
@@ -24,7 +24,7 @@ import { AchBadge } from '@/components/badges';
 import { eventState } from '@/engine/status';
 import { newRecords } from '@/engine/records';
 import { update, useApp } from '@/store/store';
-import { radius, space, useTheme } from '@/theme/tokens';
+import { layout, radius, space, useTheme } from '@/theme/tokens';
 
 function greeting(h = new Date().getHours()) { return h >= 5 && h < 12 ? 'Bonjour' : h >= 12 && h < 18 ? 'Bon après-midi' : h >= 18 && h < 22 ? 'Bonsoir' : 'Bonne nuit'; }
 const LEVEL = { vert: 'Prête', orange: 'À adapter', rouge: 'Récupération', inconnu: 'Check-in' } as const;
@@ -41,10 +41,15 @@ export default function Today() {
   const wActs = s.activities.filter(x => x.date >= ws && x.date <= d && !x.complementary);
   const wMin = Math.round(wActs.reduce((t, x) => t + (x.durationMin || 0), 0)); const wKm = wActs.filter(x => x.type === 'running' || x.type === 'course').reduce((t, x) => t + (x.distanceKm || 0), 0);
   const lvlCol = { vert: c.ok, orange: c.warn, rouge: c.stop, inconnu: c.ink3 }[r.level];
-  const recent = [...newRecords(s, addDays(d, -14), d).map(x => ({ t: `Record · ${x.label} : ${x.value}`, d: x.date })), ...unlocked(s, d, achievementsMemo(s, d)).filter(x => daysBetween(x.date!, d) <= 14).map(x => ({ t: x.title, d: x.date!, a: x }))].sort((x, y) => y.d.localeCompare(x.d))[0] as { t: string; d: string; a?: Achievement } | undefined;
+  const recent = [...newRecords(s, addDays(d, -14), d).map(x => ({ t: `${x.label} : ${x.value}`, d: x.date })), ...unlocked(s, d, achievementsMemo(s, d)).filter(x => daysBetween(x.date!, d) <= 14).map(x => ({ t: x.title, d: x.date!, a: x }))].sort((x, y) => y.d.localeCompare(x.d))[0] as { t: string; d: string; a?: Achievement } | undefined;
   const celebrating = toCelebrate(s, d, achievementsMemo(s, d)).length > 0;
   const trend = insights(s, d).find(i => i.level !== 'observation');
   const checkinFirst = r.level === 'inconnu' && !isEvent;
+  const kcal = done ? Math.round(acts.reduce((t, x) => t + (x.calories || 0), 0)) : 0;
+  // Un seul statut affiché : le plus utile.
+  const status: { label: string; tone: 'lime' | 'accent' | 'warn' | 'stage' | 'ok' } | null = isEvent ? { label: 'Jour J', tone: 'accent' }
+    : done ? { label: sp.adapted ? 'Faite, adaptée' : 'Faite', tone: 'accent' } : sp.done ? { label: 'En cours', tone: 'accent' } : a.reason ? { label: 'Adaptée', tone: 'warn' } : a.optional ? { label: 'Optionnelle', tone: 'stage' } : null;
+  const openWeek = (date?: string) => router.navigate({ pathname: '/program', params: date ? { date } : {} });
 
   const primary = done && shown.type !== 'renfo' ? null
     : isEvent ? { label: 'Ma stratégie et ma checklist', go: () => router.push({ pathname: '/race/[id]', params: { id: a.event!.id } }) }
@@ -53,6 +58,8 @@ export default function Today() {
     : shown.type === 'recup' ? { label: sp.done ? 'Reprendre la routine' : 'Ouvrir la routine', go: () => openDay(d) }
     : shown.type === 'box' ? { label: 'Marquer comme fait', go: () => markDone(a) }
     : null;
+  const links = [checkinFirst && primary ? { label: primary.label, go: primary.go } : null, !isEvent && !done && shown.type !== 'rest' ? { label: 'Adapter avec le coach', go: () => router.push('/coach') } : null,
+    done || shown.type === 'rest' ? { label: 'Détail du jour', go: () => openDay(d) } : null].filter(Boolean).slice(0, 2) as { label: string; go: () => void }[];
 
   return (
     <Screen>
@@ -69,75 +76,80 @@ export default function Today() {
         </GlassSurface>
       </Row>
       <UpdateBanner />
-      <T v="small" muted>{`${fmtLong(d)} · semaine ${w}`}</T>
+      <T v="small" muted>{fmtLong(d)}</T>
       <T v="title" style={{ marginTop: 2, marginBottom: space.s4 }}>{`${greeting()} ${s.user.name}`}</T>
 
-      {/* B · Le focus du jour */}
+      {/* 1 · L'action du jour */}
       {finished ? (
         <Stage mark>
-          <Kicker onStage>Course terminée</Kicker>
-          <T v="title" color={c.stageInk} style={{ fontSize: 30, lineHeight: 35, marginTop: space.s2, maxWidth: '85%' }}>{a.event!.name}</T>
+          <Row between><Kicker onStage>Compétition</Kicker><Chip tone="stage" label="Terminée" /></Row>
+          <T v="title" color={c.stageInk} style={{ marginTop: space.s2 }}>{a.event!.name}</T>
           <Row gap={8} style={{ alignItems: 'flex-end', marginTop: space.s3 }}>
             <T v="display" color={c.accent}>{a.event!.result ? clock(a.event!.result.time) : '—'}</T>
             <T v="small" color={c.stageInk2} style={{ paddingBottom: 8 }}>{a.event!.result?.source === 'montre' ? 'temps montre' : a.event!.distanceKm && a.event!.result ? `${mmss(a.event!.result.time / a.event!.distanceKm)} /km` : 'temps officiel'}</T>
           </Row>
-          <Button kind="primary" block style={{ marginTop: space.s5 }} label={a.event!.result?.feeling ? 'Voir mon analyse' : 'Faire mon débrief'} onPress={() => router.push({ pathname: '/race/[id]', params: { id: a.event!.id } })} />
+          <Button kind="primary" block style={{ marginTop: space.s4 }} label={a.event!.result?.feeling ? 'Voir mon analyse' : 'Faire mon débrief'} onPress={() => router.push({ pathname: '/race/[id]', params: { id: a.event!.id } })} />
         </Stage>
       ) : (
         <Stage mark={isEvent || ['run', 'box', 'renfo'].includes(shown.type)} tone={['rest', 'recup'].includes(shown.type) && !isEvent ? 'plain' : 'ink'}>
-          <Row between style={{ alignItems: 'flex-start', gap: space.s3 }}>
-            <View style={{ flex: 1 }}><Kicker onStage>{isEvent ? 'Compétition · jour J' : `Aujourd'hui · ${TYPE_LABEL[shown.type]}${a.optional ? ' · optionnel' : ''}`}</Kicker></View>
-            {done ? <T v="overline" color={c.accent}>{sp.adapted ? 'Faite, adaptée' : 'Faite'}</T> : sp.done ? <T v="overline" color={c.accent}>En cours</T> : a.reason ? <T v="overline" color={c.warn}>Adaptée</T> : null}
+          <Row between style={{ minHeight: 24, gap: space.s2 }}>
+            <Kicker onStage>{isEvent ? 'Compétition' : TYPE_LABEL[shown.type]}</Kicker>
+            {status ? <Chip tone={status.tone} label={status.label} /> : null}
           </Row>
-          <T v="title" color={c.stageInk} style={{ fontSize: ['rest', 'recup'].includes(shown.type) ? 24 : 30, lineHeight: ['rest', 'recup'].includes(shown.type) ? 30 : 35, marginTop: space.s2, maxWidth: '88%' }}>{shown.title}</T>
-          {dur || (done && acts.some(x => x.calories)) ? <Row gap={8} style={{ marginTop: space.s3, flexWrap: 'wrap' }}>
+          <T v="title" color={c.stageInk} style={{ marginTop: space.s2 }}>{shown.title}</T>
+          {dur || kcal ? <Row gap={8} style={{ marginTop: space.s3, flexWrap: 'wrap' }}>
             {dur ? <MetricPill icon={<Icon name="clock" size={15} color={c.accent} />} label={dur.replace(' au total', '')} /> : null}
-            {done && acts.some(x => x.calories) ? <MetricPill icon={<Icon name="flame" size={15} color={c.accent} />} label={`${Math.round(acts.reduce((t, x) => t + (x.calories || 0), 0))} kcal estimées`} /> : null}
+            {kcal ? <MetricPill icon={<Icon name="flame" size={15} color={c.accent} />} label={`${kcal} kcal`} /> : null}
           </Row> : null}
-          {done ? <T v="small" color={c.accent} style={{ marginTop: space.s3 }}>{`Fait · ${acts.filter(x => !x.complementary).map(x => [x.title, x.durationMin ? `${Math.round(x.durationMin)} min` : ''].filter(Boolean).join(' · ')).join(', ')}`}</T>
+          {done ? <View style={{ marginTop: space.s3, gap: 2 }}>{acts.filter(x => !x.complementary).map(x => <T key={x.id} v="small" color={c.stageInk2}>{x.durationMin ? `${x.title}, ${Math.round(x.durationMin)} min` : x.title}</T>)}</View>
             : sp.done ? <View style={{ marginTop: space.s4 }}><SessionProgressLine p={sp} /></View>
-            : <T color={c.stageInk} style={{ marginTop: space.s3, opacity: 0.85 }}>{coachLine(s, d)}</T>}
-          <View style={{ marginTop: space.s5, gap: space.s2 }}>
-            {checkinFirst ? <Button kind="primary" block label="Faire mon check-in · 30 s" onPress={() => router.push('/checkin')} />
+            : <T color={c.stageInk2} style={{ marginTop: space.s3 }}>{coachLine(s, d)}</T>}
+          <View style={{ marginTop: space.s4 }}>
+            {checkinFirst ? <Button kind="primary" block label="Faire mon check-in" onPress={() => router.push('/checkin')} />
               : primary ? <Button kind="primary" block label={primary.label} onPress={primary.go} /> : null}
-            <Row gap={space.s4} style={{ flexWrap: 'wrap', rowGap: 0 }}>
-              {checkinFirst && primary ? <Button small kind="ghost" label={primary.label} style={{ paddingHorizontal: 0 }} onPress={primary.go} /> : null}
-              {!isEvent && !done && shown.type !== 'rest' ? <Button small kind="ghost" label="Adapter avec le coach" style={{ paddingHorizontal: 0 }} onPress={() => router.push('/coach')} /> : null}
-              {done || shown.type === 'rest' ? <Button small kind="ghost" label="Détail du jour" style={{ paddingHorizontal: 0 }} onPress={() => openDay(d)} /> : null}
-            </Row>
+            {links.length ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space.s5, marginTop: space.s1 }}>
+              {links.map(l => <Button key={l.label} small kind="ghost" label={l.label} style={{ paddingHorizontal: 0 }} onPress={l.go} />)}
+            </View> : null}
           </View>
         </Stage>
       )}
 
       <ProposalCard d={d} />
+      {/* 2 · L'événement à venir, débrief, bilan */}
       <ContextCards d={d} />
       <ActivityPrompts />
 
-      {/* C · La semaine */}
-      <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, paddingHorizontal: space.s2, marginBottom: space.s3 }}>
-        <Row between style={{ paddingHorizontal: space.s2, marginBottom: space.s3 }}>
-          <T v="small" muted style={{ fontWeight: '600' }}>Ta semaine</T>
-          <T v="small" muted>{[wMin ? `${wMin} min` : '', wKm ? `${String(Math.round(wKm * 10) / 10).replace('.', ',')} km` : ''].filter(Boolean).join(' · ')}</T>
+      {/* 3 · La semaine : toucher la carte ouvre le planning */}
+      <Pressable accessibilityRole="button" accessibilityLabel={`Ta semaine, ${wk.done} séances sur ${wk.planned}. Ouvrir le planning`} onPress={() => openWeek()}
+        style={({ pressed }) => ({ backgroundColor: pressed ? c.surface2 : c.surface, borderRadius: radius.r2, padding: layout.pad, marginBottom: layout.gap })}>
+        <Row between style={{ marginBottom: space.s3 }}>
+          <T v="label">Ta semaine</T>
+          <Row gap={6}><T v="small" muted>{`Semaine ${w} sur ${s.program.weeks}`}</T><Chevron /></Row>
         </Row>
-        <WeekTracker s={s} start={ws} today={d} onSelect={x => openDay(x)} />
-        <WeekMeter w={wk} />
-      </View>
+        <WeekTracker s={s} start={ws} today={d} onSelect={x => openWeek(x)} />
+        <WeekMeter w={wk} extra={[wMin ? `${wMin} min` : null, wKm ? `${String(Math.round(wKm * 10) / 10).replace('.', ',')} km` : null]} />
+      </Pressable>
 
-      {/* E · Actions utiles */}
-      <Row gap={space.s2} style={{ marginBottom: space.s3 }}>
+      {/* Raccourcis */}
+      <Row gap={layout.gap} style={{ marginBottom: layout.gap }}>
         {([['coach', 'Coach', () => router.push('/coach')], ['plus', 'Ajouter', () => router.push({ pathname: '/activity', params: { date: d } })]] as [IconName, string, () => void][]).map(([ic, l, go]) => (
           <Pressable key={l} accessibilityRole="button" accessibilityLabel={l} onPress={go} style={({ pressed }) => ({ flex: 1, height: 52, borderRadius: radius.r2, backgroundColor: pressed ? c.surface2 : c.surface, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' })}>
             <Icon name={ic} size={18} color={c.ink} /><T v="label">{l}</T>
           </Pressable>))}
       </Row>
 
-      {/* F · Accomplissement significatif : mis en scène une fois, puis rappelé en une ligne */}
+      {/* 4 · Accomplissement significatif : mis en scène une fois, puis rappelé en une ligne */}
       <UnlockMoment />
       {!celebrating && (recent || trend) ? (
-        <Pressable onPress={() => router.push('/progress')} accessibilityRole="button" style={({ pressed }) => ({ flexDirection: 'row', gap: space.s3, alignItems: 'center', backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, opacity: pressed ? 0.88 : 1 })}>
-          {recent?.a ? <AchBadge cat={recent.a.cat} status="unlocked" major={recent.a.tier === 'major'} size={44} /> : recent ? <Badge achieved size={40} /> : <Icon name="stats" size={22} color={c.accent} />}
-          <View style={{ flex: 1 }}><T v="xs" muted style={{ fontWeight: '600' }}>{recent ? `Récent · ${fmtShort(recent.d)}` : 'Ce qui évolue'}</T><T v="label">{recent ? recent.t : trend!.text}</T></View>
-        </Pressable>) : null}
+        <Panel onPress={() => router.push('/progress')} accessibilityLabel={recent ? recent.t : trend!.text}>
+          <Row gap={space.s3}>
+            {recent?.a ? <AchBadge cat={recent.a.cat} status="unlocked" major={recent.a.tier === 'major'} size={44} /> : recent ? <Badge achieved size={40} /> : <Icon name="stats" size={22} color={c.accent} />}
+            <View style={{ flex: 1 }}>
+              <Row between><T v="small" muted style={{ fontWeight: '600' }}>{recent ? 'Récent' : 'Ce qui évolue'}</T>{recent ? <T v="small" muted>{fmtShort(recent.d)}</T> : null}</Row>
+              <T v="label" style={{ marginTop: 2 }}>{recent ? recent.t : trend!.text}</T>
+            </View>
+          </Row>
+        </Panel>) : null}
     </Screen>
   );
 }

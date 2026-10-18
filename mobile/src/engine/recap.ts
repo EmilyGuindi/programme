@@ -21,7 +21,7 @@ export function buildRecap(s: AppState, w: number): Recap {
     acts.filter(x => !x.complementary).forEach(x => {
       minutes += x.durationMin || 0; if (x.type === 'running' || x.type === 'course') km += x.distanceKm || 0;
       if (a.optional && countsFor(x, d)) optional++;
-      sessions.push(`${DAYS_SHORT[dow(d)]} · ${x.title}${x.durationMin ? ` · ${Math.round(x.durationMin)} min` : ''}${x.distanceKm ? ` · ${String(x.distanceKm).replace('.', ',')} km` : ''}`);
+      sessions.push(`${DAYS_SHORT[dow(d)]}. ${x.title}${x.durationMin ? `, ${Math.round(x.durationMin)} min` : ''}${x.distanceKm ? `, ${String(x.distanceKm).replace('.', ',')} km` : ''}`);
       if (x.effort) hard.push({ t: `${x.title} (${DAYS_SHORT[dow(d)]})`, e: x.effort });
     });
   }
@@ -42,7 +42,7 @@ export function buildRecap(s: AppState, w: number): Recap {
   if (rec.length) cards.push({ kind: 'records', title: rec.length > 1 ? 'Nouveaux records' : 'Nouveau record', lines: rec.map(r => `${r.label} : ${r.value}`) });
   // calculé au lendemain du dimanche : la semaine est alors complète (régularité, semaine allégée)
   const ach = achievementsFor(s, addDays(to, 1)).filter(a => a.date && a.date >= from && a.date <= to);
-  if (ach.length) cards.push({ kind: 'milestones', title: ach.length > 1 ? 'Jalons atteints' : 'Jalon atteint', lines: ach.map(a => `${a.title}${a.detail ? ` · ${a.detail}` : ''}`), badges: ach.map(a => ({ cat: a.cat, major: a.tier === 'major', title: a.title })) });
+  if (ach.length) cards.push({ kind: 'milestones', title: ach.length > 1 ? 'Jalons atteints' : 'Jalon atteint', lines: ach.map(a => `${a.title}${a.detail ? ` (${a.detail})` : ''}`), badges: ach.map(a => ({ cat: a.cat, major: a.tier === 'major', title: a.title })) });
   // Ce qui a bien fonctionné : uniquement des faits de la semaine, jamais un reproche.
   const worked: string[] = []; let adaptedDone = 0, restsKept = 0;
   for (let i = 0; i < 7; i++) { const d = addDays(from, i), a = adapted(s, d); const ok = activitiesOn(s, d).some(x => countsFor(x, d)); if (ok && (a.reason || a.replaced)) adaptedDone++; if (a.type === 'rest' && !activitiesOn(s, d).some(x => !x.complementary && (x.effort ?? 0) >= 7)) restsKept++; }
@@ -59,9 +59,9 @@ export function buildRecap(s: AppState, w: number): Recap {
     cards.push({ kind: 'recovery', title: 'Ta récupération', lines: [`${cis.length} check-ins cette semaine.`, `${good} nuit${good > 1 ? 's' : ''} notée${good > 1 ? 's' : ''} bonne${good > 1 ? 's' : ''} ou très bonne${good > 1 ? 's' : ''}.`, `Énergie moyenne : ${avgE.toFixed(1).replace('.', ',')} sur 5.`] });
   }
   const nf = addDays(to, 1); const ph = phaseOf(w + 1); const next: string[] = [];
-  for (let i = 0; i < 7; i++) { const d = addDays(nf, i), a = adapted(s, d); if (a.type === 'event' || (a.type === 'run' && a.run && a.run.kind !== 'facile') || (a.type !== 'rest' && a.mandatory && i === 2)) next.push(`${DAYS_SHORT[dow(d)]} · ${(a.replaced || a).title}`); }
+  for (let i = 0; i < 7; i++) { const d = addDays(nf, i), a = adapted(s, d); if (a.type === 'event' || (a.type === 'run' && a.run && a.run.kind !== 'facile') || (a.type !== 'rest' && a.mandatory && i === 2)) next.push(`${DAYS_SHORT[dow(d)]}. ${(a.replaced || a).title}`); }
   const nm = nextMilestone(s, to);
-  if (w < s.program.weeks) cards.push({ kind: 'next', title: 'La semaine prochaine', lines: [`Phase ${ph.n} · ${ph.name}${DELOAD.includes(w + 1) ? ', semaine allégée' : ''}`, ...next, ...(nm ? [`Prochain objectif : ${nm.title.toLowerCase()} (${nm.progress!.label.toLowerCase()})`] : [])] });
+  if (w < s.program.weeks) cards.push({ kind: 'next', title: 'La semaine prochaine', lines: [`Chapitre ${ph.n}, ${ph.name.toLowerCase()}${DELOAD.includes(w + 1) ? ', semaine allégée' : ''}`, ...next, ...(nm ? [`Prochain objectif : ${nm.title.toLowerCase()} (${nm.progress!.label.toLowerCase()})`] : [])] });
   return { week: w, from, to, cards, success };
 }
 /** Bilans disponibles : semaines terminées, plus la semaine en cours à partir du dimanche 18 h. */

@@ -10,7 +10,7 @@ import { update, useApp } from '@/store/store';
 import { fmtDay, mmss } from '@/engine/dates';
 import { radius, space, useTheme } from '@/theme/tokens';
 
-const TYPES: [ActivityType, string][] = [['crossfit', 'CrossFit'], ['hyrox', 'Cours HYROX'], ['hyrox-simu', 'Simulation HYROX'], ['hyrox-compet', 'Compét. HYROX'], ['running', 'Running'], ['renfo', 'Renfo'], ['marche', 'Marche'], ['autre', 'Autre']];
+const TYPES: [ActivityType, string][] = [['crossfit', 'CrossFit'], ['hyrox', 'Cours HYROX'], ['hyrox-simu', 'Simu HYROX'], ['hyrox-compet', 'Compét. HYROX'], ['running', 'Running'], ['renfo', 'Renfo'], ['marche', 'Marche'], ['autre', 'Autre']];
 const TITLE: Record<ActivityType, string> = { crossfit: 'CrossFit', hyrox: 'Cours HYROX', 'hyrox-simu': 'Simulation HYROX', 'hyrox-compet': 'Compétition HYROX', running: 'Running', course: 'Course', renfo: 'Renforcement', marche: 'Marche', autre: 'Activité' };
 
 export default function ActivityScreen() {
@@ -29,7 +29,7 @@ export default function ActivityScreen() {
     else router.back();
   }
   return (
-    <Sheet title={ex ? ex.title : 'Ajouter une activité'} sub={ex ? `${fmtDay(ex.date)}${ex.source === 'strava' ? ' · Strava' : ''}` : undefined}>
+    <Sheet title={ex ? ex.title : 'Ajouter une activité'} sub={ex ? `${fmtDay(ex.date)}${ex.source === 'strava' ? ', importée de Strava' : ''}` : undefined}>
       {ex ? <ActivitySummary a={ex} /> : null}
       {ex ? <T v="small" muted style={{ fontWeight: '600', marginBottom: space.s2, marginTop: space.s2 }}>Modifier</T> : null}
       <Field label="Type"><Choices cols={3} options={TYPES} value={f.type} onChange={v => v && set({ type: v, complementary: v === 'marche' ? f.complementary ?? true : false })} /></Field>

@@ -8,7 +8,7 @@ import { BrandMark } from '@/components/logo';
 import { Button, Card, Choices, Field, Row, T } from '@/components/ui';
 import { buildClosure } from '@/engine/closure';
 import { update, useApp } from '@/store/store';
-import { radius, space, useTheme } from '@/theme/tokens';
+import { layout, radius, space, useTheme } from '@/theme/tokens';
 
 /** Fin de séance : faits, contribution, prochaine étape. Deux questions maximum, fermeture immédiate possible. */
 export default function DoneScreen() {
@@ -28,8 +28,8 @@ export default function DoneScreen() {
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}>
-      <Row style={{ justifyContent: 'flex-end', padding: space.s4 }}><Button small kind="ghost" label="Fermer" onPress={close} /></Row>
-      <Animated.ScrollView style={{ opacity: fade }} contentContainerStyle={{ paddingHorizontal: space.s4, paddingBottom: 60, maxWidth: 560, width: '100%', alignSelf: 'center' }}>
+      <Row style={{ justifyContent: 'flex-end', paddingHorizontal: layout.gutter, paddingVertical: space.s3 }}><Button small kind="ghost" label="Fermer" onPress={close} /></Row>
+      <Animated.ScrollView style={{ opacity: fade }} contentContainerStyle={{ paddingHorizontal: layout.gutter, paddingBottom: 60, maxWidth: 560, width: '100%', alignSelf: 'center' }}>
         <Animated.View style={{ alignSelf: 'center', transform: [{ scale }], backgroundColor: c.accent, borderRadius: 999, width: 96, height: 96, alignItems: 'center', justifyContent: 'center', marginBottom: space.s4 }}>
           <BrandMark size={46} color={c.accentInk} />
         </Animated.View>
@@ -51,7 +51,7 @@ export default function DoneScreen() {
           <T v="small" muted style={{ fontWeight: '600' }}>Cette séance compte pour</T>
           {cl.contributions.map(x => <Row key={x.title} between><T v="label" style={{ flex: 1 }} color={x.unlocked ? c.accent : c.ink}>{x.title}</T><T v="small" color={x.unlocked ? c.accent : c.ink2} style={{ fontWeight: '600' }}>{x.text}</T></Row>)}
         </View> : null}
-        {cl.askEffort ? <Field label="Effort ressenti" hint="1 très facile · 10 maximal"><Choices cols={10} options={Array.from({ length: 10 }, (_, i) => [i + 1, String(i + 1)] as [number, string])} value={a.effort} onChange={v => update(st => { const x = st.activities.find(y => y.id === a.id); if (x) { x.effort = v; x.askEffort = false; } })} /></Field> : null}
+        {cl.askEffort ? <Field label="Effort ressenti" hint="de 1, très facile, à 10, maximal"><Choices cols={10} options={Array.from({ length: 10 }, (_, i) => [i + 1, String(i + 1)] as [number, string])} value={a.effort} onChange={v => update(st => { const x = st.activities.find(y => y.id === a.id); if (x) { x.effort = v; x.askEffort = false; } })} /></Field> : null}
         {cl.askPain ? <Field label="Une douleur ou une gêne ?"><Choices options={[['non', 'Non'], ['épaule', 'Épaule'], ['genou', 'Genou'], ['dos', 'Dos'], ['autre', 'Autre']]} value={ci?.pain === 'non' ? 'non' : ci?.painZone ?? null} onChange={v => update(st => { const k = a.date; const cur = st.checkins[k] || {}; st.checkins[k] = v === 'non' || !v ? { ...cur, pain: v ? 'non' : null } : { ...cur, pain: 'oui', painZone: v, painLevel: cur.painLevel ?? 3 }; })} /></Field> : null}
         {cl.next ? <Card tone="flat"><T v="small" muted>Prochaine étape</T><T v="label">{cl.next}</T></Card> : null}
         <Button kind="primary" block label="Continuer" onPress={close} />

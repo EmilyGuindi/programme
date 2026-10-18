@@ -21,7 +21,7 @@ export function segments(run: RunSession): Segment[] {
     const sp = /(\d+)\s*(?:lignes droites|accélérations)[^,]*?(\d+)\s*s[^,]*,\s*récup\s*(\d+(?:\.\d+)?)\s*(s|min)/i.exec(t);
     if (sp) {
       const n = +sp[1], w = +sp[2], r = sp[4] === 'min' ? +sp[3] * 60 : +sp[3];
-      for (let k = 0; k < n; k++) { out.push({ label: `Accélération ${k + 1} / ${n} · rapide et relâchée`, sec: w, kind: 'work', step: i }); out.push({ label: 'Récupération en marchant', sec: r, kind: 'rec', step: i }); }
+      for (let k = 0; k < n; k++) { out.push({ label: `Accélération ${k + 1} sur ${n}, rapide et relâchée`, sec: w, kind: 'work', step: i }); out.push({ label: 'Récupération en marchant', sec: r, kind: 'rec', step: i }); }
       return;
     }
     const m = /^(\d+(?:\.\d+)?)\s*min/i.exec(t.trim());

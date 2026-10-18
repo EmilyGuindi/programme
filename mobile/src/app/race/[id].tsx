@@ -5,7 +5,7 @@ import { Bullets, Disclosure } from '@/components/guide';
 import { Countdown, EffortProfile, Kicker, Ring, Stage } from '@/components/brand';
 import { Pressable } from 'react-native';
 import { Sheet } from '@/components/sheet';
-import { Button, Card, Choices, Coach, Field, Gap, KV, ListGroup, ListRow, Row, T, Tag, Tick } from '@/components/ui';
+import { Button, Card, Choices, Coach, Field, Gap, KV, ListGroup, ListRow, Meta, Row, T, Tag, Tick } from '@/components/ui';
 import { checklistFor, eventActivity, raceAnalysis, readiness, strategy, taperTips } from '@/engine/race';
 import { eventState } from '@/engine/status';
 import { clock, daysBetween, DAYS_SHORT, dow, fmtLong, fmtShort, mmss, sportDay } from '@/engine/dates';
@@ -26,9 +26,9 @@ export default function RaceScreen() {
       <Stage glow mark>
         <Row between style={{ alignItems: 'flex-start' }}>
           <View style={{ flex: 1, paddingRight: space.s3 }}>
-            <Kicker onStage>{`${TYPE[ev.type]}${ev.distanceKm ? ` · ${String(ev.distanceKm).replace('.', ',')} km` : ''}`}</Kicker>
+            <Kicker onStage>{TYPE[ev.type]}</Kicker>
             <T v="title" color={c.stageInk} style={{ marginTop: space.s3 }}>{ev.name}</T>
-            <T color={c.stageInk2} style={{ marginTop: 4 }}>{[ev.time ? `Départ ${ev.time}` : '', ev.place].filter(Boolean).join(' · ')}</T>
+            <Meta color={c.stageInk2} style={{ marginTop: 4 }} items={[ev.distanceKm ? `${String(ev.distanceKm).replace('.', ',')} km` : null, ev.time ? `départ ${ev.time.replace(':', ' h ')}` : null]} />{ev.place ? <T v="small" color={c.stageInk2} style={{ marginTop: 2 }}>{ev.place.replace(' · ', ', ')}</T> : null}
           </View>
           {!past ? <Countdown days={n} /> : null}
         </Row>

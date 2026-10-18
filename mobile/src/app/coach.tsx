@@ -34,7 +34,7 @@ export default function CoachScreen() {
   const planB = (kind: 'easy' | 'reduced' | 'rest', reason: string) => update(st => { st.overrides[d] = { ...(st.overrides[d] || {}), adj: { kind, reason, proposalId: `coach-${d}` } }; });
 
   return (
-    <Sheet title="Coach" sub={`${r.level === 'inconnu' ? 'Check-in à faire' : r.level === 'vert' ? 'Récupération : prête' : r.level === 'orange' ? 'Récupération : à surveiller' : 'Récupération : faible'} · S${a.week}`}>
+    <Sheet title="Coach" sub={`${r.level === 'inconnu' ? 'Check-in à faire' : r.level === 'vert' ? 'Récupération : prête' : r.level === 'orange' ? 'Récupération : à surveiller' : 'Récupération : faible'}, S${a.week}`}>
       <Msg><T v="h3" style={{ lineHeight: 26 }}>{coachLine(s, d)}</T>{r.level !== 'inconnu' ? <T v="small" muted style={{ marginTop: 6 }}>{r.reasons.join(' ')}</T> : null}</Msg>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: space.s5 }}>
@@ -50,7 +50,7 @@ export default function CoachScreen() {
         <Msg><T>{`Aujourd'hui : ${shown.title}${a.dur && !a.replaced ? `, ${a.dur}` : ''}.`}</T>{a.reason ? <T v="small" muted style={{ marginTop: 4 }}>{a.reason}</T> : null}</Msg>
         {props.map(p => (
           <ActionCard key={p.id} title={p.title} lines={[...p.changes.map(x => x.label), p.why]} caution={p.caution}
-            onApply={() => apply(p.changes.map(x => x.label).join(' · '), () => update(st => acceptProposal(st, p)))} onKeep={() => update(st => keepProgram(st, p))} />))}
+            onApply={() => apply(p.changes.map(x => x.label).join(', '), () => update(st => acceptProposal(st, p)))} onKeep={() => update(st => keepProgram(st, p))} />))}
         {hardToday && !s.overrides[d]?.adj ? <>
           <T v="small" muted style={{ fontWeight: '600', marginBottom: space.s2 }}>Si la séance prévue ne passe pas aujourd'hui</T>
           <ActionCard title="Version facile" lines={['La séance devient un footing facile ou un renforcement réduit.', 'Utile si tu es fatiguée ou courbaturée.']} onApply={() => { planB(planFor(s, d).type === 'renfo' ? 'reduced' : 'easy', 'Plan B choisi avec le coach : version facile.'); setSaved('Séance du jour passée en version facile.'); haptic('success'); }} />
@@ -63,14 +63,14 @@ export default function CoachScreen() {
         : <Msg><T>Pas encore assez de séances comparables pour parler de progression. Continue tes footings sur le même parcours : dès 3 sorties comparables, je te dirai ce qui évolue.</T></Msg>) : null}
 
       {topic === 'next' ? <>
-        {ev && ev.type === 'course' ? <Msg><T v="overline" color={c.accent}>{`${ev.name} · J-${daysBetween(d, ev.date)}`}</T><T style={{ marginTop: 4 }}>{taperTips(ev, d)[0]}</T><Button kind="ghost" label="Voir ma stratégie" style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }} onPress={() => router.push({ pathname: '/race/[id]', params: { id: ev.id } })} /></Msg> : null}
-        {nextRun ? <ActionCard title={`${nextRun.date === d ? "Aujourd'hui" : fmtShort(nextRun.date)} · ${nextRun.run!.title}`} lines={[nextRun.run!.goal, ...nextRun.run!.steps.map(x => x.text)]} applyLabel="Ouvrir la séance" onApply={() => router.push({ pathname: '/run/[date]', params: { date: nextRun.date } })} />
+        {ev && ev.type === 'course' ? <Msg><T v="overline" color={c.accent}>{`${ev.name}, J-${daysBetween(d, ev.date)}`}</T><T style={{ marginTop: 4 }}>{taperTips(ev, d)[0]}</T><Button kind="ghost" label="Voir ma stratégie" style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }} onPress={() => router.push({ pathname: '/race/[id]', params: { id: ev.id } })} /></Msg> : null}
+        {nextRun ? <ActionCard title={`${nextRun.date === d ? "Aujourd'hui" : fmtShort(nextRun.date)}, ${nextRun.run!.title}`} lines={[nextRun.run!.goal, ...nextRun.run!.steps.map(x => x.text)]} applyLabel="Ouvrir la séance" onApply={() => router.push({ pathname: '/run/[date]', params: { date: nextRun.date } })} />
           : <Msg><T>Pas de sortie prévue dans les 7 prochains jours.</T></Msg>}
       </> : null}
 
       {topic === 'recover' ? <>
         <Msg><T>{r.level === 'rouge' || r.level === 'orange' ? 'Ton check-in montre de la fatigue : une vraie récupération vaut mieux qu\'une séance forcée.' : 'Récupérer fait partie de l\'entraînement : c\'est là que tu progresses.'}</T></Msg>
-        <ActionCard title="Routine de mobilité · 10 min" lines={MOBILITY.slice(1).map(m => `${m.name} · ${m.dose}`)} applyLabel="Ouvrir la routine" onApply={() => router.push({ pathname: '/day/[date]', params: { date: d } })} />
+        <ActionCard title="Routine de mobilité, 10 min" lines={MOBILITY.slice(1).map(m => `${m.name}, ${m.dose}`)} applyLabel="Ouvrir la routine" onApply={() => router.push({ pathname: '/day/[date]', params: { date: d } })} />
       </> : null}
 
       <T v="xs" muted style={{ marginTop: space.s4 }}>Les recommandations viennent des règles de ton programme et de tes données (check-ins, séances, Strava). Rien ne change sans ton accord. Elles ne remplacent pas un avis médical.</T>

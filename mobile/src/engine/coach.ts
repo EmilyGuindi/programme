@@ -5,6 +5,8 @@ import type { Activity, AdaptedPlan, AppState, ISODate, Level, Measurement, Plan
 /* ---------- calendrier ---------- */
 export const DELOAD = [12];
 export const daysBetweenSafe = (a: ISODate, b: ISODate) => daysBetween(a, b);
+/** Nom du programme pour l'affichage (les anciens noms enregistrés utilisaient « · »). */
+export const programName = (s: AppState) => s.program.name.replace(/\s·\s/g, ', ').replace('Oct → Fév', 'octobre à février');
 export const weekOf = (s: AppState, d: ISODate) => Math.floor(daysBetween(s.program.start, d) / 7) + 1;
 export const weekStart = (s: AppState, w: number) => addDays(s.program.start, (w - 1) * 7);
 /** Phases du cycle : les chapitres du parcours. Calendrier inchangé ; un futur programme fournit sa propre liste. */
@@ -173,7 +175,9 @@ export function zones(s: AppState) {
   const z: Record<Zone, [number, number]> = { easy: [p5 + 75, p5 + 105], seuil: [p5 + 18, p5 + 25], '10k': [p10 - 3, p10 + 3], '5k': [p5 - 3, p5 + 3] };
   return { src, p10, z };
 }
-export const ZONE_NAME: Record<Zone, string> = { easy: 'Facile · 3–4/10', seuil: 'Seuil · 7/10', '10k': 'Allure 10 km · 7–8/10', '5k': 'Allure 5 km · 8/10' };
+export const ZONE_NAME: Record<Zone, string> = { easy: 'Facile', seuil: 'Seuil', '10k': 'Allure 10 km', '5k': 'Allure 5 km' };
+/** Effort ressenti visé par zone (sur 10). */
+export const ZONE_EFFORT: Record<Zone, string> = { easy: '3–4/10', seuil: '7/10', '10k': '7–8/10', '5k': '8/10' };
 export const zoneText = (s: AppState, z: Zone) => { const [a, b] = zones(s).z[z]; return `${mmss(a)}–${mmss(b)} /km`; };
 
 /* ---------- renforcement ---------- */
@@ -192,12 +196,12 @@ export function strengthBlocks(s: AppState, d: ISODate, reduced: boolean): Block
   };
   const leg = log?.leg || (reduced ? 'f5' : w % 2 ? 'f2' : 'f3');
   const B: Block[] = [
-    { title: 'Bloc A · superset', items: [mk('f1'), mk('m2')] },
-    { title: 'Bloc B · superset', items: [mk('m1'), mk('m3')] },
-    { title: 'Bloc C · superset', items: [mk('m4'), mk('m5')] },
+    { title: 'Bloc A, superset', items: [mk('f1'), mk('m2')] },
+    { title: 'Bloc B, superset', items: [mk('m1'), mk('m3')] },
+    { title: 'Bloc C, superset', items: [mk('m4'), mk('m5')] },
   ];
-  if (!short) B.push({ title: 'Bloc D · jambes', leg: true, legSel: leg, items: [mk(leg)] });
-  B.push({ title: 'Bloc E · abdos', items: [mk('m7')] });
+  if (!short) B.push({ title: 'Bloc D, jambes', leg: true, legSel: leg, items: [mk(leg)] });
+  B.push({ title: 'Bloc E, abdos', items: [mk('m7')] });
   if (!short && !reduced) B.push({ title: 'Bonus', items: [mk('m6')] });
   return B;
 }

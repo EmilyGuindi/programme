@@ -26,8 +26,8 @@ export default function EventScreen() {
         <Button kind="primary" block label="Ouvrir la préparation" onPress={() => router.replace({ pathname: '/race/[id]', params: { id: ex.id } })} /><Gap h={8} />
         <Row gap={6}><Tag>{ex.type}</Tag><Tag>{ex.priority}</Tag><Tag tone="accent">{ex.status}</Tag></Row>
         {ex.goal ? <T style={{ marginTop: 10 }}>{ex.goal}</T> : null}
-        <T v="small" muted style={{ marginTop: 4 }}>{[ex.place, ex.time ? `départ ${ex.time}` : '', ex.distanceKm ? `${ex.distanceKm} km` : ''].filter(Boolean).join(' · ')}</T>
-        {ex.result ? <T v="label" style={{ marginTop: 10 }}>{`${clock(ex.result.time)}${ex.distanceKm ? ` · ${mmss(ex.result.time / ex.distanceKm)}/km` : ''}${ex.result.elevM ? ` · ${ex.result.elevM} m D+` : ''}${ex.result.effort ? ` · effort ${ex.result.effort}/10` : ''}`}</T> : null}
+        <T v="small" muted style={{ marginTop: 4 }}>{[ex.place, ex.time ? `départ à ${ex.time.replace(':', ' h ')}` : '', ex.distanceKm ? `${ex.distanceKm} km` : ''].filter(Boolean).join(', ')}</T>
+        {ex.result ? <T v="label" style={{ marginTop: 10 }}>{`${clock(ex.result.time)}${ex.distanceKm ? `, ${mmss(ex.result.time / ex.distanceKm)} /km` : ''}${ex.result.elevM ? `, ${ex.result.elevM} m D+` : ''}${ex.result.effort ? `, effort ${ex.result.effort}/10` : ''}`}</T> : null}
         <Gap /><Button kind="primary" block label={ex.result ? 'Modifier le résultat' : 'Saisir mon résultat'} onPress={() => router.push({ pathname: '/result/[id]', params: { id: ex.id } })} />
         <Gap h={8} /><Button block label="Modifier l'événement" onPress={() => setEdit(true)} />
       </Card> : <View>

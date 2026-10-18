@@ -31,6 +31,11 @@ const dark: Palette = {
 /** Espacements : base 4, rythme 8. */
 export const space = { s1: 4, s2: 8, s3: 12, s4: 16, s5: 24, s6: 32, s7: 48 } as const;
 export const radius = { r1: 12, r2: 20, r3: 24, pill: 999 } as const;
+/** Grille de mise en page : une seule source pour les marges et les retraits.
+ *  gutter = marge latérale des écrans et des feuilles · pad = retrait intérieur des cartes · padHero = cartes signature
+ *  gap = entre deux cartes d'un même groupe · section = entre deux groupes · row = hauteur minimale d'une ligne de liste
+ *  icon = colonne d'icône des listes (le texte s'aligne toujours au même retrait) */
+export const layout = { gutter: 20, pad: 16, padHero: 20, gap: 12, section: 28, row: 56, icon: 24 } as const;
 export const font = {
   regular: 'Inter_400Regular', medium: 'Inter_500Medium', semibold: 'Inter_600SemiBold', bold: 'Inter_700Bold',
   display: 'InterTight_700Bold', displayHeavy: 'InterTight_800ExtraBold', displayMedium: 'InterTight_600SemiBold',

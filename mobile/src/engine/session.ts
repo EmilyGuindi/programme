@@ -54,7 +54,7 @@ export function sessionItems(s: AppState, d: ISODate, a: AdaptedPlan = adapted(s
   if (a.type === 'renfo') {
     const mode = strengthMode(s, d, a); if (mode === 'x') return { items: [], unit: 'exercices' };
     const items: SessionItem[] = WARMUP.map(w => ({ id: `warm:${w.id}`, label: w.text, group: 'Échauffement' }));
-    strengthBlocks(s, d, mode === 'r').forEach(b => b.items.forEach(e => { for (let n = 1; n <= e.nSets; n++) items.push({ id: `set:${e.id}:${n}`, label: `${e.name} · série ${n}/${e.nSets}`, group: b.title, parent: e.id }); }));
+    strengthBlocks(s, d, mode === 'r').forEach(b => b.items.forEach(e => { for (let n = 1; n <= e.nSets; n++) items.push({ id: `set:${e.id}:${n}`, label: `${e.name}, série ${n} sur ${e.nSets}`, group: b.title, parent: e.id }); }));
     return { items, unit: 'exercices' };
   }
   return { items: [], unit: '' };

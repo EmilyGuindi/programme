@@ -1,5 +1,6 @@
 import { adapted, comparable, countsFor, planFor, runsList } from './coach';
-import { addDays, DAYS_SHORT, dow } from './dates';
+import { addDays, dow } from './dates';
+const DAYS_LONG = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 import { newRecords, recordsUntil } from './records';
 import { contribution } from './achievements';
 import { sessionProgress } from './session';
@@ -34,7 +35,7 @@ export function buildClosure(s: AppState, a: Activity): Closure {
   } else if (a.type === 'crossfit' || a.type === 'hyrox') facts.push(`${a.title} validé${a.durationMin ? `, ${Math.round(a.durationMin)} min` : ''}.`);
   else facts.push(`${a.title} enregistré.`);
   let next: string | null = null;
-  for (let i = 1; i <= 7; i++) { const d = addDays(a.date, i), x = adapted(s, d); if (x.type !== 'rest' && !x.optional) { next = `${DAYS_SHORT[dow(d)]} · ${(x.replaced || x).title}`; break; } }
+  for (let i = 1; i <= 7; i++) { const d = addDays(a.date, i), x = adapted(s, d); if (x.type !== 'rest' && !x.optional) { next = `${(x.replaced || x).title}, ${DAYS_LONG[dow(d)]}`; break; } }
   const c = s.checkins[a.date];
   const sp = sessionProgress(s, a.date, a.date); const ad = adapted(s, a.date);
   const steps = sp.total && sp.done ? `${sp.done} sur ${sp.total} ${sp.items.some(x => x.parent) ? 'séries et étapes' : sp.units.label} cochées` : null;

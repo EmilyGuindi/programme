@@ -10,7 +10,7 @@ import { space, useTheme } from '@/theme/tokens';
 import { STATUS_LABEL, type Status, type WeekSummary } from '@/engine/status';
 import { reducedMotion, useReducedMotion } from '@/feedback';
 import { Icon, type IconName } from './icons';
-import { Row, T } from './ui';
+import { Chip, Meta, Row, T } from './ui';
 
 const LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -129,8 +129,9 @@ export function DayMini({ status, a }: { status: Status; a: AdaptedPlan }) {
 }
 
 /** Jauge de la semaine : une case par séance prévue (jamais par jour : le repos n'est pas une case vide).
- *  lime = faite · lime à contour = faite en version adaptée · contour = à venir · pâle = non faite. Les optionnelles faites s'ajoutent en bonus. */
-export function WeekMeter({ w }: { w: WeekSummary }) {
+ *  lime = faite ; lime à contour = faite en version adaptée ; contour = à venir ; pâle = non faite ; gris = optionnelle faite, en bonus.
+ *  Le ratio est l'information principale ; le reste passe en métadonnées, sans séparateurs. */
+export function WeekMeter({ w, extra = [] }: { w: WeekSummary; extra?: (string | null)[] }) {
   const { c } = useTheme(); const reduced = useReducedMotion();
   const fill = useRef(new Animated.Value(reduced ? 1 : 0)).current;
   useEffect(() => { if (!reduced) Animated.timing(fill, { toValue: 1, duration: 360, useNativeDriver: true }).start(); }, [w.done]);
@@ -138,16 +139,24 @@ export function WeekMeter({ w }: { w: WeekSummary }) {
   const cells: ('done' | 'adapted' | 'open' | 'missed' | 'bonus')[] = [
     ...Array(w.done - w.adapted).fill('done'), ...Array(w.adapted).fill('adapted'), ...Array(w.remaining).fill('open'), ...Array(w.missed).fill('missed'), ...Array(w.optionalDone).fill('bonus')];
   const complete = w.planned > 0 && w.done === w.planned;
+  const pl = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
+  const meta = [w.adapted ? pl(w.adapted, 'adaptée', 'adaptées') : null, w.remaining ? pl(w.remaining, 'à venir', 'à venir') : null, w.optionalDone ? `${pl(w.optionalDone, 'optionnelle', 'optionnelles')} en plus` : null,
+    w.racesDone ? pl(w.racesDone, 'course terminée', 'courses terminées') : w.racesToConfirm ? pl(w.racesToConfirm, 'course à confirmer', 'courses à confirmer') : w.races ? pl(w.races, 'course', 'courses') : null, ...extra];
   return (
-    <View style={{ paddingHorizontal: space.s2, marginTop: space.s4 }} accessible accessibilityLabel={`Semaine : ${w.text}`}>
+    <View style={{ marginTop: space.s4 }} accessible accessibilityLabel={`Semaine : ${w.text}`}>
+      <Row between style={{ alignItems: 'flex-end', marginBottom: space.s2, flexWrap: 'wrap', rowGap: space.s2 }}>
+        <Row gap={6} style={{ alignItems: 'flex-end' }}>
+          <T v="num" style={{ fontSize: 20, lineHeight: 24 }}>{w.planned ? `${w.done}/${w.planned}` : `${w.optionalDone}`}</T>
+          <T v="small" muted style={{ paddingBottom: 1 }}>{w.planned ? 'séances prévues' : 'optionnelle faite'}</T>
+        </Row>
+        {complete ? <Chip tone="accent" label="Semaine bouclée" /> : null}
+      </Row>
       {cells.length ? <View style={{ flexDirection: 'row', gap: 4 }}>
         {cells.map((k, i) => <Animated.View key={i} style={{ flex: 1, height: 6, borderRadius: 3, opacity: k === 'done' || k === 'adapted' || k === 'bonus' ? fill : 1,
-          backgroundColor: k === 'done' ? c.accent : k === 'adapted' ? c.accentSoft : k === 'bonus' ? c.ink2 : k === 'missed' ? c.line : 'transparent',
+          backgroundColor: k === 'done' ? c.accent : k === 'adapted' ? c.accentSoft : k === 'bonus' ? c.ink3 : k === 'missed' ? c.line2 : 'transparent',
           borderWidth: k === 'open' || k === 'adapted' ? 1 : 0, borderColor: k === 'adapted' ? c.accent : c.stroke }} />)}
       </View> : null}
-      <Row between style={{ marginTop: 8 }}>
-        <T v="xs" color={complete ? c.accent : c.ink2} style={{ fontWeight: '600', flex: 1 }}>{complete ? `Semaine bouclée · ${w.text}` : w.text}</T>
-      </Row>
+      <Meta items={meta} style={{ marginTop: space.s2 }} />
     </View>
   );
 }

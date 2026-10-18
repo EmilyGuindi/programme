@@ -13,7 +13,7 @@ export function useNavLayout() {
   return navLayout(width, forced || fontScale, insets.bottom);
 }
 import type { Level } from '@/engine/types';
-import { font, radius, size, space, touch, useTheme } from '@/theme/tokens';
+import { font, layout, radius, size, space, touch, useTheme } from '@/theme/tokens';
 import Svg, { Defs, Path as SvgPath, RadialGradient, Rect as SvgRect, Stop } from 'react-native-svg';
 
 const tap = () => haptic('select');
@@ -49,7 +49,7 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
   useFocusEffect(useCallback(() => { ref.current?.scrollTo({ y: 0, animated: false }); }, []));
   // Espace sous le contenu = hauteur réelle du socle de navigation (barre + zone système) + respiration : le dernier élément reste toujours atteignable.
   const nav = useNavLayout();
-  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: space.s5 - 4, paddingBottom: nav.contentInset }}>{children}</View>;
+  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: layout.gutter, paddingBottom: nav.contentInset }}>{children}</View>;
   return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}><Ambient />{scroll ? <ScrollView ref={ref} keyboardShouldPersistTaps="handled">{inner}</ScrollView> : inner}</SafeAreaView>;
 }
 export function Row({ children, gap = space.s3, between, style }: { children: ReactNode; gap?: number; between?: boolean; style?: StyleProp<ViewStyle> }) {
@@ -132,8 +132,8 @@ export function Choices<V extends string | number>({ options, value, onChange, c
         return (
           <Pressable key={String(v)} accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={() => { tap(); onChange(on ? null : v); }}
             accessibilityLabel={l}
-            style={{ flexGrow: 1, flexBasis: cols ? `${100 / cols - 2}%` : 'auto', minWidth: cols ? undefined : 56, minHeight: cols && cols > 6 ? 44 : touch, borderRadius: radius.r1, borderWidth: on ? 0 : 1, borderColor: c.stroke, backgroundColor: on ? c.ink : c.surface, alignItems: 'center', justifyContent: 'center', paddingHorizontal: cols && cols > 6 ? 2 : 14 }}>
-            <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={{ fontFamily: font.semibold, fontSize: cols && cols > 6 ? size.sm : 15, color: on ? c.paper : c.ink }}>{l}</Text>
+            style={{ flexGrow: 1, flexBasis: cols ? `${100 / cols - 2}%` : 'auto', minWidth: cols ? undefined : 56, minHeight: cols && cols > 6 ? 44 : touch, borderRadius: radius.r1, borderWidth: on ? 0 : 1, borderColor: c.stroke, backgroundColor: on ? c.ink : c.surface, alignItems: 'center', justifyContent: 'center', paddingHorizontal: cols && cols > 6 ? 2 : 10, paddingVertical: 4 }}>
+            <Text numberOfLines={cols && cols > 6 ? 1 : 2} maxFontSizeMultiplier={1.3} style={{ fontFamily: font.semibold, fontSize: cols && cols > 6 ? size.sm : 15, lineHeight: cols && cols > 6 ? 18 : 19, textAlign: 'center', color: on ? c.paper : c.ink }}>{l}</Text>
           </Pressable>
         );
       })}
@@ -152,11 +152,11 @@ export function Segmented<V extends string>({ options, value, onChange }: { opti
   );
 }
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return <View style={{ marginBottom: space.s4 }}><Row gap={6} style={{ marginBottom: 6 }}><T v="label">{label}</T>{hint ? <T v="small" muted>{hint}</T> : null}</Row>{children}</View>;
+  return <View style={{ marginBottom: space.s4 }}><View style={{ marginBottom: space.s2 }}><T v="label">{label}</T>{hint ? <T v="small" muted>{hint}</T> : null}</View>{children}</View>;
 }
 export function Input(props: TextInputProps & { big?: boolean }) {
   const { c } = useTheme();
-  return <TextInput placeholderTextColor={c.ink2} {...props} style={[{ minHeight: props.big ? 64 : touch, borderWidth: 1, borderColor: c.line2, backgroundColor: c.surface, borderRadius: radius.r1, paddingHorizontal: 14, color: c.ink, fontFamily: props.big ? font.condensed : font.regular, fontSize: props.big ? 36 : size.md }, props.style]} />;
+  return <TextInput placeholderTextColor={c.ink2} {...props} style={[{ minWidth: 0, minHeight: props.big ? 64 : touch, borderWidth: 1, borderColor: c.line2, backgroundColor: c.surface, borderRadius: radius.r1, paddingHorizontal: 14, color: c.ink, fontFamily: props.big ? font.condensed : font.regular, fontSize: props.big ? 36 : size.md }, props.style]} />;
 }
 export function Stat({ items }: { items: [string, string][] }) {
   const { c } = useTheme();
@@ -167,25 +167,55 @@ export function KV({ k, v }: { k: string; v: string }) {
   return <Row between style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: c.line }}><T v="small">{k}</T><T v="label" style={{ fontVariant: ['tabular-nums'] }}>{v}</T></Row>;
 }
 
-const styles = StyleSheet.create({ card: { borderWidth: 1, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3 } });
+const styles = StyleSheet.create({ card: { borderWidth: 1, borderRadius: radius.r2, padding: layout.pad, marginBottom: layout.gap } });
 
 
 /* ---------- Éléments de liste compacts (réglages, plannings, accès secondaires) ---------- */
-export function ListGroup({ children, title }: { children: ReactNode; title?: string }) {
+export function ListGroup({ children, title, action, onAction }: { children: ReactNode; title?: string; action?: string; onAction?: () => void }) {
   const { c } = useTheme();
   return (
-    <View style={{ marginBottom: space.s5, marginTop: space.s2 }}>
-      {title ? <T v="small" muted style={{ marginBottom: space.s2, marginLeft: space.s1, fontWeight: '600' }}>{title}</T> : null}
+    <View style={{ marginBottom: layout.gap }}>
+      {title ? <SectionHeader title={title} action={action} onAction={onAction} /> : null}
       <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, overflow: 'hidden' }}>{children}</View>
     </View>
   );
 }
-export function ListRow({ title, sub, left, right, onPress, last, chevron = true }: { title: string; sub?: string; left?: ReactNode; right?: ReactNode; onPress?: () => void; last?: boolean; chevron?: boolean }) {
+
+/* ---------- Grille et composition ---------- */
+/** Titre de section : aligné sur le bord des cartes, même espacement partout (section au-dessus, 8 en dessous). */
+export function SectionHeader({ title, action, onAction, first }: { title: string; action?: string; onAction?: () => void; first?: boolean }) {
+  const { c } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: first ? 0 : layout.section - layout.gap, marginBottom: space.s2, minHeight: 24 }}>
+      <T v="label" color={c.ink2} style={{ fontSize: 14, lineHeight: 20 }}>{title}</T>
+      {action && onAction ? <Pressable accessibilityRole="button" accessibilityLabel={action} hitSlop={12} onPress={() => { tap(); onAction(); }} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4, opacity: pressed ? 0.6 : 1 })}><T v="small" color={c.accent} style={{ fontWeight: '600' }}>{action}</T><Chevron color={c.accent} size={12} /></Pressable> : null}
+    </View>
+  );
+}
+/** Statut court en pastille : remplace « Titre · statut ». Une seule par élément. */
+export function Chip({ label, tone = 'neutral', style }: { label: string; tone?: 'neutral' | 'accent' | 'ok' | 'warn' | 'stage' | 'lime'; style?: StyleProp<ViewStyle> }) {
+  const { c } = useTheme();
+  const m = { neutral: [c.surface2, c.ink2], accent: [c.accentSoft, c.accent], ok: [c.okSoft, c.ok], warn: [c.warnSoft, c.warn], stage: ['rgba(245,247,242,0.08)', c.stageInk2], lime: ['rgba(11,13,10,0.12)', c.accentInk] }[tone];
+  return <View style={[{ alignSelf: 'flex-start', height: 24, paddingHorizontal: 10, borderRadius: 12, backgroundColor: m[0], alignItems: 'center', justifyContent: 'center' }, style]}><Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={{ fontFamily: font.semibold, fontSize: size.xs, lineHeight: 16, color: m[1] }}>{label}</Text></View>;
+}
+/** Métadonnées secondaires : séparées par l'espace, jamais par « · ». Passent à la ligne proprement. */
+export function Meta({ items, color, style }: { items: (string | null | false | undefined)[]; color?: string; style?: StyleProp<ViewStyle> }) {
+  const { c } = useTheme(); const xs = items.filter(Boolean) as string[];
+  if (!xs.length) return null;
+  return <View style={[{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 2 }, style]}>{xs.map(x => <T key={x} v="small" color={color || c.ink2}>{x}</T>)}</View>;
+}
+/** Carte d'information pressable : retrait, rayon et chevron identiques partout. */
+export function Panel({ children, onPress, accessibilityLabel, style, chevron = !!onPress }: { children: ReactNode; onPress?: () => void; accessibilityLabel?: string; style?: StyleProp<ViewStyle>; chevron?: boolean }) {
+  const { c } = useTheme();
+  const body = (pressed = false) => <View style={[{ backgroundColor: pressed ? c.surface2 : c.surface, borderRadius: radius.r2, padding: layout.pad, marginBottom: layout.gap, flexDirection: 'row', alignItems: 'center', gap: space.s3 }, style]}><View style={{ flex: 1 }}>{children}</View>{chevron ? <Chevron /> : null}</View>;
+  return onPress ? <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={() => { tap(); onPress(); }}>{({ pressed }) => body(pressed)}</Pressable> : body();
+}
+export function ListRow({ title, sub, left, right, onPress, last, chevron = true, leftWidth = layout.icon }: { title: string; sub?: string; left?: ReactNode; right?: ReactNode; onPress?: () => void; last?: boolean; chevron?: boolean; leftWidth?: number }) {
   const { c } = useTheme();
   const body = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s3, minHeight: 56, paddingHorizontal: space.s4, paddingVertical: space.s3 }}>
-      {left}
-      <View style={{ flex: 1 }}><T v="label">{title}</T>{sub ? <T v="small" muted numberOfLines={2}>{sub}</T> : null}</View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s3, minHeight: layout.row, paddingHorizontal: layout.pad, paddingVertical: space.s3 }}>
+      {left ? <View style={{ width: leftWidth, alignItems: leftWidth > layout.icon ? 'flex-start' : 'center' }}>{left}</View> : null}
+      <View style={{ flex: 1 }}><T v="label">{title}</T>{sub ? <T v="small" muted numberOfLines={3}>{sub}</T> : null}</View>
       {right}
       {onPress && chevron ? <Chevron /> : null}
     </View>
@@ -193,7 +223,7 @@ export function ListRow({ title, sub, left, right, onPress, last, chevron = true
   return (
     <View>
       {onPress ? <Pressable accessibilityRole="button" onPress={() => { tap(); onPress(); }} style={({ pressed }) => ({ backgroundColor: pressed ? c.surface2 : 'transparent' })}>{body}</Pressable> : body}
-      {!last ? <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.line, marginLeft: left ? 56 : space.s4, marginRight: space.s4 }} /> : null}
+      {!last ? <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.line2, marginLeft: left ? layout.pad + leftWidth + space.s3 : layout.pad }} /> : null}
     </View>
   );
 }

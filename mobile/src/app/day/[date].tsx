@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Bullets, MoveList } from '@/components/guide';
 import { ActivityRow, markDone, TYPE_LABEL } from '@/components/plan-row';
 import { Sheet } from '@/components/sheet';
-import { Button, Card, Coach, Gap, Row, T, Tag } from '@/components/ui';
+import { Button, Card, Chip, Coach, Gap, Row, SectionHeader, T, Tag } from '@/components/ui';
 import { activitiesOn, adapted, doneOn, phaseOf } from '@/engine/coach';
 import { fmtDay, fmtLong, sportDay } from '@/engine/dates';
 import { movable } from '@/engine/reschedule';
@@ -19,8 +19,8 @@ export default function DayScreen() {
   const a = adapted(s, date); const shown = a.replaced || a; const acts = activitiesOn(s, date); const done = doneOn(s, date);
   const ph = phaseOf(a.week); const sp = useSession(date);
   return (
-    <Sheet title={fmtLong(date)} sub={`Semaine ${a.week} · Phase ${ph.n}, ${ph.name}`}>
-      <Row gap={6}><Tag>{`${TYPE_LABEL[shown.type]}${a.optional ? ' · optionnel' : ''}`}</Tag>{a.reason ? <Tag tone="accent">adaptée</Tag> : null}{done ? <Tag>faite ✓</Tag> : null}</Row>
+    <Sheet title={fmtLong(date)} sub={`Semaine ${a.week}, ${ph.name.toLowerCase()}`}>
+      <Row gap={6} style={{ flexWrap: 'wrap' }}><Chip label={TYPE_LABEL[shown.type]} />{done ? <Chip tone="accent" label="Faite" /> : a.reason ? <Chip tone="warn" label="Adaptée" /> : a.optional ? <Chip label="Optionnelle" /> : null}</Row>
       <T v="title" style={{ marginTop: space.s3 }}>{shown.title}</T>
       {shown.dur || (shown === a && a.dur) ? <T muted>{shown.dur || a.dur}</T> : null}
       <Gap />
@@ -52,7 +52,7 @@ export default function DayScreen() {
 
       {movable(s, date, sportDay()).ok ? <Button block label={a.movedFrom ? 'Déplacer ou annuler le déplacement' : 'Déplacer la séance'} style={{ marginTop: space.s3 }} onPress={() => router.push({ pathname: '/move/[date]', params: { date } })} /> : null}
       {a.movedTo ? <Button block label="Voir la séance déplacée" style={{ marginTop: space.s3 }} onPress={() => router.push({ pathname: '/day/[date]', params: { date: a.movedTo! } })} /> : null}
-      <T v="h3" style={{ marginTop: space.s4, marginBottom: space.s2 }}>Activités enregistrées</T>
+      <SectionHeader title="Activités enregistrées" />
       {acts.length ? acts.map(x => <ActivityRow key={x.id} x={x} />) : <T v="small" muted>Aucune pour ce jour.</T>}
       <View style={{ height: space.s2 }} />
       <Button small label="Ajouter une activité" onPress={() => router.push({ pathname: '/activity', params: { date } })} />

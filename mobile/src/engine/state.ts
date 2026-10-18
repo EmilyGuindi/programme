@@ -10,7 +10,7 @@ export const DEFAULT_STATE: AppState = {
     prefs: { checkinTime: '07:00', weighDay: 0, weighTime: '07:30', notifCheckin: true, notifWeigh: true, cycleOptIn: false },
     ref: { k10: null, k5: null },
   },
-  program: { id: 'c1', name: 'Cycle 1 · Oct → Fév', start: '2026-10-12', weeks: 20 },
+  program: { id: 'c1', name: 'Cycle 1, octobre à février', start: '2026-10-12', weeks: 20 },
   events: [], activities: [], checkins: {}, measurements: [], strength: {}, runs: {}, overrides: {}, migrated: false,
 };
 
@@ -19,7 +19,7 @@ export function seed(s: AppState): AppState {
   if (!s.events.length) s.events = [
     { id: 'ev-mudgirl', name: 'MUDGIRL Lyon', type: 'ocr', date: '2026-10-17', place: 'Grand Parc Miribel-Jonage', priority: 'participation', goal: 'Prendre du plaisir, finir entière', status: 'prévu' },
     { id: 'ev-lausanne', name: '10 km de Lausanne', type: 'course', date: '2026-10-25', time: '14:00', distanceKm: 10, place: 'Lausanne', priority: 'repère', goal: 'Premier repère chrono sur 10 km', status: 'prévu' },
-    { id: 'ev-athenes', name: "10 km d'Athènes", type: 'course', date: '2026-11-08', time: '08:00', distanceKm: 10, place: 'Athènes · Athens Marathon The Authentic, 10 km Road Race', priority: 'repère', goal: 'Deuxième repère, comparé à Lausanne', status: 'prévu' },
+    { id: 'ev-athenes', name: "10 km d'Athènes", type: 'course', date: '2026-11-08', time: '08:00', distanceKm: 10, place: 'Athènes, Athens Marathon The Authentic (10 km Road Race)', priority: 'repère', goal: 'Deuxième repère, comparé à Lausanne', status: 'prévu' },
   ];
   if (!s.measurements.some(m => m.date === '2026-10-14')) s.measurements.unshift({ id: 'm-start', date: '2026-10-14', weight: 67.3, fatPct: 32.7, fatKg: 22.0, muscleKg: 42.9, note: 'Point de départ officiel' });
   if (!s.activities.some(a => a.date === '2026-10-14')) s.activities.push({ id: 'a-walk1', date: '2026-10-14', type: 'marche', title: 'Marche', durationMin: 40, source: 'manuel', complementary: false, matched: '2026-10-14', effort: 3 });

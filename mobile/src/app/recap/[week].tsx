@@ -10,7 +10,7 @@ import { Button, Row, T } from '@/components/ui';
 import { fmtShort } from '@/engine/dates';
 import { buildRecap, type RecapCard } from '@/engine/recap';
 import { update, useApp } from '@/store/store';
-import { radius, space, useTheme } from '@/theme/tokens';
+import { layout, radius, space, useTheme } from '@/theme/tokens';
 
 const ILLU: Record<RecapCard['kind'], any> = { numbers: IlluRegularity, sessions: IlluRegularity, highlight: IlluRun, progress: IlluRun, records: IlluStrength, milestones: IlluStrength, worked: IlluRegularity, recovery: IlluBody, next: IlluRun };
 
@@ -22,17 +22,17 @@ export default function RecapScreen() {
   const go = (n: number) => { if (n < 0) return; if (n >= r.cards.length) { router.back(); return; } haptic('select'); list.current?.scrollToIndex({ index: n }); setI(n); };
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}>
-      <View style={{ flexDirection: 'row', gap: 4, paddingHorizontal: space.s4, paddingTop: space.s3 }}>
+      <View style={{ flexDirection: 'row', gap: 4, paddingHorizontal: layout.gutter, paddingTop: space.s3 }}>
         {r.cards.map((_, k) => <View key={k} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: k <= i ? c.accent : c.line2 }} />)}
       </View>
-      <Row between style={{ paddingHorizontal: space.s4, paddingVertical: space.s3 }}>
+      <Row between style={{ paddingHorizontal: layout.gutter, paddingVertical: space.s3 }}>
         <Wordmark height={12} onDark />
         <Button small kind="ghost" label="Fermer" onPress={() => router.back()} />
       </Row>
       <FlatList<RecapCard> ref={list} data={r.cards} horizontal pagingEnabled showsHorizontalScrollIndicator={false} keyExtractor={(_, k) => String(k)}
         onMomentumScrollEnd={e => setI(Math.round(e.nativeEvent.contentOffset.x / width))}
         renderItem={({ item, index }) => { return (
-          <Animated.View style={{ width, paddingHorizontal: space.s5, justifyContent: 'center', flex: 1, opacity: index === i ? fade : 1 }}>
+          <Animated.View style={{ width, paddingHorizontal: layout.gutter, justifyContent: 'center', flex: 1, opacity: index === i ? fade : 1 }}>
             
             {index === 0 ? <T v="small" color={c.ink2} style={{ marginBottom: 6 }}>{`${fmtShort(r.from)} – ${fmtShort(r.to)}`}</T> : null}
             <T v="title" color={c.ink}>{item.title}</T>
@@ -40,7 +40,7 @@ export default function RecapScreen() {
             {item.big ? <><T v="mega" color={c.accent} style={{ marginTop: space.s4, fontSize: 88, lineHeight: 92 }}>{item.big}</T><T color={c.ink2}>{item.bigLabel}</T></> : null}
             <View style={{ marginTop: space.s4, gap: 10 }}>{item.lines.map(l => <T key={l} color={c.ink}>{l}</T>)}</View>
           </Animated.View>); }} />
-      <Row style={{ padding: space.s4 }}>
+      <Row style={{ paddingHorizontal: layout.gutter, paddingVertical: space.s4 }}>
         <Button label="Précédent" kind="inverse" disabled={i === 0} onPress={() => go(i - 1)} />
         <Button kind="primary" style={{ flex: 1 }} label={i < r.cards.length - 1 ? 'Suivant' : 'Terminer'} onPress={() => go(i + 1)} />
       </Row>

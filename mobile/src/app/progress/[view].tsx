@@ -19,13 +19,13 @@ import { BrandMark } from '@/components/logo';
 import { sportDay } from '@/engine/dates';
 import { Pressable } from 'react-native';
 import { ActivityRow } from '@/components/plan-row';
-import { BackLink, Button, Chevron, Card, Gap, KV, ListGroup, ListRow, Meter, Row, Screen, Segmented, Stat, T } from '@/components/ui';
-import { adapted, doneOn, mandatoryStats, runInsight, trend, weekOf, weekStart, weightInsight, weightSeries, ZONE_NAME, zones, zoneText } from '@/engine/coach';
+import { BackLink, Button, Chevron, Card, Chip, Gap, SectionHeader, KV, ListGroup, ListRow, Meter, Row, Screen, Segmented, Stat, T } from '@/components/ui';
+import { adapted, doneOn, mandatoryStats, programName, runInsight, trend, weekOf, weekStart, weightInsight, weightSeries, ZONE_EFFORT, ZONE_NAME, zones, zoneText } from '@/engine/coach';
 import { addDays, clock, fmtShort, mmss, num, today } from '@/engine/dates';
 import { EX } from '@/engine/library';
 import { useApp } from '@/store/store';
 import { eventState } from '@/engine/status';
-import { radius, space, useTheme } from '@/theme/tokens';
+import { layout, radius, space, useTheme } from '@/theme/tokens';
 
 export default function Detail() {
   const { view } = useLocalSearchParams<{ view: string }>();
@@ -68,7 +68,7 @@ function Physique() {
       <T v="overline" muted>Poids et composition</T>
       {last ? <>
         <Row gap={6} style={{ alignItems: 'flex-end', marginTop: space.s2 }}><T v="display">{fmt(last.weight)}</T><T muted style={{ paddingBottom: 8 }}>kg</T></Row>
-        <T muted>{`Pesée du ${fmtShort(last.date)}${delta != null ? ` · ${delta <= 0 ? '−' : '+'}${fmt(Math.abs(delta))} kg depuis le ${fmtShort(first.date)}` : ''}`}</T>
+        <T muted>{`Pesée du ${fmtShort(last.date)}${delta != null ? `, ${delta <= 0 ? '−' : '+'}${fmt(Math.abs(delta))} kg depuis le ${fmtShort(first.date)}` : ''}`}</T>
       </> : <T style={{ marginTop: space.s2 }}>Aucune pesée pour l'instant.</T>}
       <Button kind="primary" block style={{ marginTop: space.s4 }} label="Ajouter une pesée" onPress={() => router.push('/measure')} />
       <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s3, marginTop: space.s5 }}>
@@ -78,12 +78,12 @@ function Physique() {
         </Row>
         {all.length >= 2 ? <WeightChart ms={ms} trend={showTrend ? tr : ms.map(m => m.weight)} goal={s.user.goals.weightTarget} start={s.program.start} selected={sel} onSelect={setSel} hideTrend={!showTrend} />
           : <T v="small" muted style={{ padding: space.s4, textAlign: 'center' }}>La courbe apparaît dès la deuxième pesée.</T>}
-        {sel != null && ms[sel] ? <T v="small" style={{ textAlign: 'center' }}>{`${fmtShort(ms[sel].date)} · ${fmt(ms[sel].weight)} kg${showTrend ? ` · tendance ${fmt(tr[sel])} kg` : ''}`}</T> : null}
+        {sel != null && ms[sel] ? <T v="small" style={{ textAlign: 'center' }}>{`${fmtShort(ms[sel].date)}, ${fmt(ms[sel].weight)} kg${showTrend ? `, tendance ${fmt(tr[sel])} kg` : ''}`}</T> : null}
         {all.length >= 6 ? <View style={{ marginTop: space.s2 }}><Segmented options={[['4s', '4 sem.'], ['3m', '3 mois'], ['all', 'Tout']]} value={f} onChange={setF} /></View> : null}
       </View>
       <T v="small" muted style={{ marginTop: space.s2 }}>{showTrend ? weightInsight(s) : 'La tendance lissée s\'affichera à partir de 4 pesées : avant, elle serait trompeuse.'}</T>
       <ListGroup title="Historique">
-        {[...all].reverse().map((m, i, arr) => <ListRow key={m.id} last={i === arr.length - 1} title={`${fmt(m.weight)} kg`} sub={[fmtShort(m.date), m.fatPct != null ? `MG ${fmt(m.fatPct)} %` : '', m.muscleKg != null ? `muscle ${fmt(m.muscleKg)} kg` : '', m.waist != null ? `taille ${fmt(m.waist)} cm` : '', m.note || ''].filter(Boolean).join(' · ')} onPress={() => router.push({ pathname: '/measure', params: { id: m.id } })} />)}
+        {[...all].reverse().map((m, i, arr) => <ListRow key={m.id} last={i === arr.length - 1} title={`${fmt(m.weight)} kg`} sub={[fmtShort(m.date), m.fatPct != null ? `MG ${fmt(m.fatPct)} %` : '', m.muscleKg != null ? `muscle ${fmt(m.muscleKg)} kg` : '', m.waist != null ? `taille ${fmt(m.waist)} cm` : '', m.note || ''].filter(Boolean).join(', ')} onPress={() => router.push({ pathname: '/measure', params: { id: m.id } })} />)}
       </ListGroup>
       {hasCompo ? <T v="xs" muted>Masse grasse et masse musculaire : estimations de la balance (impédance). Quelques centaines de grammes d'écart ne prouvent rien.</T> : null}
     </>
@@ -103,7 +103,7 @@ function Running() {
       <T v="overline" muted>Référence mesurée</T>
       {best10 ? <>
         <Row gap={6} style={{ alignItems: 'flex-end', marginTop: space.s2 }}><T v="display">{mmss(best10.raw / 10)}</T><T muted style={{ paddingBottom: 8 }}>/km sur 10 km</T></Row>
-        <T muted>{`${clock(best10.raw)} · ${fmtShort(best10.date)}${best5 ? ` · 5 km : ${best5.value}` : ''}`}</T>
+        <T muted>{`${clock(best10.raw)}, ${fmtShort(best10.date)}${best5 ? `, 5 km : ${best5.value}` : ''}`}</T>
       </> : <>
         <T v="h2" style={{ marginTop: space.s2 }}>Pas encore de chrono mesuré</T>
         <T muted style={{ marginTop: 4 }}>{next ? `${next.name}, le ${fmtShort(next.date)}, sera ta première référence.` : 'Ton premier test ou ta première course deviendra ta référence.'}</T>
@@ -113,16 +113,16 @@ function Running() {
         <View style={{ flex: 1, backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s3 }}><T v="overline" muted>{best10 ? 'Écart' : 'Estimation initiale'}</T><T v="num" style={{ marginTop: 4 }} color={best10 ? undefined : c.ink3}>{best10 ? `${mmss(Math.max(0, best10.raw / 10 - 330))} /km` : `≈ ${mmss(z.p10)} /km`}</T><T v="xs" muted>{best10 ? 'à gagner' : 'hypothèse, pas un résultat'}</T></View>
       </View>
       <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s3, marginTop: space.s5 }}>
-        <Row between style={{ paddingHorizontal: 4, marginBottom: space.s2 }}><T v="label">Allure dans le temps</T><Row gap={10}><Row gap={4}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.accent }} /><T v="xs" muted>courses, tests</T></Row><Row gap={4}><View style={{ width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: c.ink2 }} /><T v="xs" muted>footings</T></Row></Row></Row>
+        <T v="label" style={{ paddingHorizontal: 4 }}>Allure dans le temps</T><Row gap={10} style={{ paddingHorizontal: 4, marginTop: 4, marginBottom: space.s2 }}><Row gap={4}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.accent }} /><T v="xs" muted>courses, tests</T></Row><Row gap={4}><View style={{ width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: c.ink2 }} /><T v="xs" muted>footings</T></Row></Row>
         {refPts.length + easy.length >= 2 ? <PaceChart refs={refPts} easy={easy} goal={330} start={s.program.start} /> : <T v="small" muted style={{ padding: space.s4, textAlign: 'center' }}>{runs.length ? 'Encore une sortie et ta courbe apparaît.' : 'Tes sorties apparaîtront ici, avec ta référence et ton objectif.'}</T>}
       </View>
       <Insights domains={['running']} />
       <Disclosure title="Allures d'entraînement" sub={`Calculées depuis ${z.src}`}>
-        {(['easy', 'seuil', '10k', '5k'] as const).map(k => <KV key={k} k={ZONE_NAME[k]} v={zoneText(s, k)} />)}
+        {(['easy', 'seuil', '10k', '5k'] as const).map(k => <KV key={k} k={`${ZONE_NAME[k]}, effort ${ZONE_EFFORT[k]}`} v={zoneText(s, k)} />)}
       </Disclosure>
-      {races.length ? <ListGroup title="Compétitions">{races.map((e, i) => <ListRow key={e.id} last={i === races.length - 1} title={e.name} sub={`${fmtShort(e.date)} · ${clock(e.result!.time)}${e.distanceKm ? ` · ${mmss(e.result!.time / e.distanceKm)} /km` : ''}${e.result!.elevM ? ` · ${e.result!.elevM} m D+` : ''}`} onPress={() => router.push({ pathname: '/race/[id]', params: { id: e.id } })} />)}</ListGroup> : null}
+      {races.length ? <ListGroup title="Compétitions">{races.map((e, i) => <ListRow key={e.id} last={i === races.length - 1} title={e.name} sub={`${fmtShort(e.date)}, ${clock(e.result!.time)}${e.distanceKm ? `, ${mmss(e.result!.time / e.distanceKm)} /km` : ''}${e.result!.elevM ? `, ${e.result!.elevM} m D+` : ''}`} onPress={() => router.push({ pathname: '/race/[id]', params: { id: e.id } })} />)}</ListGroup> : null}
       {ws.length ? <ListGroup title="Distance par semaine"><View style={{ padding: space.s3 }}><BarChart labels={ws.map(w => `S${w}`)} values={ws.map(w => +wk[w].toFixed(1))} unit="km" /></View></ListGroup> : null}
-      <ListGroup title="Sorties">{runs.length ? [...runs].reverse().slice(0, 12).map((r, i, arr) => <ListRow key={r.id} last={i === arr.length - 1} title={r.title} sub={`${fmtShort(r.date)} · ${String(r.distanceKm).replace('.', ',')} km · ${mmss((r.durationMin! * 60) / r.distanceKm!)} /km${r.elevM ? ` · ${r.elevM} m D+` : ''}`} onPress={() => router.push({ pathname: '/activity', params: { id: r.id } })} />) : <ListRow last chevron={false} title="Aucune sortie enregistrée" sub="Les cours de box et les marches ne comptent pas ici." />}</ListGroup>
+      <ListGroup title="Sorties">{runs.length ? [...runs].reverse().slice(0, 12).map((r, i, arr) => <ListRow key={r.id} last={i === arr.length - 1} title={r.title} sub={`${fmtShort(r.date)}, ${String(r.distanceKm).replace('.', ',')} km, ${mmss((r.durationMin! * 60) / r.distanceKm!)} /km${r.elevM ? `, ${r.elevM} m D+` : ''}`} onPress={() => router.push({ pathname: '/activity', params: { id: r.id } })} />) : <ListRow last chevron={false} title="Aucune sortie enregistrée" sub="Les cours de box et les marches ne comptent pas ici." />}</ListGroup>
     </>
   );
 }
@@ -167,9 +167,9 @@ function Track({ title, steps }: { title: string; steps: Step[] }) {
                 {cur && st.ratio != null ? <View style={{ marginTop: space.s3 }}><Meter value={st.ratio} track="rgba(244,242,238,0.15)" color={c.accent} /></View> : null}
                 {cur && st.progress ? <T v="small" color={c.stageInk2} style={{ marginTop: 6 }}>{st.progress}</T> : null}
                 {isOpen ? <View style={{ marginTop: space.s3, gap: 8 }}>
-                  <T v="small" color={cur ? c.stageInk : c.ink}><T v="small" style={{ fontWeight: '700' }} color={cur ? c.stageInk : c.ink}>Critère · </T>{st.criterion}</T>
+                  <T v="small" color={cur ? c.stageInk : c.ink}><T v="small" style={{ fontWeight: '700' }} color={cur ? c.stageInk : c.ink}>Critère : </T>{st.criterion}</T>
                   {!cur ? <T v="small" color={c.ink2}>{st.progress ?? 'Pas encore mesurable : les données arrivent avec tes séances.'}</T> : null}
-                  {st.history.length ? <T v="small" color={cur ? c.stageInk2 : c.ink2}>{st.history.join(' · ')}</T> : null}
+                  {st.history.length ? <T v="small" color={cur ? c.stageInk2 : c.ink2}>{st.history.join(', ')}</T> : null}
                   {st.status !== 'atteinte' ? <Row gap={8} style={{ alignItems: 'flex-start' }}><T v="small" color={c.accent} style={{ fontWeight: '700' }}>→</T><T v="small" color={cur ? c.stageInk : c.ink} style={{ flex: 1 }}>{st.next}</T></Row> : null}
                 </View> : null}
               </View>
@@ -183,7 +183,7 @@ function Journey() {
   const s = useApp(); const { c } = useTheme(); const d = sportDay(); const chs = chapters(s, d, achievementsMemo(s, d));
   return (<>
     <T v="title" style={{ fontSize: 32, lineHeight: 38 }}>Mon parcours</T>
-    <T muted style={{ marginTop: 4, marginBottom: space.s5 }}>{`${s.program.name} : ${chs.length} chapitres, du premier repère au bilan.`}</T>
+    <T muted style={{ marginTop: 4, marginBottom: space.s5 }}>{`${programName(s)} : ${chs.length} chapitres, du premier repère au bilan.`}</T>
     {chs.map((ch, i) => { const cur = ch.state === 'en cours'; const done = ch.state === 'terminé';
       return (
         <Row key={ch.n} gap={space.s3} style={{ alignItems: 'stretch' }}>
@@ -200,9 +200,9 @@ function Journey() {
               {ch.state !== 'à venir' ? <View style={{ flexDirection: 'row', gap: 4, marginTop: space.s3 }}>{ch.weeks.map(k => <View key={k.w} accessibilityLabel={`Semaine ${k.w}`} style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: k.state === 'ok' ? c.accent : k.state === 'ko' ? c.surface2 : 'transparent', borderWidth: k.state === 'current' || k.state === 'next' ? 1 : 0, borderColor: k.state === 'current' ? c.accent : c.stroke }} />)}</View> : null}
               <Row gap={8} style={{ marginTop: space.s3, alignItems: 'flex-start' }}>
                 <View style={{ marginTop: 2 }}><StepMark state={ch.milestone.reached ? 'done' : cur ? 'current' : 'next'} size={16} /></View>
-                <T v="small" style={{ flex: 1 }} color={ch.state === 'à venir' ? c.ink2 : c.ink}><T v="small" style={{ fontWeight: '700' }} color={ch.state === 'à venir' ? c.ink2 : c.ink}>Jalon · </T>{`${ch.milestone.title}${ch.milestone.reached ? ` · atteint le ${fmtShort(ch.milestone.reached)}` : ''}`}</T>
+                <T v="small" style={{ flex: 1 }} color={ch.state === 'à venir' ? c.ink2 : c.ink}><T v="small" style={{ fontWeight: '700' }} color={ch.state === 'à venir' ? c.ink2 : c.ink}>Jalon : </T>{`${ch.milestone.title}${ch.milestone.reached ? `, atteint le ${fmtShort(ch.milestone.reached)}` : ''}`}</T>
               </Row>
-              {ch.bilan ? <T v="xs" muted style={{ marginTop: space.s2 }}>{`${done ? 'Bilan' : 'Jusqu\'ici'} : ${ch.bilan.done}/${ch.bilan.planned} séances prévues${ch.bilan.km ? ` · ${String(ch.bilan.km).replace('.', ',')} km courus` : ''}${ch.bilan.records ? ` · ${ch.bilan.records} record${ch.bilan.records > 1 ? 's' : ''}` : ''}`}</T> : null}
+              {ch.bilan ? <T v="xs" muted style={{ marginTop: space.s2 }}>{`${done ? 'Bilan' : 'Jusqu\'ici'} : ${ch.bilan.done}/${ch.bilan.planned} séances prévues${ch.bilan.km ? `, ${String(ch.bilan.km).replace('.', ',')} km courus` : ''}${ch.bilan.records ? `, ${ch.bilan.records} record${ch.bilan.records > 1 ? 's' : ''}` : ''}`}</T> : null}
               {!done ? <Row gap={8} style={{ marginTop: space.s2, alignItems: 'flex-start' }}><T v="small" color={c.accent} style={{ fontWeight: '700' }}>→</T><T v="small" style={{ flex: 1 }} color={cur ? c.ink : c.ink2}>{ch.next}</T></Row> : null}
             </View>
           </View>
@@ -219,7 +219,7 @@ function Records() {
   const run = recs.filter(r => r.id.startsWith('run-')), str = recs.filter(r => r.id.startsWith('str-'));
   const Rec = ({ label, value, date }: { label: string; value: string; date?: string }) => (
     <View style={{ flexBasis: '47%', flexGrow: 1, backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4 }}>
-      <T v="overline" muted numberOfLines={2}>{label}</T><T v="hero" style={{ marginTop: 6 }}>{value}</T>{date ? <T v="xs" muted>{fmtShort(date)}</T> : null}
+      <T v="small" muted style={{ fontWeight: '600' }}>{label}</T><T v="num" style={{ marginTop: space.s2, fontSize: 28, lineHeight: 32 }} numberOfLines={1}>{value}</T>{date ? <T v="xs" muted>{fmtShort(date)}</T> : null}
     </View>);
   return (
     <>
@@ -228,16 +228,16 @@ function Records() {
       {majors.map(a => (
         <Stage key={a.id} mark tone="lime">
           <Row gap={space.s4}><AchBadge cat={a.cat} status="unlocked" major size={76} label={a.title} />
-            <View style={{ flex: 1 }}><T v="eyebrow" color={c.accentInk}>{`${CAT_LABEL[a.cat]} · ${fmtShort(a.date!)}`}</T><T v="h2" color={c.accentInk} style={{ marginTop: 4 }}>{a.title}</T><T v="small" color={c.accentInk} style={{ marginTop: 2 }}>{a.detail || a.description}</T></View></Row>
+            <View style={{ flex: 1 }}><T v="eyebrow" color={c.accentInk}>{CAT_LABEL[a.cat]}</T><T v="h2" color={c.accentInk} style={{ marginTop: 4 }}>{a.title}</T><T v="small" color={c.accentInk} style={{ marginTop: 2 }}>{a.detail || a.description}</T></View></Row>
         </Stage>))}
       {got.filter(a => a.tier !== 'major').length ? <>
-        <T v="small" muted style={{ fontWeight: '600', marginTop: space.s2, marginBottom: space.s2, marginLeft: space.s1 }}>Atteints</T>
+        <SectionHeader title="Atteints" first />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.s3, marginBottom: space.s5 }}>
           {got.filter(a => a.tier !== 'major').map(a => (
             <View key={a.id} accessible accessibilityLabel={`${a.title}, atteint le ${fmtShort(a.date!)}`} style={{ flexBasis: '30%', flexGrow: 1, backgroundColor: c.stage, borderRadius: radius.r2, borderWidth: 0.5, borderColor: c.line2, padding: space.s3, alignItems: 'center' }}>
               <AchBadge cat={a.cat} status="unlocked" size={64} />
               <T v="small" style={{ fontWeight: '600', textAlign: 'center', marginTop: 6 }}>{a.title}</T>
-              <T v="xs" muted style={{ textAlign: 'center' }}>{a.detail ? `${a.detail} · ${fmtShort(a.date!)}` : fmtShort(a.date!)}</T>
+              <T v="xs" muted style={{ textAlign: 'center' }}>{a.detail ? `${a.detail}, ${fmtShort(a.date!)}` : fmtShort(a.date!)}</T>
             </View>))}
         </View>
       </> : null}
@@ -245,10 +245,10 @@ function Records() {
       {later.length ? <Disclosure title={`${later.length} jalons à découvrir`} sub="Critères et sources, par catégorie">
         {(Object.keys(CAT_LABEL) as AchCat[]).map(k => { const xs = later.filter(a => a.cat === k); return xs.length ? <View key={k} style={{ marginBottom: space.s3 }}><T v="label" style={{ marginBottom: 4 }}>{CAT_LABEL[k]}</T>{xs.map(a => <Row key={a.id} gap={space.s3} style={{ paddingVertical: 6, alignItems: 'flex-start' }}><AchBadge cat={a.cat} status="locked" size={32} /><View style={{ flex: 1 }}><T v="small" style={{ fontWeight: '600' }}>{a.title}</T><T v="xs" muted>{a.criterion}</T><T v="xs" muted>{`Source : ${a.source}`}</T></View></Row>)}</View> : null; })}
       </Disclosure> : null}
-      <Kicker>Records running</Kicker>
-      <View style={{ marginTop: space.s2, marginBottom: space.s5 }}>{run.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{run.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Tes records arrivent avec tes premières sorties et courses.</T>}</View>
-      <Kicker>Records de renforcement</Kicker>
-      <View style={{ marginTop: space.s2, marginBottom: space.s5 }}>{str.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{str.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Note tes charges et coche tes séries : tes meilleures apparaîtront ici.</T>}</View>
+      <SectionHeader title="Records running" />
+      <View style={{ marginBottom: layout.gap }}>{run.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{run.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Tes records arrivent avec tes premières sorties et courses.</T>}</View>
+      <SectionHeader title="Records de renforcement" />
+      <View style={{ marginBottom: layout.gap }}>{str.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{str.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Note tes charges et coche tes séries : tes meilleures apparaîtront ici.</T>}</View>
       <T v="xs" muted style={{ marginTop: space.s2 }}>Les records de vitesse ne viennent que de courses ou de tests sur la bonne distance, avec une allure plausible. Une activité corrigée ou supprimée est réévaluée automatiquement.</T>
     </>
   );
@@ -256,7 +256,7 @@ function Records() {
 function Recaps() {
   const s = useApp(); const { c } = useTheme(); const list = availableRecaps(s);
   return (<><T v="title" style={{ marginBottom: space.s4 }}>Bilans de la semaine</T>
-    {list.length ? <ListGroup>{list.map((w, i) => { const r = buildRecap(s, w); const seen = !!s.recapsSeen?.[String(w)]; return <ListRow key={w} last={i === list.length - 1} title={`Semaine ${w}`} sub={`${fmtShort(r.from)} – ${fmtShort(r.to)}${seen ? '' : ' · nouveau'}`} left={<Icon name="story" color={seen ? undefined : c.accent} />} onPress={() => router.push({ pathname: '/recap/[week]', params: { week: String(w) } })} />; })}</ListGroup> : <T muted>Ton premier bilan arrivera dimanche soir.</T>}</>);
+    {list.length ? <ListGroup>{list.map((w, i) => { const r = buildRecap(s, w); const seen = !!s.recapsSeen?.[String(w)]; return <ListRow key={w} last={i === list.length - 1} title={`Semaine ${w}`} sub={`${fmtShort(r.from)} – ${fmtShort(r.to)}`} left={<Icon name="story" color={seen ? undefined : c.accent} />} right={seen ? undefined : <Chip tone="accent" label="Nouveau" />} onPress={() => router.push({ pathname: '/recap/[week]', params: { week: String(w) } })} />; })}</ListGroup> : <T muted>Ton premier bilan arrivera dimanche soir.</T>}</>);
 }
 
 function Energy() {
@@ -274,14 +274,14 @@ function Energy() {
         {[['7 derniers jours', wk], ['30 derniers jours', mo]].map(([l, e]: any) => (
           <View key={l} style={{ flex: 1, backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4 }}>
             <T v="small" muted style={{ fontWeight: '600' }}>{l}</T>
-            {e.withData ? <><Row gap={4} style={{ alignItems: 'flex-end', marginTop: 6 }}><T v="hero">{fmtK(e.total)}</T><T v="small" muted style={{ paddingBottom: 6 }}>kcal</T></Row><T v="xs" muted>{coverage(e)}</T></>
+            {e.withData ? <><Row gap={4} style={{ alignItems: 'flex-end', marginTop: space.s2 }}><T v="num" style={{ fontSize: 28, lineHeight: 32 }} numberOfLines={1}>{fmtK(e.total)}</T><T v="small" muted style={{ paddingBottom: 3 }}>kcal</T></Row><T v="xs" muted style={{ marginTop: 2 }}>{coverage(e)}</T></>
               : <T v="small" muted style={{ marginTop: 6 }}>{e.count ? `Aucune estimation sur ${e.count} activité${e.count > 1 ? 's' : ''}` : 'Aucune activité'}</T>}
           </View>))}
       </Row>
       {mo.withData ? <ListGroup title="D'où vient la dépense (30 jours)">
         {CAT.filter(([k]) => mo.byCat[k].n).map(([k, l], i, arr) => (
           <View key={k} style={{ paddingHorizontal: space.s4, paddingVertical: space.s3 }}>
-            <Row between><T>{l}</T><T v="label" style={{ fontVariant: ['tabular-nums'] }}>{`${fmtK(Math.round(mo.byCat[k].kcal))} kcal`}</T></Row>
+            <Row between style={{ alignItems: 'flex-start' }}><T style={{ flex: 1 }}>{l}</T><T v="label" numberOfLines={1} style={{ fontVariant: ['tabular-nums'] }}>{`${fmtK(Math.round(mo.byCat[k].kcal))} kcal`}</T></Row>
             <View style={{ height: 4, borderRadius: 2, backgroundColor: c.line, marginTop: 8 }}><View style={{ width: `${(mo.byCat[k].kcal / mo.total) * 100}%`, height: 4, borderRadius: 2, backgroundColor: k === 'entraînement' ? c.ink : c.ink3 }} /></View>
             <T v="xs" muted style={{ marginTop: 4 }}>{`${mo.byCat[k].n} activité${mo.byCat[k].n > 1 ? 's' : ''}`}</T>
           </View>))}

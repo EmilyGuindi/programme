@@ -61,5 +61,5 @@ export function weekSummary(s: AppState, start: ISODate, today: ISODate): WeekSu
   const pl = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
   const parts = [out.planned ? `${out.done}/${out.planned} prévues` : '', out.adapted ? pl(out.adapted, 'adaptée', 'adaptées') : '', out.remaining ? pl(out.remaining, 'à venir', 'à venir') : '',
     out.optionalDone ? `+${pl(out.optionalDone, 'optionnelle', 'optionnelles')}` : '', out.races ? (out.racesDone ? pl(out.racesDone, 'course terminée', 'courses terminées') : out.racesToConfirm ? pl(out.racesToConfirm, 'course à confirmer', 'courses à confirmer') : pl(out.races, 'course', 'courses')) : ''];
-  return { ...out, text: parts.filter(Boolean).join(' · ') };
+  return { ...out, text: parts.filter(Boolean).join(', ') };
 }

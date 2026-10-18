@@ -21,15 +21,15 @@ export default function CheckInScreen() {
   return (
     <Sheet title="Check-in du matin" sub={fmtLong(d)}>
       <Field label="Comment as-tu dormi ?"><Choices options={[['mal', 'Mal'], ['moyen', 'Moyen'], ['bien', 'Bien'], ['tres', 'Très bien']]} value={c.sleep} onChange={v => set('sleep', v)} /></Field>
-      <Field label="Ton énergie ?" hint="1 vide · 5 pleine"><Choices options={scale5} value={c.energy} onChange={v => set('energy', v)} /></Field>
+      <Field label="Ton énergie ?" hint="de 1, vide, à 5, pleine"><Choices options={scale5} value={c.energy} onChange={v => set('energy', v)} /></Field>
       <Field label="Des courbatures ?"><Choices options={[['non', 'Non'], ['peu', 'Un peu'], ['fortes', 'Fortes']]} value={c.soreness} onChange={v => set('soreness', v)} /></Field>
       {c.soreness === 'fortes' ? <Field label="Où ?"><Choices options={[['jambes', 'Jambes'], ['fessiers', 'Fessiers'], ['dos', 'Dos'], ['épaules', 'Épaules'], ['partout', 'Partout']]} value={c.soreZone} onChange={v => set('soreZone', v)} /></Field> : null}
       <Field label="Une douleur ?"><Choices options={[['non', 'Non'], ['oui', 'Oui']]} value={c.pain} onChange={v => set('pain', v)} /></Field>
       {c.pain === 'oui' ? <>
         <Field label="Zone"><Choices options={[['épaule', 'Épaule'], ['genou', 'Genou'], ['dos', 'Dos'], ['cheville', 'Cheville'], ['hanche', 'Hanche'], ['autre', 'Autre']]} value={c.painZone} onChange={v => set('painZone', v)} /></Field>
-        <Field label="Intensité" hint="0 aucune · 10 maximale"><Choices cols={11} options={Array.from({ length: 11 }, (_, i) => [i, String(i)] as [number, string])} value={c.painLevel} onChange={v => set('painLevel', v)} /></Field>
+        <Field label="Intensité" hint="de 0 à 10"><Choices cols={11} options={Array.from({ length: 11 }, (_, i) => [i, String(i)] as [number, string])} value={c.painLevel} onChange={v => set('painLevel', v)} /></Field>
       </> : null}
-      <Field label="Motivation ?" hint="1 aucune · 5 à fond"><Choices options={scale5} value={c.motivation} onChange={v => set('motivation', v)} /></Field>
+      <Field label="Motivation ?" hint="de 1 à 5"><Choices options={scale5} value={c.motivation} onChange={v => set('motivation', v)} /></Field>
       {s.user.prefs.cycleOptIn ? <Field label="Règles aujourd'hui ?"><Choices options={[['non', 'Non'], ['oui', 'Oui']]} value={c.period} onChange={v => set('period', v)} /></Field> : null}
       <Card>
         <Pill level={complete ? r.level : 'inconnu'} /><Gap h={8} />

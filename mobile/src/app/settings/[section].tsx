@@ -8,8 +8,8 @@ import { Alert, Linking, Pressable, View } from 'react-native';
 import { APP_VERSION, CHANGELOG } from '@/changelog';
 import { manualUpdateCheck } from '@/components/update-banner';
 import { Bullets } from '@/components/guide';
-import { BackLink, Button, Card, Field, Gap, Input, ListGroup, ListRow, Row, Screen, Segmented, T, Toggle } from '@/components/ui';
-import { phaseOf, weekOf } from '@/engine/coach';
+import { BackLink, Button, Card, Field, Gap, Input, ListGroup, ListRow, Row, Screen, Segmented, T, Toggle, Chip } from '@/components/ui';
+import { PHASES, phaseOf, weekOf } from '@/engine/coach';
 import { addDays, DAYS_SHORT, fmtShort, num, today } from '@/engine/dates';
 import { planReminders } from '@/engine/reminders';
 import { askPermission, nextScheduled, permission, syncReminders, testNotification } from '@/notifications';
@@ -96,7 +96,7 @@ function Connections() {
       </Card>
       <Card>
         <T v="h3">Strava</T>
-        <T v="small" muted style={{ marginVertical: 6 }}>{!sv.url ? 'Configure d\'abord le serveur ci-dessus.' : !st ? 'Statut inconnu.' : !st.configured ? 'Le serveur attend les identifiants Strava.' : st.connected ? `Connecté${st.athlete ? ` · ${st.athlete}` : ''}${st.lastSync ? ` · synchro ${new Date(st.lastSync).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}` : st.error ? 'Accès expiré : reconnecte Strava.' : 'Non connecté.'}</T>
+        <T v="small" muted style={{ marginVertical: 6 }}>{!sv.url ? 'Configure d\'abord le serveur ci-dessus.' : !st ? 'Statut inconnu.' : !st.configured ? 'Le serveur attend les identifiants Strava.' : st.connected ? `Connecté${st.athlete ? ` en tant que ${st.athlete}` : ''}${st.lastSync ? `, synchro ${new Date(st.lastSync).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}` : st.error ? 'Accès expiré : reconnecte Strava.' : 'Non connecté.'}</T>
         {st?.connected ? (
           <Row><Button label={busy ? 'Synchronisation…' : 'Synchroniser'} style={{ flex: 1 }} disabled={busy} onPress={async () => { setBusy(true); const n = await stravaSyncNow(14); setBusy(false); setSmsg(n ? `${n} activité${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.` : 'Tout est à jour.'); }} />
             <Button kind="danger" label="Déconnecter" onPress={() => Alert.alert('Déconnecter Strava ?', 'BYYND n\'aura plus accès à tes activités. Celles déjà importées restent.', [{ text: 'Annuler', style: 'cancel' }, { text: 'Déconnecter', style: 'destructive', onPress: () => disconnectStrava() }])} /></Row>
@@ -120,18 +120,18 @@ function Connections() {
 
 function Program() {
   const s = useApp(); const { c } = useTheme(); const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, today())));
-  const PH = [{ n: 'A', name: 'Évaluation', from: 1, to: 5, what: 'Courses de l\'automne, premiers repères 10 km' }, { n: 'B', name: 'Base aérobie', from: 6, to: 10, what: 'Endurance, premières séances au seuil' }, { n: 'C', name: 'Seuil', from: 11, to: 15, what: 'Allure soutenue, repère fin janvier' }, { n: 'D', name: 'Spécifique 10 km', from: 16, to: 19, what: 'Allure cible, bilan mi-février' }, { n: '20', name: 'Bilan', from: 20, to: 20, what: 'Comparaison des repères' }];
+  const PH = PHASES;
   return (
     <>
-      <T muted style={{ marginBottom: space.s4 }}>{`${fmtShort(s.program.start)} → ${fmtShort(addDays(s.program.start, s.program.weeks * 7 - 1))} · semaine ${w} sur ${s.program.weeks}`}</T>
+      <T muted style={{ marginBottom: space.s4 }}>{`Du ${fmtShort(s.program.start)} au ${fmtShort(addDays(s.program.start, s.program.weeks * 7 - 1))}. Semaine ${w} sur ${s.program.weeks}.`}</T>
       <ListGroup title="Phases">
         {PH.map((p, i) => { const st = w > p.to ? 'terminée' : w >= p.from ? 'en cours' : 'à venir'; return (
-          <ListRow key={p.n + i} last={i === PH.length - 1} chevron={false} title={`${p.name}`} sub={`S${p.from}${p.to !== p.from ? `–S${p.to}` : ''} · ${p.what}`}
-            left={<View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: st === 'en cours' ? c.accent : st === 'terminée' ? c.ink : c.surface2 }}><T v="label" color={st === 'à venir' ? c.ink2 : st === 'en cours' ? c.accentInk : c.paper}>{p.n}</T></View>}
-            right={<T v="xs" color={st === 'en cours' ? c.accent : c.ink3}>{st}</T>} />); })}
+          <ListRow key={p.n + i} last={i === PH.length - 1} chevron={false} title={`${p.name}`} sub={`Semaine${p.to !== p.from ? `s ${p.from} à ${p.to}` : ` ${p.from}`}. ${p.goal}`}
+            leftWidth={28} left={<View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: st === 'en cours' ? c.accent : st === 'terminée' ? c.ink : c.surface2 }}><T v="label" color={st === 'à venir' ? c.ink2 : st === 'en cours' ? c.accentInk : c.paper}>{p.n}</T></View>}
+            right={st === 'en cours' ? <Chip tone="accent" label="En cours" /> : st === 'terminée' ? <Chip label="Terminée" /> : undefined} />); })}
       </ListGroup>
       <ListGroup title="Compétitions du cycle">
-        {s.events.filter(e => e.status !== 'annulé').sort((a, b) => a.date.localeCompare(b.date)).map((e, i, arr) => <ListRow key={e.id} last={i === arr.length - 1} title={e.name} sub={`${fmtShort(e.date)}${e.result ? ' · terminée' : ''}`} onPress={() => router.push({ pathname: '/race/[id]', params: { id: e.id } })} />)}
+        {s.events.filter(e => e.status !== 'annulé').sort((a, b) => a.date.localeCompare(b.date)).map((e, i, arr) => <ListRow key={e.id} last={i === arr.length - 1} title={e.name} sub={`${fmtShort(e.date)}${e.result ? ', terminée' : ''}`} onPress={() => router.push({ pathname: '/race/[id]', params: { id: e.id } })} />)}
       </ListGroup>
       <T v="small" muted>Semaine allégée en S12. Une séance manquée ne se rattrape pas : la suite s'ajuste.</T>
     </>
@@ -166,7 +166,7 @@ function Data() {
   return (
     <>
       <ListGroup title="Où sont tes données">
-        <ListRow chevron={false} title="Sur ce téléphone" sub={`${s.activities.length} activités · ${s.measurements.length} pesées · ${Object.keys(s.checkins).length} check-ins`} />
+        <ListRow chevron={false} title="Sur ce téléphone" sub={`${s.activities.length} activités, ${s.measurements.length} pesées, ${Object.keys(s.checkins).length} check-ins`} />
         <ListRow last chevron={false} title="Sur ton serveur" sub={sv.url ? 'Copie synchronisée automatiquement' : 'Non configuré : voir Serveur et Strava'} />
       </ListGroup>
       <ListGroup title="Préférences">
@@ -195,7 +195,7 @@ function News() {
         {msg && msg !== 'ready' ? <T v="small" style={{ marginTop: 8 }} color={msg.startsWith('Impossible') ? c.stop : undefined}>{msg}</T> : null}
         {msg === 'ready' ? <T v="small" style={{ marginTop: 8 }}>Nouvelle version téléchargée.</T> : null}
       </Card>
-      {CHANGELOG.map(v => <Card key={v.version}><T v="label">{`${v.version} · ${v.date}`}</T><Gap h={6} /><Bullets items={v.items} /></Card>)}
+      {CHANGELOG.map(v => <Card key={v.version}><Row between><T v="label">{`Version ${v.version}`}</T><T v="small" muted>{v.date}</T></Row><Gap h={6} /><Bullets items={v.items} /></Card>)}
     </>
   );
 }
