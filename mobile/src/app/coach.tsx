@@ -1,5 +1,5 @@
 import type React from 'react';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/feedback';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -10,6 +10,7 @@ import { Button, Row, T } from '@/components/ui';
 import { adapted, coachLine, planFor, recovery } from '@/engine/coach';
 import { addDays, daysBetween, fmtShort, sportDay } from '@/engine/dates';
 import { MOBILITY } from '@/engine/guides';
+import { RECUP } from '@/engine/library';
 import { insights } from '@/engine/insights';
 import { acceptProposal, keepProgram, proposals } from '@/engine/proactive';
 import { nextEvent, taperTips } from '@/engine/race';
@@ -29,7 +30,7 @@ export default function CoachScreen() {
   const nextRun = Array.from({ length: 8 }, (_, i) => adapted(s, addDays(d, i))).find(x => x.type === 'run' && x.run && x.date >= d);
 
   const Msg = ({ children }: { children: React.ReactNode }) => <View style={{ marginBottom: space.s4 }}>{children}</View>;
-  const apply = (label: string, fn: () => void) => { fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); setSaved(label); };
+  const apply = (label: string, fn: () => void) => { fn(); haptic('success'); setSaved(label); };
   const planB = (kind: 'easy' | 'reduced' | 'rest', reason: string) => update(st => { st.overrides[d] = { ...(st.overrides[d] || {}), adj: { kind, reason, proposalId: `coach-${d}` } }; });
 
   return (
@@ -38,7 +39,7 @@ export default function CoachScreen() {
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: space.s5 }}>
         {TOPICS.map(([k, l]) => (
-          <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: topic === k }} onPress={() => { setTopic(k); setSaved(''); Haptics.selectionAsync().catch(() => {}); }}>
+          <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: topic === k }} onPress={() => { setTopic(k); setSaved(''); haptic('select'); }}>
             <View style={{ borderRadius: 20, backgroundColor: topic === k ? c.accent : c.surface2 }}><T v="small" color={topic === k ? c.accentInk : c.ink} style={{ paddingHorizontal: 16, paddingVertical: 10, fontWeight: '600' }}>{l}</T></View>
           </Pressable>))}
       </View>
@@ -52,8 +53,8 @@ export default function CoachScreen() {
             onApply={() => apply(p.changes.map(x => x.label).join(' · '), () => update(st => acceptProposal(st, p)))} onKeep={() => update(st => keepProgram(st, p))} />))}
         {hardToday && !s.overrides[d]?.adj ? <>
           <T v="small" muted style={{ fontWeight: '600', marginBottom: space.s2 }}>Si la séance prévue ne passe pas aujourd'hui</T>
-          <ActionCard title="Version facile" lines={['La séance devient un footing facile ou un renforcement réduit.', 'Utile si tu es fatiguée ou courbaturée.']} onApply={() => { planB(planFor(s, d).type === 'renfo' ? 'reduced' : 'easy', 'Plan B choisi avec le coach : version facile.'); setSaved('Séance du jour passée en version facile.'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }} />
-          <ActionCard title="Récupération active" lines={['Marche 30 min et 10 min de mobilité.', 'À choisir en cas de douleur ou de grosse fatigue.']} onApply={() => { planB('rest', 'Plan B choisi avec le coach : récupération active.'); setSaved('Séance du jour remplacée par une récupération active.'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }} />
+          <ActionCard title="Version facile" lines={['La séance devient un footing facile ou un renforcement réduit.', 'Utile si tu es fatiguée ou courbaturée.']} onApply={() => { planB(planFor(s, d).type === 'renfo' ? 'reduced' : 'easy', 'Plan B choisi avec le coach : version facile.'); setSaved('Séance du jour passée en version facile.'); haptic('success'); }} />
+          <ActionCard title="Récupération active" lines={[RECUP.goal, 'À choisir en cas de douleur ou de grosse fatigue.']} onApply={() => { planB('rest', 'Plan B choisi avec le coach : récupération active.'); setSaved('Séance du jour remplacée par une récupération active.'); haptic('success'); }} />
         </> : null}
         {s.overrides[d]?.adj ? <Button kind="ghost" label="Revenir à la séance prévue" style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }} onPress={() => { update(st => { delete st.overrides[d].adj; }); setSaved('Séance prévue rétablie.'); }} /> : null}
       </> : null}

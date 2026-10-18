@@ -1,4 +1,4 @@
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/feedback';
 import { View } from 'react-native';
 import { acceptProposal, keepProgram, proposals } from '@/engine/proactive';
 import { update, useApp } from '@/store/store';
@@ -19,7 +19,7 @@ export function ProposalCard({ d }: { d: string }) {
       <T v="small" style={{ marginTop: 4 }}><T v="small" style={{ fontWeight: '600' }}>Pour ton objectif : </T>{p.impact}</T>
       {p.caution ? <T v="small" color={c.stop} style={{ marginTop: 6 }}>{p.caution}</T> : null}
       <Row style={{ marginTop: space.s3 }}>
-        <Button kind="primary" label="Accepter" style={{ flex: 1 }} onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); update(st => acceptProposal(st, p)); }} />
+        <Button kind="primary" label="Accepter" style={{ flex: 1 }} onPress={() => { haptic('success'); update(st => acceptProposal(st, p)); }} />
         <Button label="Garder mon programme" style={{ flex: 1 }} onPress={() => update(st => keepProgram(st, p))} />
       </Row>
     </View>

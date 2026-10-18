@@ -10,7 +10,10 @@ import { Badge, Kicker, Rail, Stage, StepMark } from '@/components/brand';
 import { Icon } from '@/components/icons';
 import { availableRecaps, buildRecap } from '@/engine/recap';
 import { Bullets } from '@/components/guide';
-import { achievements, bodyJourney, runningJourney, type Step } from '@/engine/journey';
+import { bodyJourney, chapters, runningJourney, type Step } from '@/engine/journey';
+import { achievementsMemo, CAT_LABEL, type AchCat } from '@/engine/achievements';
+import { MilestoneRow } from '@/components/achievement-ui';
+import { AchBadge } from '@/components/badges';
 import { recordsUntil } from '@/engine/records';
 import { BrandMark } from '@/components/logo';
 import { sportDay } from '@/engine/dates';
@@ -21,6 +24,7 @@ import { adapted, doneOn, mandatoryStats, runInsight, trend, weekOf, weekStart, 
 import { addDays, clock, fmtShort, mmss, num, today } from '@/engine/dates';
 import { EX } from '@/engine/library';
 import { useApp } from '@/store/store';
+import { eventState } from '@/engine/status';
 import { radius, space, useTheme } from '@/theme/tokens';
 
 export default function Detail() {
@@ -90,7 +94,7 @@ function Running() {
   const recs = recordsUntil(s, t); const best10 = recs.find(r => r.id === 'run-10k'); const best5 = recs.find(r => r.id === 'run-5k');
   const runs = s.activities.filter(a => a.type === 'running' && !a.complementary && a.distanceKm && a.durationMin).sort((a, b) => a.date.localeCompare(b.date));
   const races = s.events.filter(e => e.result && e.type === 'course').sort((a, b) => a.date.localeCompare(b.date)); // OCR et HYROX hors analyses running
-  const next = s.events.filter(e => e.type === 'course' && !e.result && e.status !== 'annulé' && e.date >= t).sort((a, b) => a.date.localeCompare(b.date))[0];
+  const next = s.events.filter(e => e.type === 'course' && ['upcoming', 'today'].includes(eventState(s, e, t))).sort((a, b) => a.date.localeCompare(b.date))[0];
   const refPts = [...races.filter(e => e.distanceKm).map(e => ({ d: e.date, p: e.result!.time / e.distanceKm!, kind: 'course' as const })), ...runs.filter(r => r.kind === 'test').map(r => ({ d: r.date, p: (r.durationMin! * 60) / r.distanceKm!, kind: 'test' as const }))].sort((a, b) => a.d.localeCompare(b.d));
   const easy = runs.filter(r => (r.kind || 'facile') === 'facile').map(r => ({ d: r.date, p: (r.durationMin! * 60) / r.distanceKm! }));
   const wk: Record<number, number> = {}; runs.forEach(r => { const w = weekOf(s, r.date); wk[w] = (wk[w] || 0) + (r.distanceKm || 0); }); const ws = Object.keys(wk).map(Number).sort((a, b) => a - b).slice(-10);
@@ -176,37 +180,76 @@ function Track({ title, steps }: { title: string; steps: Step[] }) {
   );
 }
 function Journey() {
-  const s = useApp(); const d = sportDay();
-  return (<><T v="title" style={{ fontSize: 32, lineHeight: 38 }}>Mon parcours</T><T muted style={{ marginTop: 4, marginBottom: space.s5 }}>Des étapes mesurables, de l'endurance à ton objectif 10 km.</T>
-    <Track title="Running" steps={runningJourney(s, d)} /><Track title="Physique et renforcement" steps={bodyJourney(s, d)} /></>);
+  const s = useApp(); const { c } = useTheme(); const d = sportDay(); const chs = chapters(s, d, achievementsMemo(s, d));
+  return (<>
+    <T v="title" style={{ fontSize: 32, lineHeight: 38 }}>Mon parcours</T>
+    <T muted style={{ marginTop: 4, marginBottom: space.s5 }}>{`${s.program.name} : ${chs.length} chapitres, du premier repère au bilan.`}</T>
+    {chs.map((ch, i) => { const cur = ch.state === 'en cours'; const done = ch.state === 'terminé';
+      return (
+        <Row key={ch.n} gap={space.s3} style={{ alignItems: 'stretch' }}>
+          <View style={{ width: 28, alignItems: 'center' }}>
+            <View style={{ width: 28, height: 28, borderRadius: 8, marginTop: cur ? 22 : 14, alignItems: 'center', justifyContent: 'center', backgroundColor: done ? c.ink : cur ? c.accent : 'transparent', borderWidth: done || cur ? 0 : 1.5, borderColor: c.stroke }}>
+              <T v="label" color={done ? c.paper : cur ? c.accentInk : c.ink2}>{ch.n}</T>
+            </View>
+            {i < chs.length - 1 ? <View style={{ flex: 1, marginTop: 4, alignItems: 'center' }}><Rail done={done} height="100%" /></View> : null}
+          </View>
+          <View style={{ flex: 1, paddingBottom: space.s3 }}>
+            <View style={cur ? { backgroundColor: c.stage, borderRadius: radius.r2, padding: space.s4, borderWidth: 0.5, borderColor: c.line2 } : { paddingVertical: space.s3 }}>
+              <Row between><T v={cur ? 'h3' : 'label'} color={ch.state === 'à venir' ? c.ink2 : c.ink} style={{ flex: 1 }}>{ch.name}</T><T v="xs" color={done ? c.ink2 : cur ? c.accent : c.ink3} style={{ fontWeight: '700' }}>{done ? 'Terminé' : cur ? 'En cours' : `Sem. ${ch.from}${ch.to > ch.from ? `–${ch.to}` : ''}`}</T></Row>
+              <T v="small" muted style={{ marginTop: 2 }}>{ch.goal}</T>
+              {ch.state !== 'à venir' ? <View style={{ flexDirection: 'row', gap: 4, marginTop: space.s3 }}>{ch.weeks.map(k => <View key={k.w} accessibilityLabel={`Semaine ${k.w}`} style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: k.state === 'ok' ? c.accent : k.state === 'ko' ? c.surface2 : 'transparent', borderWidth: k.state === 'current' || k.state === 'next' ? 1 : 0, borderColor: k.state === 'current' ? c.accent : c.stroke }} />)}</View> : null}
+              <Row gap={8} style={{ marginTop: space.s3, alignItems: 'flex-start' }}>
+                <View style={{ marginTop: 2 }}><StepMark state={ch.milestone.reached ? 'done' : cur ? 'current' : 'next'} size={16} /></View>
+                <T v="small" style={{ flex: 1 }} color={ch.state === 'à venir' ? c.ink2 : c.ink}><T v="small" style={{ fontWeight: '700' }} color={ch.state === 'à venir' ? c.ink2 : c.ink}>Jalon · </T>{`${ch.milestone.title}${ch.milestone.reached ? ` · atteint le ${fmtShort(ch.milestone.reached)}` : ''}`}</T>
+              </Row>
+              {ch.bilan ? <T v="xs" muted style={{ marginTop: space.s2 }}>{`${done ? 'Bilan' : 'Jusqu\'ici'} : ${ch.bilan.done}/${ch.bilan.planned} séances prévues${ch.bilan.km ? ` · ${String(ch.bilan.km).replace('.', ',')} km courus` : ''}${ch.bilan.records ? ` · ${ch.bilan.records} record${ch.bilan.records > 1 ? 's' : ''}` : ''}`}</T> : null}
+              {!done ? <Row gap={8} style={{ marginTop: space.s2, alignItems: 'flex-start' }}><T v="small" color={c.accent} style={{ fontWeight: '700' }}>→</T><T v="small" style={{ flex: 1 }} color={cur ? c.ink : c.ink2}>{ch.next}</T></Row> : null}
+            </View>
+          </View>
+        </Row>); })}
+    <T v="small" muted style={{ fontWeight: '600', marginTop: space.s5, marginBottom: space.s3 }}>Étapes détaillées</T>
+    <Track title="Running" steps={runningJourney(s, d)} /><Track title="Physique et renforcement" steps={bodyJourney(s, d)} />
+  </>);
 }
 function Records() {
-  const s = useApp(); const { c } = useTheme(); const d = sportDay(); const recs = recordsUntil(s, d); const ach = achievements(s, d);
-  const got = ach.filter(a => a.date), locked = ach.filter(a => !a.date);
+  const s = useApp(); const { c } = useTheme(); const d = sportDay(); const recs = recordsUntil(s, d); const ach = achievementsMemo(s, d);
+  const got = ach.filter(a => a.date).sort((a, b) => b.date!.localeCompare(a.date!)); const majors = got.filter(a => a.tier === 'major');
+  const going = ach.filter(a => a.status === 'progress' && a.id !== 'reg-cycle' && a.id !== 'reg-phase').sort((a, b) => b.progress!.value / b.progress!.target - a.progress!.value / a.progress!.target).slice(0, 4);
+  const later = ach.filter(a => !a.date && !going.includes(a));
   const run = recs.filter(r => r.id.startsWith('run-')), str = recs.filter(r => r.id.startsWith('str-'));
   const Rec = ({ label, value, date }: { label: string; value: string; date?: string }) => (
     <View style={{ flexBasis: '47%', flexGrow: 1, backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4 }}>
-      <T v="overline" muted numberOfLines={1}>{label}</T><T v="hero" style={{ marginTop: 6 }}>{value}</T>{date ? <T v="xs" muted>{fmtShort(date)}</T> : null}
+      <T v="overline" muted numberOfLines={2}>{label}</T><T v="hero" style={{ marginTop: 6 }}>{value}</T>{date ? <T v="xs" muted>{fmtShort(date)}</T> : null}
     </View>);
   return (
     <>
-      <T v="title" style={{ fontSize: 32, lineHeight: 38, marginBottom: space.s4 }}>Records et paliers</T>
-      {got.length ? got.map(a => (
-        <Stage key={a.id} mark>
-          <Row gap={space.s4}>
-            <Badge achieved size={64} label={a.title} />
-            <View style={{ flex: 1 }}><Kicker onStage>{`Palier atteint · ${fmtShort(a.date!)}`}</Kicker><T v="h2" color={c.stageInk} style={{ marginTop: 6 }}>{a.title}</T><T v="small" color={c.stageInk2} style={{ marginTop: 2 }}>{a.detail}</T></View>
-          </Row>
-        </Stage>)) : null}
-      <Kicker>Running</Kicker>
+      <T v="title" style={{ fontSize: 32, lineHeight: 38, marginBottom: space.s2 }}>Accomplissements</T>
+      <T muted style={{ marginBottom: space.s4 }}>{`${got.length} atteint${got.length > 1 ? 's' : ''} sur ${ach.length}. Chacun repose sur des données vérifiables : séances, Strava, résultats.`}</T>
+      {majors.map(a => (
+        <Stage key={a.id} mark tone="lime">
+          <Row gap={space.s4}><AchBadge cat={a.cat} status="unlocked" major size={76} label={a.title} />
+            <View style={{ flex: 1 }}><T v="eyebrow" color={c.accentInk}>{`${CAT_LABEL[a.cat]} · ${fmtShort(a.date!)}`}</T><T v="h2" color={c.accentInk} style={{ marginTop: 4 }}>{a.title}</T><T v="small" color={c.accentInk} style={{ marginTop: 2 }}>{a.detail || a.description}</T></View></Row>
+        </Stage>))}
+      {got.filter(a => a.tier !== 'major').length ? <>
+        <T v="small" muted style={{ fontWeight: '600', marginTop: space.s2, marginBottom: space.s2, marginLeft: space.s1 }}>Atteints</T>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.s3, marginBottom: space.s5 }}>
+          {got.filter(a => a.tier !== 'major').map(a => (
+            <View key={a.id} accessible accessibilityLabel={`${a.title}, atteint le ${fmtShort(a.date!)}`} style={{ flexBasis: '30%', flexGrow: 1, backgroundColor: c.stage, borderRadius: radius.r2, borderWidth: 0.5, borderColor: c.line2, padding: space.s3, alignItems: 'center' }}>
+              <AchBadge cat={a.cat} status="unlocked" size={64} />
+              <T v="small" style={{ fontWeight: '600', textAlign: 'center', marginTop: 6 }}>{a.title}</T>
+              <T v="xs" muted style={{ textAlign: 'center' }}>{a.detail ? `${a.detail} · ${fmtShort(a.date!)}` : fmtShort(a.date!)}</T>
+            </View>))}
+        </View>
+      </> : null}
+      {going.length ? <ListGroup title="En bonne voie">{going.map((a, i) => <MilestoneRow key={a.id} a={a} last={i === going.length - 1} />)}</ListGroup> : null}
+      {later.length ? <Disclosure title={`${later.length} jalons à découvrir`} sub="Critères et sources, par catégorie">
+        {(Object.keys(CAT_LABEL) as AchCat[]).map(k => { const xs = later.filter(a => a.cat === k); return xs.length ? <View key={k} style={{ marginBottom: space.s3 }}><T v="label" style={{ marginBottom: 4 }}>{CAT_LABEL[k]}</T>{xs.map(a => <Row key={a.id} gap={space.s3} style={{ paddingVertical: 6, alignItems: 'flex-start' }}><AchBadge cat={a.cat} status="locked" size={32} /><View style={{ flex: 1 }}><T v="small" style={{ fontWeight: '600' }}>{a.title}</T><T v="xs" muted>{a.criterion}</T><T v="xs" muted>{`Source : ${a.source}`}</T></View></Row>)}</View> : null; })}
+      </Disclosure> : null}
+      <Kicker>Records running</Kicker>
       <View style={{ marginTop: space.s2, marginBottom: space.s5 }}>{run.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{run.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Tes records arrivent avec tes premières sorties et courses.</T>}</View>
-      <Kicker>Renforcement</Kicker>
-      <View style={{ marginTop: space.s2, marginBottom: space.s5 }}>{str.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{str.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Note tes charges le dimanche : tes meilleures apparaîtront ici.</T>}</View>
-      {locked.length ? <><Kicker>À venir</Kicker>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: space.s3 }}>
-          {locked.map(a => <View key={a.id} style={{ width: '33.33%', alignItems: 'center', marginBottom: space.s4, paddingHorizontal: 4 }}><Badge achieved={false} size={48} label={a.title} /><T v="xs" muted style={{ textAlign: 'center', marginTop: 6 }}>{a.title}</T></View>)}
-        </View></> : null}
-      <T v="xs" muted style={{ marginTop: space.s2 }}>Les records de vitesse ne viennent que de courses ou de tests sur la bonne distance.</T>
+      <Kicker>Records de renforcement</Kicker>
+      <View style={{ marginTop: space.s2, marginBottom: space.s5 }}>{str.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{str.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Note tes charges et coche tes séries : tes meilleures apparaîtront ici.</T>}</View>
+      <T v="xs" muted style={{ marginTop: space.s2 }}>Les records de vitesse ne viennent que de courses ou de tests sur la bonne distance, avec une allure plausible. Une activité corrigée ou supprimée est réévaluée automatiquement.</T>
     </>
   );
 }

@@ -1,35 +1,45 @@
-import * as Haptics from 'expo-haptics';
-import { Pressable, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, Text, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs';
+import { haptic } from '@/feedback';
 import { font, useTheme } from '@/theme/tokens';
-import { GlassSurface } from './glass';
+import { NAV } from '@/theme/nav-layout';
 import { Icon, type IconName } from './icons';
-import { NAV_H, T } from './ui';
+import { useNavLayout } from './ui';
 
-const ICONS: Record<string, IconName> = { index: 'today', program: 'calendar', progress: 'chevrons', profile: 'person' };
+const ICONS: Record<string, IconName> = { index: 'home', program: 'plan', progress: 'stats', profile: 'profile' };
 const LABELS: Record<string, string> = { index: "Aujourd'hui", program: 'Programme', progress: 'Progression', profile: 'Profil' };
 
-/** Navigation flottante, opaque. 4 destinations libellées ; l'onglet actif : pastille, icône pleine lime, libellé en gras. */
+/** Navigation principale. Quatre colonnes égales ; l'onglet actif = pastille lime derrière l'icône (jamais autour du libellé),
+ *  icône pleine, libellé clair. La taille des libellés est calculée (nav-layout) : ils tiennent toujours dans leur colonne,
+ *  sans troncature ni masquage. Un socle opaque couvre tout l'espace sous la barre, zone système comprise. */
 export function GlassTabBar({ state, navigation }: BottomTabBarProps) {
-  const { c } = useTheme(); const insets = useSafeAreaInsets();
+  const { c } = useTheme(); const L = useNavLayout();
   return (
-    <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: insets.bottom + 12, alignItems: 'center' }}>
-      <GlassSurface r={NAV_H / 2} style={{ width: '92%', maxWidth: 480 }}>
-        <View accessibilityRole="tablist" style={{ flexDirection: 'row', height: NAV_H, paddingHorizontal: 6, alignItems: 'center' }}>
-          {state.routes.map((route, i) => {
-            const on = state.index === i;
-            return (
-              <Pressable key={route.key} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={LABELS[route.name]}
-                onPress={() => { const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true }); if (!on && !e.defaultPrevented) { Haptics.selectionAsync().catch(() => {}); navigation.navigate(route.name); } }}
-                style={({ pressed }) => ({ flex: 1, height: 52, minWidth: 48, marginHorizontal: 2, borderRadius: 26, alignItems: 'center', justifyContent: 'center', gap: 2, backgroundColor: on ? c.surface2 : pressed ? 'rgba(245,247,242,0.06)' : 'transparent' })}>
-                <Icon name={ICONS[route.name] || 'today'} size={22} color={on ? c.accent : c.ink2} filled={on} />
-                <T v="xs" numberOfLines={1} maxFontSizeMultiplier={1.2} color={on ? c.ink : c.ink2} style={{ fontFamily: on ? font.semibold : font.medium, fontSize: 11, lineHeight: 14 }}>{LABELS[route.name]}</T>
-              </Pressable>
-            );
-          })}
-        </View>
-      </GlassSurface>
+    <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: L.dockH, backgroundColor: c.paper, alignItems: 'center', paddingTop: NAV.dockTop }}>
+      {/* Fondu au-dessus du socle : le contenu disparaît avant d'atteindre la barre. */}
+      <Svg pointerEvents="none" width="100%" height={20} style={{ position: 'absolute', top: -20, left: 0 }}>
+        <Defs><LinearGradient id="navfade" x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={c.paper} stopOpacity={0} /><Stop offset="1" stopColor={c.paper} stopOpacity={1} /></LinearGradient></Defs>
+        <Rect width="100%" height={20} fill="url(#navfade)" />
+      </Svg>
+      <View accessibilityRole="tablist" style={{ width: L.barW, height: L.barH, flexDirection: 'row', borderRadius: 28, backgroundColor: c.nav, borderWidth: 1, borderColor: c.line2, shadowColor: '#000', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 14 }}>
+        {state.routes.map((route, i) => {
+          const on = state.index === i; const label = LABELS[route.name] ?? route.name;
+          return (
+            <Pressable key={route.key} accessibilityRole="tab" accessibilityState={{ selected: on }} aria-selected={on} accessibilityLabel={label}
+              onPress={() => { const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true }); if (!on && !e.defaultPrevented) { haptic('select'); navigation.navigate(route.name); } }}
+              onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
+              style={{ width: L.colW, height: L.barH, alignItems: 'center', justifyContent: 'center' }}>
+              {({ pressed }) => (<>
+                <View style={{ width: NAV.pillW, height: NAV.pillH, borderRadius: NAV.pillH / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? c.accent : pressed ? c.surface2 : 'transparent' }}>
+                  <Icon name={ICONS[route.name] || 'home'} size={NAV.icon} color={on ? c.accentInk : c.ink2} filled={on} cut={c.accent} />
+                </View>
+                <Text allowFontScaling={false} style={{ marginTop: NAV.gapIconLabel, fontFamily: font.medium, fontSize: L.label, lineHeight: L.lineH, color: on ? c.ink : c.ink2, textAlign: 'center' }}>{label}</Text>
+              </>)}
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }

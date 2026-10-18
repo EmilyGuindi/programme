@@ -49,6 +49,10 @@ export interface Measurement {
   waist?: number | null; hips?: number | null; arm?: number | null; note?: string; photo?: string;
 }
 
+/** Coche d'un élément de séance (exercice, série, étape). `at` départage deux appareils : la plus récente gagne.
+ *  Décocher écrit { on: false } avec une date : la coche ne peut pas « revenir » lors d'une synchro. */
+export interface Mark { on: boolean; at: number }
+/** `done` : ancien stockage des séries cochées, conservé pour la migration. La source de vérité est `AppState.checks`. */
 export interface ExerciseLog { kg: (string | null)[]; reps: (string | null)[]; done: boolean[] }
 export interface StrengthLog { ex: Record<string, ExerciseLog>; warm?: Record<string, boolean>; leg?: string; level?: string }
 export interface RunLog { km?: string; min?: string; elev?: string; hr?: string; rpe?: number | null; test?: string; steps?: Record<string, boolean> }
@@ -61,7 +65,8 @@ export interface AppState {
   user: {
     name: string; tz: string; height: number; startDate: ISODate;
     goals: { weightTarget: number; run: string; physique: string };
-    prefs: { checkinTime: string; weighDay: number; weighTime: string; notifCheckin: boolean; notifWeigh: boolean; cycleOptIn: boolean; notifRecap?: boolean };
+    prefs: { checkinTime: string; weighDay: number; weighTime: string; notifCheckin: boolean; notifWeigh: boolean; cycleOptIn: boolean; notifRecap?: boolean;
+      /** Retours haptiques (défaut : activés). */ haptics?: boolean; /** Animations : celles du système, ou réduites dans BYYND. */ motion?: 'system' | 'reduced'; /** Mettre en scène les accomplissements débloqués (défaut : oui). */ celebrate?: boolean };
     ref: { k10: number | null; k5: number | null };
   };
   program: { id: string; name: string; start: ISODate; weeks: number };
@@ -75,6 +80,20 @@ export interface AppState {
   recapsSeen?: Record<string, number>;
   /** Décisions sur les propositions du coach : acceptée ou programme gardé. */
   proposals?: Record<string, { decision: 'accepted' | 'kept'; at: number }>;
+  /** Coches des séances, par jour puis par identifiant stable d'élément (`set:f1:2`, `warm:rameur`, `mob:chat-vache`, `step:facile:1`…). */
+  checks?: Record<ISODate, Record<string, Mark>>;
+  /** Activités supprimées dans l'app (id → date) : une synchro ne les fait pas réapparaître. */
+  deleted?: Record<string, number>;
+  /** Séances déplacées. moves : date d'origine → nouvelle date (to = origine : déplacement annulé, gardé pour la synchro).
+   *  habits : changement du jour habituel d'un type de séance à partir d'une date. */
+  reschedule?: Reschedule;
+  /** Accomplissements déjà mis en scène (id → date) : l'animation de déverrouillage n'est jouée qu'une fois. */
+  celebrated?: Record<string, number>;
+}
+
+export interface Reschedule {
+  moves: Record<ISODate, { to: ISODate; at: number }>;
+  habits: { type: 'run' | 'renfo'; fromDow: number; toDow: number; since: ISODate }[]; habitsAt: number;
 }
 
 export type PlanType = 'box' | 'run' | 'renfo' | 'rest' | 'recup' | 'event';
@@ -82,5 +101,6 @@ export interface Plan {
   date: ISODate; type: PlanType; title: string; dur?: string; goal?: string; note?: string;
   run?: RunSession; event?: SportEvent; hyrox?: boolean; alt?: boolean; short?: boolean;
   optional: boolean; mandatory: boolean; skipped?: boolean; week: number;
+  /** Séance déplacée : date d'origine (identifiant de la séance) ou nouvelle date pour le jour quitté. */ movedFrom?: ISODate; movedTo?: ISODate;
 }
-export interface AdaptedPlan extends Plan { level: Level; reason: string | null; replaced?: { type: 'recup'; title: string; goal: string } }
+export interface AdaptedPlan extends Plan { level: Level; reason: string | null; replaced?: { type: 'recup'; title: string; goal: string; dur?: string } }

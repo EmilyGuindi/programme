@@ -29,7 +29,7 @@ export async function syncReminders(s: AppState, force = false) {
   try {
     if ((await permission()) !== 'granted') return;
     const list = planReminders(s);
-    const sig = JSON.stringify([list.map(r => r.id + r.at.getTime()), s.user.prefs]);
+    const sig = JSON.stringify([list.map(r => r.id + r.at.getTime() + r.body), s.user.prefs]); // le texte compte : une séance déplacée change le rappel du jour
     if (!force && sig === lastSig) return;
     lastSig = sig;
     await setupChannel();

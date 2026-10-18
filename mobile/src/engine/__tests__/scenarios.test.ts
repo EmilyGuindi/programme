@@ -172,7 +172,8 @@ test('V2 · notification du bilan le dimanche 19 h, une seule fois', () => {
 });
 
 import { insights } from '../insights';
-import { achievements, runningJourney } from '../journey';
+import { runningJourney } from '../journey';
+import { achievementsFor } from '../achievements';
 test('V2 · lot C : aucun insight sans données suffisantes', () => {
   const s = fresh(); assert.equal(insights(s, '2026-11-20').length, 0);
   s.activities.push({ id: 'one', date: '2026-11-18', type: 'running', title: 'Run', distanceKm: 6, durationMin: 42, complementary: false, source: 'manuel', kind: 'facile', effort: 4 });
@@ -186,7 +187,7 @@ test('V2 · lot C : tendance running avec sa source', () => {
 test('V2 · lot C : parcours running, premier repère atteint après Lausanne', () => {
   const s = fresh(); const lau = s.events.find(e => e.id === 'ev-lausanne')!; lau.result = { time: 3720 }; recordEventResult(s, lau);
   const j = runningJourney(s, '2026-10-27'); assert.equal(j.find(x => x.id === 'r4')!.status, 'atteinte'); assert.equal(j.filter(x => x.status === 'en cours').length, 1);
-  assert.equal(achievements(s, '2026-10-27').find(a => a.id === 'a-race')!.date, '2026-10-25');
+  assert.equal(achievementsFor(s, '2026-10-27').find(a => a.id === 'race-first')!.date, '2026-10-25');
 });
 
 import { acceptProposal, keepProgram, proposals } from '../proactive';

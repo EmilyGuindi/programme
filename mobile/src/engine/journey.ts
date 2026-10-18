@@ -1,6 +1,7 @@
-import { adapted, comparable, countsFor, DELOAD, runsList, trend, weekOf, weekStart, weightSeries } from './coach';
+import { adapted, comparable, countsFor, DELOAD, mandatoryStats, PHASES, runsList, trend, weekOf, weekStart, weightSeries } from './coach';
+import { achievementsFor } from './achievements';
 import { addDays, fmtShort, mmss, num } from './dates';
-import { recordsUntil } from './records';
+import { newRecords, recordsUntil } from './records';
 import type { AppState, ISODate } from './types';
 
 export type StepStatus = 'à venir' | 'en cours' | 'atteinte' | 'réévaluée';
@@ -32,6 +33,8 @@ function sequence(steps: Omit<Step, 'status'>[], achieved: (Date | ISODate | nul
 }
 
 export function runningJourney(s: AppState, today: ISODate): Step[] {
+  // Même règle et même compteur que l'accomplissement « Footing régulier » : un seul calcul.
+  const reg = achievementsFor(s, today).find(a => a.id === 'run-regular')!;
   const ws = weekSuccess(s, today); const easyWeeks = ws.map(w => w.easyRuns >= 1);
   const runs = runsList(s).filter(r => r.type === 'running');
   const easy = runs.filter(r => (r.kind || 'facile') === 'facile' && (r.effort == null || r.effort <= 5));
@@ -44,14 +47,14 @@ export function runningJourney(s: AppState, today: ISODate): Step[] {
   const firstRef = refs[0]; const better = refs.find((r, i) => i > 0 && r.p < firstRef.p - 1);
   const best10 = recordsUntil(s, today).find(r => r.id === 'run-10k');
   const steps: Omit<Step, 'status'>[] = [
-    { id: 'r1', title: 'Endurance facile régulière', criterion: 'Au moins un footing facile par semaine, 4 semaines d\'affilée.', progress: `${Math.min(4, currentStreak(easyWeeks))} semaine${currentStreak(easyWeeks) > 1 ? 's' : ''} sur 4`, ratio: Math.min(1, currentStreak(easyWeeks) / 4), history: maxStreak(easyWeeks) >= 4 ? ['4 semaines régulières atteintes'] : [], next: 'Ton footing du mercredi, en vraie aisance respiratoire.' },
+    { id: 'r1', title: 'Endurance facile régulière', criterion: 'Au moins un footing facile par semaine, 4 semaines d\'affilée.', progress: reg.progress!.label, ratio: reg.progress!.value / reg.progress!.target, history: reg.date ? [`Atteint le ${fmtShort(reg.date)}`] : [], next: 'Ton footing du mercredi, en vraie aisance respiratoire.' },
     { id: 'r2', title: '45 minutes à effort confortable', criterion: 'Une sortie facile d\'au moins 45 min, effort ressenti 5/10 ou moins.', progress: best45 ? `Plus longue sortie facile : ${Math.round(best45)} min` : null, ratio: best45 ? Math.min(1, best45 / 45) : null, history: r45 ? [`Atteint le ${fmtShort(r45.date)}`] : [], next: 'Allonge de 5 min une sortie facile, sans accélérer.' },
     { id: 'r3', title: 'Allure qui s\'améliore à effort égal', criterion: 'Ta dernière sortie facile plus rapide de plus de 5 s/km que la moyenne de tes sorties comparables (même distance, même dénivelé).', progress: lastEasy ? `${Math.min(cmp.length, 2)} sortie${cmp.length > 1 ? 's' : ''} comparable${cmp.length > 1 ? 's' : ''} sur 2 nécessaires` : null, ratio: lastEasy ? Math.min(1, cmp.length / 2) : null, history: improved ? [`Constaté le ${fmtShort(improved)}`] : [], next: 'Refais tes footings sur un même parcours pour pouvoir comparer.' },
     { id: 'r4', title: 'Premier repère 10 km', criterion: 'Un 10 km chronométré (course ou test).', progress: firstRef ? `${mmss(firstRef.p)} /km` : null, ratio: firstRef ? 1 : null, history: firstRef ? [`${firstRef.n === 'test' ? 'Test' : firstRef.n} · ${fmtShort(firstRef.d)}`] : [], next: 'Le 10 km de Lausanne, le 25 octobre.' },
     { id: 'r5', title: 'Améliorer ton chrono de référence', criterion: 'Un 10 km plus rapide que ton premier repère.', progress: firstRef && refs.length > 1 ? `Meilleur : ${mmss(Math.min(...refs.map(r => r.p)))} /km` : null, ratio: null, history: better ? [`${better.n === 'test' ? 'Test' : better.n} · ${fmtShort(better.d)} · ${mmss(better.p)} /km`] : [], next: 'Athènes, le 8 novembre, puis les tests de fin de phase.' },
     { id: 'r6', title: '10 km à 5\'30/km', criterion: 'Un 10 km en 55:00 ou moins, effort maîtrisé.', progress: best10 ? `Écart actuel : ${mmss(Math.max(0, best10.raw / 10 - 330))} /km` : null, ratio: null, history: best10 && best10.raw <= 3300 ? [`Atteint le ${fmtShort(best10.date)}`] : [], next: 'Objectif à moyen terme : on le rapproche palier par palier.' },
   ];
-  return sequence(steps, [maxStreak(easyWeeks) >= 4 ? today : null, r45?.date || null, improved, firstRef?.d || null, better?.d || null, best10 && best10.raw <= 3300 ? best10.date : null]);
+  return sequence(steps, [reg.date, r45?.date || null, improved, firstRef?.d || null, better?.d || null, best10 && best10.raw <= 3300 ? best10.date : null]);
 }
 
 export function bodyJourney(s: AppState, today: ISODate): Step[] {
@@ -73,19 +76,29 @@ export function bodyJourney(s: AppState, today: ISODate): Step[] {
   return sequence(steps, [maxStreak(okWeeks) >= 4 ? today : null, maintained === 4 ? today : null, progressed >= 2 ? today : null, ms.length >= 4 ? today : null, lastTrend != null && all.length >= 4 && lastTrend <= goal ? today : null]);
 }
 
-export interface Achievement { id: string; title: string; detail: string; date: ISODate | null }
-export function achievements(s: AppState, today: ISODate): Achievement[] {
-  const ws = weekSuccess(s, today); const ok = ws.map(w => w.ok);
-  const firstRace = s.events.filter(e => e.result || e.status === 'fait').sort((a, b) => a.date.localeCompare(b.date))[0];
-  const nWeeks = ok.filter(Boolean).length; const ci = Object.keys(s.checkins).filter(k => s.checkins[k].sleep).sort();
-  const runs = runsList(s); const r45 = runs.find(r => (r.durationMin || 0) >= 45);
-  const lastWeek = ws.find(w => w.w === s.program.weeks);
-  return [
-    { id: 'a-race', title: 'Première compétition', detail: 'Terminer une course ou un événement enregistré.', date: firstRace?.date || null },
-    { id: 'a-4w', title: '4 semaines régulières', detail: '4 semaines réussies d\'affilée. Une semaine allégée bien suivie compte.', date: maxStreak(ok) >= 4 ? today : null },
-    { id: 'a-10w', title: '10 semaines réussies', detail: 'Pas forcément d\'affilée : la régularité se mesure sur la durée.', date: nWeeks >= 10 ? today : null },
-    { id: 'a-ci', title: '20 check-ins', detail: 'Ton coach connaît de mieux en mieux ta récupération.', date: ci.length >= 20 ? ci[19] : null },
-    { id: 'a-45', title: 'Première sortie de 45 min', detail: 'Une course d\'au moins 45 minutes.', date: r45?.date || null },
-    { id: 'a-cycle', title: 'Premier cycle terminé', detail: '20 semaines, du 14 octobre au 28 février.', date: lastWeek ? today : null },
-  ];
+/* Les paliers (accomplissements) sont dans achievements.ts : un seul système. */
+
+/* ---------- Chapitres du parcours : les phases réelles du programme ---------- */
+export type ChapterState = 'terminé' | 'en cours' | 'à venir';
+export interface Chapter {
+  n: string; name: string; goal: string; from: number; to: number; state: ChapterState;
+  /** Une case par semaine : réussie, non réussie, en cours ou à venir. */ weeks: { w: number; state: 'ok' | 'ko' | 'current' | 'next' }[];
+  milestone: { id: string; title: string; reached: ISODate | null; progress: string | null };
+  next: string; bilan: { done: number; planned: number; km: number; records: number } | null;
+}
+export function chapters(s: AppState, today: ISODate, ach = achievementsFor(s, today)): Chapter[] {
+  const cur = weekOf(s, today); const ws = weekSuccess(s, today);
+  return PHASES.map(ph => {
+    const end = addDays(weekStart(s, ph.to), 6); const state: ChapterState = end < today ? 'terminé' : cur >= ph.from ? 'en cours' : 'à venir';
+    const weeks = Array.from({ length: ph.to - ph.from + 1 }, (_, i) => { const w = ph.from + i; const r = ws.find(x => x.w === w); return { w, state: (r ? (r.ok ? 'ok' : 'ko') : w === cur ? 'current' : 'next') as Chapter['weeks'][number]['state'] }; });
+    const m = ach.find(a => a.id === ph.milestone);
+    let bilan: Chapter['bilan'] = null;
+    if (state !== 'à venir') {
+      const from = weekStart(s, ph.from), to = state === 'terminé' ? end : today; const st = mandatoryStats(s, from, to);
+      const km = s.activities.filter(a => a.date >= from && a.date <= to && (a.type === 'running' || a.type === 'course') && !a.complementary).reduce((t, a) => t + (a.distanceKm || 0), 0);
+      bilan = { done: st.done, planned: st.planned, km: Math.round(km * 10) / 10, records: newRecords(s, from, to).length };
+    }
+    const next = state === 'terminé' ? 'Chapitre bouclé.' : state === 'à venir' ? `Commence semaine ${ph.from}, le ${fmtShort(weekStart(s, ph.from))}.` : m?.date ? 'Jalon du chapitre atteint : garde la régularité jusqu\'au bout.' : (m ? `Vise le jalon « ${m.title.toLowerCase()} »${m.progress ? ` (${m.progress.label.charAt(0).toLowerCase()}${m.progress.label.slice(1)})` : ''}.` : 'Tes séances prévues de la semaine.');
+    return { n: ph.n, name: ph.name, goal: ph.goal, from: ph.from, to: ph.to, state, weeks, milestone: { id: ph.milestone, title: m?.title || '', reached: m?.date || null, progress: m?.progress?.label || null }, next, bilan };
+  });
 }

@@ -39,6 +39,7 @@ export default function Profile() {
         <ListRow last title="Serveur et Strava" sub={conn} left={<Icon name="link" />} onPress={() => open('connections')} />
       </ListGroup>
       <ListGroup title="Application">
+        <ListRow title="Retours et animations" sub={[pr.haptics !== false ? 'haptique' : 'sans haptique', pr.motion === 'reduced' ? 'animations réduites' : 'animations', pr.celebrate !== false ? 'accomplissements mis en scène' : ''].filter(Boolean).join(' · ')} left={<Icon name="spark" />} onPress={() => open('feedback')} />
         <ListRow title="Mes données" sub="Sauvegarde, import, préférences" left={<Icon name="data" />} onPress={() => open('data')} />
         <ListRow last title="Quoi de neuf" sub={`Version ${APP_VERSION}`} left={<Icon name="story" />} onPress={() => open('news')} />
       </ListGroup>

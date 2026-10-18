@@ -1,5 +1,5 @@
 import { addDays, daysBetween, dow, mmss, num, parseISO } from './dates';
-import { EX, FIXED, RUN, WED, type Exercise } from './library';
+import { EX, FIXED, RECUP, RUN, WED, type Exercise } from './library';
 import type { Activity, AdaptedPlan, AppState, ISODate, Level, Measurement, Plan, RunSession, SportEvent, Zone } from './types';
 
 /* ---------- calendrier ---------- */
@@ -7,13 +7,16 @@ export const DELOAD = [12];
 export const daysBetweenSafe = (a: ISODate, b: ISODate) => daysBetween(a, b);
 export const weekOf = (s: AppState, d: ISODate) => Math.floor(daysBetween(s.program.start, d) / 7) + 1;
 export const weekStart = (s: AppState, w: number) => addDays(s.program.start, (w - 1) * 7);
-export function phaseOf(w: number) {
-  if (w <= 5) return { n: 'A', name: 'Évaluation' };
-  if (w <= 10) return { n: 'B', name: 'Base aérobie' };
-  if (w <= 15) return { n: 'C', name: 'Seuil' };
-  if (w <= 19) return { n: 'D', name: 'Spécifique 10 km' };
-  return { n: 'E', name: 'Bilan' };
-}
+/** Phases du cycle : les chapitres du parcours. Calendrier inchangé ; un futur programme fournit sa propre liste. */
+export interface Phase { n: string; name: string; from: number; to: number; goal: string; /** Jalon principal du chapitre (identifiant d'accomplissement). */ milestone: string }
+export const PHASES: Phase[] = [
+  { n: 'A', name: 'Évaluation', from: 1, to: 5, goal: 'Poser tes repères : premières courses chronométrées, premières charges notées.', milestone: 'run-10k-first' },
+  { n: 'B', name: 'Base aérobie', from: 6, to: 10, goal: 'Allonger les footings faciles sans accumuler de fatigue.', milestone: 'run-45' },
+  { n: 'C', name: 'Seuil', from: 11, to: 15, goal: 'Tenir plus longtemps une allure soutenue, semaine allégée comprise.', milestone: 'run-endurance' },
+  { n: 'D', name: 'Spécifique 10 km', from: 16, to: 19, goal: 'Rapprocher ton allure de course de l\'objectif 10 km.', milestone: 'run-pr-10k' },
+  { n: 'E', name: 'Bilan', from: 20, to: 20, goal: 'Mesurer le chemin parcouru et préparer la suite.', milestone: 'reg-cycle' },
+];
+export function phaseOf(w: number): Phase { return PHASES.find(p => w <= p.to) || PHASES[PHASES.length - 1]; }
 export const eventOn = (s: AppState, d: ISODate) => s.events.find(e => e.date === d && e.status !== 'annulé');
 export const activitiesOn = (s: AppState, d: ISODate) => s.activities.filter(a => a.date === d);
 /** Une séance est validée par une activité non complémentaire ce jour-là. Les promenades ne valident rien. */
@@ -28,7 +31,37 @@ function satRun(s: AppState, w: number, wed: RunSession): RunSession {
   return RUN.tempo();
 }
 
+/* ---------- replanification ---------- */
+type MoveMap = { to: Map<ISODate, ISODate>; from: Map<ISODate, ISODate> };
+const moveCache = new WeakMap<object, { events: unknown; start: ISODate; m: MoveMap }>();
+/** Correspondance origine ↔ nouvelle date : déplacements ponctuels, puis jours habituels changés (sans écraser un déplacement ponctuel). */
+export function moveMap(s: AppState): MoveMap {
+  const r = s.reschedule; const m: MoveMap = { to: new Map(), from: new Map() };
+  if (!r) return m;
+  const c = moveCache.get(r); if (c && c.events === s.events && c.start === s.program.start) return c.m;
+  for (const [o, x] of Object.entries(r.moves || {})) if (x.to !== o && !m.from.has(x.to)) { m.to.set(o, x.to); m.from.set(x.to, o); }
+  for (const h of r.habits || []) for (let w = 1; w <= s.program.weeks; w++) {
+    const o = addDays(weekStart(s, w), h.fromDow), t = addDays(weekStart(s, w), h.toDow);
+    if (o < h.since || m.to.has(o) || m.from.has(t) || m.to.has(t) || r.moves?.[o]) continue;
+    const b = basePlan(s, o), bt = basePlan(s, t);
+    if (b.type !== h.type || bt.type === 'event' || (bt.type !== 'rest' && bt.type !== h.type)) continue;
+    m.to.set(o, t); m.from.set(t, o);
+  }
+  moveCache.set(r, { events: s.events, start: s.program.start, m }); return m;
+}
+/** Identifiant de la séance affichée un jour donné : sa date d'origine (les coches, charges et notes y restent attachées). */
+export const sessionKey = (s: AppState, d: ISODate) => moveMap(s).from.get(d) ?? d;
+
 export function planFor(s: AppState, d: ISODate): Plan {
+  const m = moveMap(s);
+  const src = m.from.get(d);
+  if (src) return { ...basePlan(s, src), date: d, week: weekOf(s, d), movedFrom: src };
+  const to = m.to.get(d);
+  if (to) { const b = basePlan(s, d); return { type: 'rest', title: 'Séance déplacée', note: `${b.title} déplacée au ${DAYS_LONG[dow(to)]} ${+to.slice(8)}.`, date: d, week: weekOf(s, d), optional: false, mandatory: false, movedTo: to }; }
+  return basePlan(s, d);
+}
+const DAYS_LONG = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+export function basePlan(s: AppState, d: ISODate): Plan {
   const w = weekOf(s, d), i = dow(d), ov = s.overrides[d] || {}, ev = eventOn(s, d);
   let p: Omit<Plan, 'optional' | 'mandatory' | 'date' | 'week'> & Partial<Plan>;
   const fx = FIXED[d];
@@ -96,12 +129,12 @@ export function adapted(s: AppState, d: ISODate): AdaptedPlan {
   // Adaptation acceptée explicitement depuis une proposition du coach
   if (ov.adj) {
     const j = ov.adj;
-    if (j.kind === 'rest') { a.replaced = { type: 'recup', title: 'Récupération active', goal: 'Marche 30 min et 10 min de mobilité.' }; a.reason = j.reason; return a; }
+    if (j.kind === 'rest') { a.replaced = { type: 'recup', title: RECUP.title, goal: RECUP.goal, dur: RECUP.dur }; a.reason = j.reason; return a; }
     if (j.kind === 'easy' && p.type === 'run' && p.run && p.run.kind !== 'facile' && p.run.kind !== 'recup') { a.run = RUN.easy(40, 4); a.title = a.run.title; a.dur = a.run.dur; a.goal = a.run.goal; a.reason = j.reason; return a; }
     if ((j.kind === 'reduced' || j.kind === 'shoulder') && p.type === 'renfo') { a.level = 'orange'; a.reason = j.reason; return a; }
     if (j.kind === 'easy' && p.type === 'box') { a.reason = j.reason; return a; }
   }
-  if (lv === 'rouge' && p.type !== 'box') { a.replaced = { type: 'recup', title: 'Récupération active', goal: 'Marche 30 min et 10 min de mobilité. Rien à rattraper.' }; a.reason = 'Rouge : ' + lc(r.reasons[0]); }
+  if (lv === 'rouge' && p.type !== 'box') { a.replaced = { type: 'recup', title: RECUP.title, goal: `${RECUP.goal} Rien à rattraper.`, dur: RECUP.dur }; a.reason = 'Rouge : ' + lc(r.reasons[0]); }
   else if (lv === 'rouge' && p.type === 'box') a.reason = `Rouge : va à la box si tu y tiens, effort ≤ 6/10, ou repos. ${r.reasons[0]}`;
   else if (lv === 'orange') {
     if (p.type === 'run' && p.run && (p.run.kind === 'qualite' || p.run.kind === 'test')) { a.run = RUN.easy(40, 4); a.title = a.run.title; a.dur = a.run.dur; a.goal = a.run.goal; a.reason = `Orange : séance d'allure remplacée par du facile. ${r.reasons[0]}`; }
@@ -148,7 +181,7 @@ export const strPhase = (w: number) => (w <= 5 ? 0 : w <= 12 ? 1 : w <= 16 ? 2 :
 export interface SetPlan extends Exercise { id: string; nSets: number; repsTxt: string; rirTxt: string }
 export interface Block { title: string; leg?: boolean; legSel?: string; items: SetPlan[] }
 export function strengthBlocks(s: AppState, d: ISODate, reduced: boolean): Block[] {
-  const p = planFor(s, d), w = weekOf(s, d), pi = strPhase(w), log = s.strength[d], short = !!p.short, deload = DELOAD.includes(w);
+  const p = planFor(s, d), w = weekOf(s, p.movedFrom || d), pi = strPhase(w), log = s.strength[sessionKey(s, d)], short = !!p.short, deload = DELOAD.includes(w);
   const xr = (deload ? 1 : 0) + (reduced ? 1 : 0);
   const addRir = (r: string, k: number) => (!k ? r : r.split('–').map(x => +x + k).join('–'));
   const mk = (id: string): SetPlan => {

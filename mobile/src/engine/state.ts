@@ -1,8 +1,9 @@
 import { addDays, num, uid } from './dates';
+import { upgradeChecks } from './session';
 import type { AppState } from './types';
 
 export const DEFAULT_STATE: AppState = {
-  v: 2, updatedAt: 0,
+  v: 3, updatedAt: 0,
   user: {
     name: 'Emily', tz: 'Europe/Paris', height: 165, startDate: '2026-10-14',
     goals: { weightTarget: 60, run: "10 km à 5'30/km, effort maîtrisé", physique: 'Épaules et bras dessinés, dos développé, taille marquée, abdos visibles, fessiers et quadriceps développés' },
@@ -27,7 +28,7 @@ export function seed(s: AppState): AppState {
 
 /** Reprend un état venant de l'ancienne app (v1 PWA ou tracker de programme). */
 export function migrate(raw: any): AppState {
-  if (raw && raw.v >= 1 && Array.isArray(raw.activities)) return seed({ ...structuredClone(DEFAULT_STATE), ...raw, v: 2 });
+  if (raw && raw.v >= 1 && Array.isArray(raw.activities)) { const s = seed({ ...structuredClone(DEFAULT_STATE), ...raw, v: 3 }); upgradeChecks(s); return s; }
   const s = structuredClone(DEFAULT_STATE);
   if (raw && raw.weeks) {
     const keys = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
@@ -48,5 +49,5 @@ export function migrate(raw: any): AppState {
     if (raw.k5) s.user.ref.k5 = raw.k5;
   }
   s.migrated = true;
-  return seed(s);
+  const out = seed(s); upgradeChecks(out); return out;
 }

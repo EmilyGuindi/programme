@@ -1,4 +1,4 @@
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/feedback';
 import { router, useLocalSearchParams } from 'expo-router';
 import { View } from 'react-native';
 import { Bullets, Disclosure } from '@/components/guide';
@@ -7,6 +7,7 @@ import { Pressable } from 'react-native';
 import { Sheet } from '@/components/sheet';
 import { Button, Card, Choices, Coach, Field, Gap, KV, ListGroup, ListRow, Row, T, Tag, Tick } from '@/components/ui';
 import { checklistFor, eventActivity, raceAnalysis, readiness, strategy, taperTips } from '@/engine/race';
+import { eventState } from '@/engine/status';
 import { clock, daysBetween, DAYS_SHORT, dow, fmtLong, fmtShort, mmss, sportDay } from '@/engine/dates';
 import { update, useApp } from '@/store/store';
 import { radius, space, useTheme } from '@/theme/tokens';
@@ -17,7 +18,7 @@ export default function RaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>(); const s = useApp(); const { c } = useTheme();
   const ev = s.events.find(e => e.id === id);
   if (!ev) return <Sheet title="Événement introuvable"><T>Cet événement a été supprimé.</T></Sheet>;
-  const d = sportDay(); const n = daysBetween(d, ev.date); const act0 = eventActivity(s, ev); const past = n < 0 || !!ev.result || (n === 0 && !!act0);
+  const d = sportDay(); const n = daysBetween(d, ev.date); const evs = eventState(s, ev, d); const past = evs === 'done' || evs === 'toConfirm';
   const rd = readiness(s, ev, d); const st = strategy(s, ev); const act = eventActivity(s, ev);
   const setEv = (fn: (e: NonNullable<typeof ev>) => void) => update(x => { const e = x.events.find(y => y.id === id); if (e) fn(e); });
   return (
@@ -72,7 +73,7 @@ export default function RaceScreen() {
           <View style={{ marginTop: space.s4 }}>
             <Row between style={{ marginBottom: space.s2 }}><Kicker>Checklist</Kicker><Ring value={ok / items.length} label={`${ok}/${items.length}`} /></Row>
             <ListGroup>{items.map((item, i) => { const on = !!ev.checklist?.[item]; return (
-              <Pressable key={item} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => { Haptics.selectionAsync().catch(() => {}); setEv(e => { e.checklist = { ...(e.checklist || {}), [item]: !on }; }); }}
+              <Pressable key={item} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => { haptic('select'); setEv(e => { e.checklist = { ...(e.checklist || {}), [item]: !on }; }); }}
                 style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, minHeight: 52, paddingHorizontal: space.s4, borderTopWidth: i ? 0.5 : 0, borderTopColor: c.line2, backgroundColor: pressed ? c.surface2 : 'transparent' })}>
                 <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: on ? 0 : 1.5, borderColor: c.ink3, backgroundColor: on ? c.ok : 'transparent', alignItems: 'center', justifyContent: 'center' }}>{on ? <T v="xs" color={c.paper} style={{ fontWeight: '700' }}>✓</T> : null}</View>
                 <T style={{ flex: 1, textDecorationLine: on ? 'line-through' : 'none', color: on ? c.ink3 : c.ink }}>{item}</T>
@@ -90,8 +91,9 @@ export default function RaceScreen() {
       <>
         {!r ? <Card>
           <T v="h3">Ton résultat</T>
-          <T v="small" muted style={{ marginVertical: 6 }}>{act ? `Strava a rattaché ${act.title}${act.elapsedMin ? ` (${Math.round(act.elapsedMin)} min)` : ''}. Saisis ton temps officiel pour une analyse juste.` : 'Saisis ton temps officiel, il deviendra ta référence.'}</T>
+          <T v="small" muted style={{ marginVertical: 6 }}>{act ? `Strava a rattaché ${act.title}${act.elapsedMin ? ` (${Math.round(act.elapsedMin)} min)` : ''}. Saisis ton temps officiel pour une analyse juste.` : 'Aucune activité Strava rattachée pour l\'instant. Saisis ton temps officiel, il deviendra ta référence.'}</T>
           <Button kind="primary" block label="Saisir mon résultat" onPress={() => router.push({ pathname: '/result/[id]', params: { id: ev!.id } })} />
+          {!act ? <Button small kind="ghost" label="Je n'y ai pas participé" style={{ alignSelf: 'center', marginTop: 4 }} onPress={() => setEv(e => { e.status = 'annulé'; })} /> : null}
         </Card> : <>
           {!r.feeling ? <Card>
             <T v="h3">Débrief rapide</T>
@@ -106,7 +108,7 @@ export default function RaceScreen() {
             {r.elevM != null ? <KV k="Dénivelé" v={`${r.elevM} m`} /> : null}
             {r.effort ? <KV k="Effort ressenti" v={`${r.effort}/10`} /> : null}
           </Card>
-          <Button block label="Modifier le résultat" onPress={() => { Haptics.selectionAsync().catch(() => {}); router.push({ pathname: '/result/[id]', params: { id: ev!.id } }); }} />
+          <Button block label="Modifier le résultat" onPress={() => { haptic('select'); router.push({ pathname: '/result/[id]', params: { id: ev!.id } }); }} />
         </>}
       </>
     );

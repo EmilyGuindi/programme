@@ -1,10 +1,11 @@
 import { activitiesOn, adapted, doneOn, zones } from './coach';
 import { addDays, daysBetween, mmss } from './dates';
+import { eventState } from './status';
 import type { Activity, AppState, ISODate, SportEvent } from './types';
 
 /** Prochain événement à préparer (dans les 6 semaines), ou celui du jour. */
 export function nextEvent(s: AppState, d: ISODate, horizon = 42): SportEvent | undefined {
-  return s.events.filter(e => e.status !== 'annulé' && !e.result && e.date >= d && daysBetween(d, e.date) <= horizon).sort((a, b) => a.date.localeCompare(b.date))[0];
+  return s.events.filter(e => ['upcoming', 'today'].includes(eventState(s, e, d)) && daysBetween(d, e.date) <= horizon).sort((a, b) => a.date.localeCompare(b.date))[0];
 }
 /** Événement passé récemment sans débrief. */
 export function pendingDebrief(s: AppState, d: ISODate): SportEvent | undefined {

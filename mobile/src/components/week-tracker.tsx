@@ -1,12 +1,14 @@
 import type React from 'react';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/feedback';
 import { useEffect, useRef } from 'react';
-import { AccessibilityInfo, Animated, Pressable, View } from 'react-native';
-import { adapted, doneOn } from '@/engine/coach';
+import { Animated, Pressable, View } from 'react-native';
+import { adapted } from '@/engine/coach';
+import { dayStatus } from '@/engine/status';
 import { addDays, dow, parseISO } from '@/engine/dates';
 import type { AdaptedPlan, AppState } from '@/engine/types';
 import { space, useTheme } from '@/theme/tokens';
-import { STATUS_LABEL, type Status } from './brand';
+import { STATUS_LABEL, type Status, type WeekSummary } from '@/engine/status';
+import { reducedMotion, useReducedMotion } from '@/feedback';
 import { Icon, type IconName } from './icons';
 import { Row, T } from './ui';
 
@@ -14,19 +16,7 @@ const LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const DAY = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 
-/** Statut d'un jour, identique partout (Aujourd'hui, Programme, Progression). */
-export function dayStatus(s: AppState, a: AdaptedPlan, today: string): Status {
-  if (a.date < s.user.startDate) return 'none';
-  if (a.type === 'event') return a.event?.result || s.activities.some(x => x.eventId === a.event?.id) ? 'raceDone' : 'race';
-  const acts = s.activities.filter(x => x.date === a.date && !x.complementary);
-  if (doneOn(s, a.date)) return acts.some(x => x.source === 'strava') ? 'synced' : 'done';
-  if (acts.some(x => x.needsConfirm)) return 'pending';
-  if (a.type === 'rest') return 'rest';
-  if (a.date < today && a.mandatory && !a.skipped) return 'missed';
-  if (a.optional) return 'optional';
-  if (a.reason || a.replaced) return 'adapted';
-  return 'planned';
-}
+export { dayStatus } from '@/engine/status';
 
 /** Pictogramme du type de séance prévu. */
 export function dayIcon(a: AdaptedPlan): IconName {
@@ -63,7 +53,7 @@ function Mark({ status, children }: { status: Status; children: React.ReactNode 
   const v = useRef(new Animated.Value(1)).current; const first = useRef(true);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
-    AccessibilityInfo.isReduceMotionEnabled().then(r => { if (r) return; v.setValue(0.9); Animated.spring(v, { toValue: 1, friction: 6, tension: 180, useNativeDriver: true }).start(); }).catch(() => {});
+    if (reducedMotion()) return; v.setValue(0.9); Animated.spring(v, { toValue: 1, friction: 6, tension: 180, useNativeDriver: true }).start();
   }, [status]);
   return <Animated.View style={{ transform: [{ scale: v }] }}>{children}</Animated.View>;
 }
@@ -76,7 +66,9 @@ export function cellStyle(c: ReturnType<typeof useTheme>['c'], st: Status, isTod
     case 'done': case 'synced': return { bg: c.ink, fg: c.paper, glyph: c.paper, border: 'transparent', dash: false };
     case 'raceDone': return { bg: c.ink, fg: c.paper, glyph: c.paper, border: 'transparent', dash: false };
     case 'race': return { bg: c.accent, fg: c.accentInk, glyph: c.accentInk, border: 'transparent', dash: false };
-    case 'pending': return { bg: 'transparent', fg: c.ink, glyph: c.warn, border: c.warn, dash: false };
+    case 'pending': case 'raceToConfirm': return { bg: 'transparent', fg: c.ink, glyph: c.warn, border: c.warn, dash: false };
+    case 'inProgress': return { bg: c.accentSoft, fg: c.ink, glyph: c.accent, border: c.accent, dash: false };
+    case 'partial': return { bg: c.surface2, fg: c.ink, glyph: c.ink2, border: c.stroke, dash: false };
     case 'missed': return { bg: 'transparent', fg: c.ink3, glyph: c.ink3, border: c.line2, dash: false };
     case 'optional': return { bg: 'transparent', fg: c.ink2, glyph: c.ink3, border: c.stroke, dash: true };
     case 'rest': case 'none': return { bg: 'transparent', fg: c.ink3, glyph: c.ink3, border: 'transparent', dash: false };
@@ -96,14 +88,14 @@ export function WeekTracker({ s, start, today, selected, onSelect }: { s: AppSta
         return (
           <Pressable key={a.date} disabled={pre || !onSelect} accessibilityRole="button" accessibilityState={{ selected: isSel, disabled: pre }}
             accessibilityLabel={`${DAY[dow(a.date)]} ${parseISO(a.date).getDate()}${isToday ? ", aujourd'hui" : ''} : ${(a.replaced || a).title}, ${STATUS_LABEL[st] || 'avant le programme'}`}
-            onPress={() => { Haptics.selectionAsync().catch(() => {}); onSelect?.(a.date); }}
+            onPress={() => { haptic('select'); onSelect?.(a.date); }}
             style={({ pressed }) => ({ flex: 1, alignItems: 'center', opacity: pre ? 0.3 : pressed ? 0.75 : 1 })}>
             <T v="xs" color={isToday ? c.ink : c.ink3} style={{ fontFamily: isToday ? 'Inter_700Bold' : 'Inter_500Medium', fontSize: 11, lineHeight: 14, marginBottom: 6 }} maxFontSizeMultiplier={1.2}>{isToday ? 'Auj.' : LETTERS[dow(a.date)]}</T>
             <View style={{ padding: 2, borderRadius: 18, borderWidth: 2, borderColor: isSel ? c.accent : 'transparent', alignSelf: 'stretch' }}>
               <Mark status={st}>
                 <View style={{ height: 58, borderRadius: 14, backgroundColor: k.bg, borderWidth: k.border === 'transparent' ? 0 : isToday && st === 'planned' ? 2 : 1.5, borderStyle: k.dash ? 'dashed' : 'solid', borderColor: k.border, alignItems: 'center', justifyContent: 'center', gap: 3 }}>
                   <T v="num" color={k.fg} style={{ fontSize: 17, lineHeight: 20 }} maxFontSizeMultiplier={1.2}>{parseISO(a.date).getDate()}</T>
-                  {!pre ? <Icon name={st === 'raceDone' ? 'flag' : dayIcon(a)} size={13} color={st === 'raceDone' ? c.accent : k.glyph} filled={st === 'raceDone'} /> : <View style={{ height: 13 }} />}
+                  {!pre ? <Icon name={st === 'raceDone' || st === 'raceToConfirm' ? 'flag' : dayIcon(a)} size={13} color={st === 'raceDone' ? c.accent : k.glyph} filled={st === 'raceDone'} /> : <View style={{ height: 13 }} />}
                 </View>
               </Mark>
             </View>
@@ -131,7 +123,31 @@ export function DayMini({ status, a }: { status: Status; a: AdaptedPlan }) {
   const { c } = useTheme(); const k = cellStyle(c, status);
   return (
     <View accessibilityLabel={STATUS_LABEL[status]} style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: k.bg, borderWidth: k.border === 'transparent' ? 0 : 1.5, borderStyle: k.dash ? 'dashed' : 'solid', borderColor: k.border, alignItems: 'center', justifyContent: 'center' }}>
-      <Icon name={status === 'raceDone' ? 'flag' : dayIcon(a)} size={18} color={status === 'raceDone' ? c.accent : k.glyph} filled={status === 'raceDone'} />
+      <Icon name={status === 'raceDone' || status === 'raceToConfirm' ? 'flag' : dayIcon(a)} size={18} color={status === 'raceDone' ? c.accent : k.glyph} filled={status === 'raceDone'} />
+    </View>
+  );
+}
+
+/** Jauge de la semaine : une case par séance prévue (jamais par jour : le repos n'est pas une case vide).
+ *  lime = faite · lime à contour = faite en version adaptée · contour = à venir · pâle = non faite. Les optionnelles faites s'ajoutent en bonus. */
+export function WeekMeter({ w }: { w: WeekSummary }) {
+  const { c } = useTheme(); const reduced = useReducedMotion();
+  const fill = useRef(new Animated.Value(reduced ? 1 : 0)).current;
+  useEffect(() => { if (!reduced) Animated.timing(fill, { toValue: 1, duration: 360, useNativeDriver: true }).start(); }, [w.done]);
+  if (!w.planned && !w.optionalDone && !w.races) return null;
+  const cells: ('done' | 'adapted' | 'open' | 'missed' | 'bonus')[] = [
+    ...Array(w.done - w.adapted).fill('done'), ...Array(w.adapted).fill('adapted'), ...Array(w.remaining).fill('open'), ...Array(w.missed).fill('missed'), ...Array(w.optionalDone).fill('bonus')];
+  const complete = w.planned > 0 && w.done === w.planned;
+  return (
+    <View style={{ paddingHorizontal: space.s2, marginTop: space.s4 }} accessible accessibilityLabel={`Semaine : ${w.text}`}>
+      {cells.length ? <View style={{ flexDirection: 'row', gap: 4 }}>
+        {cells.map((k, i) => <Animated.View key={i} style={{ flex: 1, height: 6, borderRadius: 3, opacity: k === 'done' || k === 'adapted' || k === 'bonus' ? fill : 1,
+          backgroundColor: k === 'done' ? c.accent : k === 'adapted' ? c.accentSoft : k === 'bonus' ? c.ink2 : k === 'missed' ? c.line : 'transparent',
+          borderWidth: k === 'open' || k === 'adapted' ? 1 : 0, borderColor: k === 'adapted' ? c.accent : c.stroke }} />)}
+      </View> : null}
+      <Row between style={{ marginTop: 8 }}>
+        <T v="xs" color={complete ? c.accent : c.ink2} style={{ fontWeight: '600', flex: 1 }}>{complete ? `Semaine bouclée · ${w.text}` : w.text}</T>
+      </Row>
     </View>
   );
 }

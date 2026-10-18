@@ -23,7 +23,7 @@ let pushTimer: ReturnType<typeof setTimeout> | null = null;
 export async function loadStore() {
   try {
     const raw = await AsyncStorage.getItem(KEY);
-    if (raw) state = migrate(JSON.parse(raw));
+    if (raw) { const before = JSON.parse(raw); state = migrate(before); if (before.v !== state.v) persist(); }
     const sv = await AsyncStorage.getItem(SERVER_KEY);
     if (sv) server = JSON.parse(sv);
   } catch {}
@@ -32,14 +32,25 @@ export async function loadStore() {
   pull();
 }
 
-/** Toute modification passe par ici : copie, mutation, persistance, synchro différée. */
+/** Écritures disque en file : la dernière version écrite est toujours la dernière version connue, même si deux écritures se suivent de près. */
+let writing: Promise<void> = Promise.resolve();
+let dirty = false;
+function persist() {
+  dirty = true;
+  writing = writing.then(async () => { if (!dirty) return; dirty = false; try { await AsyncStorage.setItem(KEY, JSON.stringify(state)); } catch { dirty = true; } });
+  return writing;
+}
+/** À appeler quand l'app passe en arrière-plan : termine l'écriture locale et tente l'envoi au serveur tout de suite. */
+export async function flush() { await persist(); if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; push(); } }
+
+/** Toute modification passe par ici : copie, mutation, affichage immédiat (optimiste), persistance locale, synchro différée. */
 export function update(fn: (s: AppState) => void) {
   const next = structuredClone(state);
   fn(next); next.updatedAt = Date.now(); state = next; emit();
-  AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {});
+  persist();
   schedulePush();
 }
-export function replaceState(raw: unknown) { state = migrate(raw); state.updatedAt = Date.now(); emit(); AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {}); schedulePush(); }
+export function replaceState(raw: unknown) { state = migrate(raw); state.updatedAt = Date.now(); emit(); persist(); schedulePush(); }
 export const getState = () => state;
 
 export function useApp<T = AppState>(sel?: (s: AppState) => T): T {
@@ -81,7 +92,7 @@ function absorb(d: { json: string | null; updatedAt: number }) {
   if (!d.json) return;
   const remote = migrate(JSON.parse(d.json));
   state = mergeStates(state, remote); state.updatedAt = Date.now(); emit();
-  AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {});
+  persist();
   setServer({ version: d.updatedAt });
 }
 export async function pull(): Promise<SyncStatus> {

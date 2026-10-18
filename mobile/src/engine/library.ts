@@ -34,6 +34,9 @@ export const WED: Record<number, RunSession> = {
   17: RUN.easy(50, 6), 18: RUN.test10(), 19: RUN.k10('4 × 1 km', 48), 20: RUN.easy(40),
 };
 
+/** Récupération active : une seule définition, une seule durée partout (marche + mobilité). */
+export const RECUP = { title: 'Récupération active', walkMin: 30, mobilityMin: 10, dur: '40 min', goal: 'Marche 30 min puis 10 min de mobilité, soit 40 min au total.' } as const;
+
 type Fixed =
   | { type: 'box' | 'rest' | 'recup'; title: string; dur?: string; goal?: string; note?: string }
   | { type: 'run'; run: RunSession; optional?: boolean; note?: string }
@@ -44,7 +47,7 @@ export const FIXED: Record<string, Fixed> = {
   '2026-10-14': { type: 'recup', title: 'Marche', dur: '40 min', goal: 'Démarrage du programme, en douceur.' },
   '2026-10-15': { type: 'box', title: 'CrossFit', note: 'Pas de jambes lourdes : MUDGIRL dans 2 jours.' },
   '2026-10-16': { type: 'rest', title: 'Repos', note: 'Veille de MUDGIRL.' },
-  '2026-10-18': { type: 'recup', title: 'Récupération active', dur: '30 min', goal: "Marche 30 min et 10 min de mobilité. Rien d'autre après la course à obstacles." },
+  '2026-10-18': { type: 'recup', title: RECUP.title, dur: RECUP.dur, goal: `${RECUP.goal} Rien d'autre après la course à obstacles.` },
   '2026-10-20': { type: 'box', title: 'CrossFit, effort ≤ 7/10', note: 'Semaine de course : garde 2 reps en réserve, pas de jambes lourdes.' },
   '2026-10-21': { type: 'run', run: RUN.easy(35, 4) },
   '2026-10-22': { type: 'box', title: 'CrossFit léger', note: 'Effort ≤ 7/10, haut du corps si tu as le choix. Lausanne dans 3 jours.' },
@@ -81,4 +84,8 @@ export const EX: Record<string, Exercise> = {
   f5: { name: 'Abduction de hanche', main: false, sets: [2, 2, 3, 3], reps: ['15–20', '15–20', '15–20', '12–15'], rir: ['1–2', '1–2', '1', '1'], rest: '45 s', tech: 'Buste penché en avant, pause 1 s en ouverture.', alt: 'Élastique au-dessus des genoux.', shoulder: '' },
 };
 export const LEGS: [string, string][] = [['f2', 'Fentes'], ['f3', 'RDL'], ['f4', 'Goblet'], ['f5', 'Fessiers']];
-export const WARMUP = ['4 min rameur ou vélo, facile', 'Rotations externes élastique 2×12', 'Pull-aparts 2×15', 'Pont fessier 2×12', 'Charnière au bâton 1×10', 'Dead bug 1×8 par côté', '1 série légère de hip thrust et de tirage'];
+/** Échauffement du renforcement. `id` stable (coches mémorisées) ; l'ordre reprend l'ancien index pour la migration. */
+export const WARMUP: { id: string; text: string }[] = [
+  { id: 'rameur', text: '4 min rameur ou vélo, facile' }, { id: 'rot-ext', text: 'Rotations externes élastique 2×12' }, { id: 'pull-apart', text: 'Pull-aparts 2×15' },
+  { id: 'pont', text: 'Pont fessier 2×12' }, { id: 'charniere', text: 'Charnière au bâton 1×10' }, { id: 'dead-bug', text: 'Dead bug 1×8 par côté' }, { id: 'serie-legere', text: '1 série légère de hip thrust et de tirage' },
+];

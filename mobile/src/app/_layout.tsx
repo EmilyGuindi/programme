@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { checkForUpdate } from '@/components/update-banner';
 import { listenResponses, setupChannel, syncReminders } from '@/notifications';
-import { loadStore, pull, useApp, useReady } from '@/store/store';
+import { flush, loadStore, pull, useApp, useReady } from '@/store/store';
 import { useTheme } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
@@ -20,7 +20,7 @@ export default function RootLayout() {
   const { c, dark } = useTheme();
   useEffect(() => { if (fontsLoaded && ready) SplashScreen.hideAsync(); }, [fontsLoaded, ready]);
   useEffect(() => { setupChannel(); return listenResponses(); }, []);
-  useEffect(() => { const sub = AppState.addEventListener('change', st => { if (st === 'active') { checkForUpdate(); pull(); } }); return () => sub.remove(); }, []);
+  useEffect(() => { const sub = AppState.addEventListener('change', st => { if (st === 'active') { checkForUpdate(); pull(); } else if (st === 'background') flush(); }); return () => sub.remove(); }, []);
   if (!fontsLoaded || !ready) return null;
   const base = dark ? DarkTheme : DefaultTheme;
   const theme = { ...base, colors: { ...base.colors, background: c.paper, card: c.surface, text: c.ink, border: c.line, primary: c.accent } };
@@ -45,6 +45,7 @@ export default function RootLayout() {
         <Stack.Screen name="race/[id]" options={sheet} />
         <Stack.Screen name="run-live/[date]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="coach" options={sheet} />
+        <Stack.Screen name="move/[date]" options={sheet} />
         <Stack.Screen name="done/[id]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="recap/[week]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
       </Stack>

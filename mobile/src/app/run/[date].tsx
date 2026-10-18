@@ -10,24 +10,28 @@ import { segments, totalSec } from '@/engine/segments';
 import { radius } from '@/theme/tokens';
 import { RPE_SCALE, RUN_COOLDOWN, RUN_TERMS, RUN_WARMUP, ZONE_GUIDE } from '@/engine/guides';
 import { Button, Card, Choices, Coach, Field, Gap, Input, KV, Row, T, Tick } from '@/components/ui';
-import { adapted, ZONE_NAME, zones, zoneText } from '@/engine/coach';
-import { fmtDay, num, parseTime } from '@/engine/dates';
+import { adapted, sessionKey, ZONE_NAME, zones, zoneText } from '@/engine/coach';
+import { fmtDay, num, parseTime, uid } from '@/engine/dates';
+import { isOn, toggleCheck } from '@/engine/session';
+import { SessionFooter } from '@/components/session-progress';
+import { haptic } from '@/feedback';
+import { Pressable } from 'react-native';
 import type { RunLog, Zone } from '@/engine/types';
 import { getState, update, useApp } from '@/store/store';
 import { space, useTheme } from '@/theme/tokens';
 
 export default function RunScreen() {
   const { date, finished } = useLocalSearchParams<{ date: string; finished?: string }>(); const s = useApp(); const { c } = useTheme();
-  const a = adapted(s, date); const run = a.replaced ? undefined : a.run; const R: RunLog = s.runs[date] || {};
+  const a = adapted(s, date); const run = a.replaced ? undefined : a.run; const key = sessionKey(s, date); const R: RunLog = s.runs[key] || {};
   const [live, setLive] = useState<number | null>(null);
-  const set = (patch: Partial<RunLog>) => update(st => { st.runs[date] = { ...(st.runs[date] || {}), ...patch }; });
+  const set = (patch: Partial<RunLog>) => update(st => { st.runs[key] = { ...(st.runs[key] || {}), ...patch }; });
   if (!run) return <Sheet title={(a.replaced || a).title} sub={fmtDay(date)}><T>{(a.replaced || a).goal}</T></Sheet>;
   const zs = [...new Set(run.steps.map(x => x.zone).filter(Boolean))] as Zone[];
   function save() {
     const km = num(R.km), min = num(R.min);
     update(st => {
       let act = st.activities.find(x => x.date === date && x.type === 'running' && x.source === 'manuel');
-      if (!act) { act = { id: 'run-' + date, date, type: 'running', title: run!.title, source: 'manuel', complementary: false, matched: date }; st.activities.push(act); }
+      if (!act) { act = { id: `run-${date}-${uid()}`, date, type: 'running', title: run!.title, source: 'manuel', complementary: false, matched: date }; st.activities.push(act); }
       Object.assign(act, { title: run!.title, durationMin: min, distanceKm: km, elevM: num(R.elev), avgHr: num(R.hr), effort: R.rpe ?? null, kind: run!.kind === 'qualite' ? 'qualite' : run!.kind === 'test' ? 'test' : 'facile' });
       if (run!.kind === 'test') { const t = parseTime(R.test); if (t && t > 900) { if (/10 km/.test(run!.title)) st.user.ref.k10 = t; else st.user.ref.k5 = t; } }
     });
@@ -36,7 +40,7 @@ export default function RunScreen() {
   }
   const sg = segments(run); const total = Math.round(totalSec(sg) / 60);
   return (
-    <Sheet title={run.title} sub={fmtDay(date)} footer={<Button kind="primary" block icon={<Icon name="play" size={18} color="#0B0D0A" />} label="Démarrer la séance" onPress={() => router.push({ pathname: '/run-live/[date]', params: { date } })} />}>
+    <Sheet title={run.title} sub={fmtDay(date)} footer={<SessionFooter date={date}><Button kind="primary" block icon={<Icon name="play" size={18} color="#0B0D0A" />} label="Démarrer la séance" onPress={() => router.push({ pathname: '/run-live/[date]', params: { date } })} /></SessionFooter>}>
       {finished ? <View style={{ backgroundColor: c.accentSoft, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3 }}><T v="label" color={c.accent}>Séance terminée</T><T v="small">Ton temps est noté. La distance et l'allure de ta montre arrivent par Strava ; tu peux aussi les saisir dans « Bilan » plus bas.</T></View> : null}
       <BrandedCard mark>
         <T v="overline" color={c.stageInk2}>{run.kind === 'facile' ? 'Endurance' : run.kind === 'qualite' ? 'Séance d\'allure' : run.kind === 'test' ? 'Test' : 'Récupération'}</T>
@@ -47,13 +51,14 @@ export default function RunScreen() {
         </Row>
         {a.reason ? <T v="small" color={c.warn} style={{ marginTop: space.s3 }}>{a.reason}</T> : null}
       </BrandedCard>
-      <T v="small" muted style={{ fontWeight: '600', marginTop: space.s3, marginBottom: space.s2 }}>Déroulé</T>
+      <T v="small" muted style={{ fontWeight: '600', marginTop: space.s3, marginBottom: space.s2 }}>Déroulé · touche une étape pour la cocher</T>
       <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, paddingVertical: space.s2 }}>
-        {run.steps.map((st, i) => (
-          <Row key={i} gap={space.s3} style={{ paddingHorizontal: space.s4, paddingVertical: space.s3, alignItems: 'flex-start' }}>
-            <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: st.zone && st.zone !== 'easy' ? c.accent : c.line2, backgroundColor: R.steps?.[i] ? c.accent : 'transparent' }}>{R.steps?.[i] ? <Icon name="check" size={14} color={c.accentInk} /> : <T v="xs" color={st.zone && st.zone !== 'easy' ? c.accent : c.ink2} style={{ fontWeight: '700' }}>{String(i + 1)}</T>}</View>
-            <View style={{ flex: 1 }}><T>{st.text}</T>{st.zone ? <T v="small" color={st.zone === 'easy' ? c.ink2 : c.accent}>{`${zoneText(s, st.zone)} · ${ZONE_NAME[st.zone].split(' ·')[0].toLowerCase()}`}</T> : null}</View>
-          </Row>))}
+        {run.steps.map((st, i) => { const id = `step:${run.kind}:${i + 1}`; const on = isOn(s, date, id); const hot = !!st.zone && st.zone !== 'easy'; return (
+          <Pressable key={i} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={`Étape ${i + 1} : ${st.text}`} onPress={() => { haptic(on ? 'untick' : 'tick'); update(x => toggleCheck(x, date, id)); }}
+            style={({ pressed }) => ({ flexDirection: 'row', gap: space.s3, paddingHorizontal: space.s4, paddingVertical: space.s3, alignItems: 'flex-start', backgroundColor: pressed ? c.surface2 : 'transparent' })}>
+            <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: on ? c.accent : hot ? c.accent : c.stroke, backgroundColor: on ? c.accent : 'transparent' }}>{on ? <Icon name="check" size={16} color={c.accentInk} /> : <T v="xs" color={hot ? c.accent : c.ink2} style={{ fontWeight: '700' }}>{String(i + 1)}</T>}</View>
+            <View style={{ flex: 1 }}><T color={on ? c.ink2 : c.ink}>{st.text}</T>{st.zone ? <T v="small" color={st.zone === 'easy' ? c.ink2 : c.accent}>{`${zoneText(s, st.zone)} · ${ZONE_NAME[st.zone].split(' ·')[0].toLowerCase()}`}</T> : null}</View>
+          </Pressable>); })}
       </View>
       <T v="xs" muted style={{ marginTop: space.s2 }}>{`Allures calculées depuis ${zones(s).src}. En côte ou par vent, suis l'effort.`}</T>
       <T v="overline" muted style={{ marginTop: space.s5, marginBottom: space.s2 }}>Pour bien la faire</T>
@@ -62,7 +67,7 @@ export default function RunScreen() {
       </Disclosure>
       <Disclosure title="Avant de partir : échauffement détaillé" sub="Coche au fur et à mesure">
         <T v="small" muted style={{ marginBottom: 8 }}>{run.kind === 'facile' || run.kind === 'recup' ? 'Pour un footing facile, les 5 premières minutes très lentes suffisent. Les éducatifs sont un bonus.' : 'Indispensable avant une séance d\'allure : fais tout.'}</T>
-        <MoveList moves={RUN_WARMUP} />
+        <MoveList moves={RUN_WARMUP} date={date} prefix="rwarm" />
       </Disclosure>
       {zs.map(z => (
         <Disclosure key={'z' + z} title={`Comment courir en ${ZONE_NAME[z].split(' ·')[0].toLowerCase()}`} sub={zoneText(s, z)}>
@@ -70,7 +75,7 @@ export default function RunScreen() {
         </Disclosure>
       ))}
       <Disclosure title="Après : retour au calme et étirements" sub="10 min">
-        <MoveList moves={RUN_COOLDOWN} />
+        <MoveList moves={RUN_COOLDOWN} date={date} prefix="rcool" />
       </Disclosure>
       <Disclosure title="L'échelle d'effort (1 à 10)">
         {RPE_SCALE.map(([n, t]) => <KV key={n} k={t} v={`${n}/10`} />)}

@@ -16,7 +16,7 @@ import { askPermission, nextScheduled, permission, syncReminders, testNotificati
 import { connectStrava, disconnectStrava, getState, pull, replaceState, setServer, stravaStatus, stravaSyncNow, testServer, update, useApp, useServer, useStrava, useSync } from '@/store/store';
 import { space, useTheme } from '@/theme/tokens';
 
-const TITLES: Record<string, string> = { goals: 'Objectifs', reminders: 'Rappels', connections: 'Serveur et Strava', program: 'Programme', data: 'Mes données', news: 'Quoi de neuf' };
+const TITLES: Record<string, string> = { feedback: 'Retours et animations', goals: 'Objectifs', reminders: 'Rappels', connections: 'Serveur et Strava', program: 'Programme', data: 'Mes données', news: 'Quoi de neuf' };
 
 export default function Section() {
   const { section } = useLocalSearchParams<{ section: string }>();
@@ -24,7 +24,7 @@ export default function Section() {
     <Screen>
       <View style={{ paddingTop: space.s3, paddingBottom: space.s2 }}><BackLink label="Profil" onPress={() => router.back()} /></View>
       <T v="title" style={{ marginBottom: space.s3 }}>{TITLES[section] || 'Profil'}</T>
-      {section === 'goals' ? <Goals /> : section === 'reminders' ? <Reminders /> : section === 'connections' ? <Connections /> : section === 'program' ? <Program /> : section === 'data' ? <Data /> : <News />}
+      {section === 'goals' ? <Goals /> : section === 'reminders' ? <Reminders /> : section === 'connections' ? <Connections /> : section === 'program' ? <Program /> : section === 'data' ? <Data /> : section === 'feedback' ? <Feedback /> : <News />}
     </Screen>
   );
 }
@@ -135,6 +135,19 @@ function Program() {
       </ListGroup>
       <T v="small" muted>Semaine allégée en S12. Une séance manquée ne se rattrape pas : la suite s'ajuste.</T>
     </>
+  );
+}
+
+/** Préférences de ressenti : haptique, animations, mise en scène des accomplissements. */
+function Feedback() {
+  const s = useApp(); const pr = s.user.prefs;
+  const set = (fn: (p: typeof pr) => void) => update(st => fn(st.user.prefs));
+  return (
+    <ListGroup>
+      <ListRow title="Retours haptiques" sub="Une vibration brève quand tu coches, valides ou débloques quelque chose." chevron={false} right={<Toggle label="Retours haptiques" value={pr.haptics !== false} onChange={v => set(p => { p.haptics = v; })} />} />
+      <ListRow title="Animations réduites" sub="Coches, jauges et accomplissements sans mouvement. Le réglage Android « Supprimer les animations » est aussi respecté." chevron={false} right={<Toggle label="Animations réduites" value={pr.motion === 'reduced'} onChange={v => set(p => { p.motion = v ? 'reduced' : 'system'; })} />} />
+      <ListRow last title="Mettre en scène les accomplissements" sub="Quand un jalon est atteint, il est présenté une fois sur Aujourd'hui et Progression. Désactivé : il apparaît simplement dans la liste." chevron={false} right={<Toggle label="Mettre en scène les accomplissements" value={pr.celebrate !== false} onChange={v => set(p => { p.celebrate = v; })} />} />
+    </ListGroup>
   );
 }
 

@@ -1,4 +1,4 @@
-import * as Haptics from 'expo-haptics';
+import { haptic, reducedMotion } from '@/feedback';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -7,8 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassSurface } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Button, Row, T } from '@/components/ui';
-import { adapted, ZONE_NAME, zoneText } from '@/engine/coach';
+import { adapted, sessionKey, ZONE_NAME, zoneText } from '@/engine/coach';
 import { segments, totalSec } from '@/engine/segments';
+import { setCheck } from '@/engine/session';
 import { update, useApp } from '@/store/store';
 import { font, radius, space, useTheme } from '@/theme/tokens';
 
@@ -31,9 +32,9 @@ export default function RunLive() {
 
   useEffect(() => {
     if (phase !== 'count') return;
-    if (count === 0) { acc.current.since = now(); setPhase('run'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); return; }
-    AccessibilityInfo.isReduceMotionEnabled().then(r => { if (!r) { scale.setValue(1.3); Animated.timing(scale, { toValue: 1, duration: 600, useNativeDriver: true }).start(); } });
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (count === 0) { acc.current.since = now(); setPhase('run'); haptic('success'); return; }
+    if (!reducedMotion()) { scale.setValue(1.3); Animated.timing(scale, { toValue: 1, duration: 600, useNativeDriver: true }).start(); }
+    haptic('untick');
     const t = setTimeout(() => setCount(count - 1), 900); return () => clearTimeout(t);
   }, [phase, count]);
   useEffect(() => { if (phase !== 'run') return; const t = setInterval(() => tick(x => x + 1), 250); return () => clearInterval(t); }, [phase]);
@@ -45,13 +46,13 @@ export default function RunLive() {
     if (phase === 'run') bank();
     if (idx >= segs.length - 1) { finish(); return; }
     acc.current.seg = 0; acc.current.since = now(); setIdx(idx + 1);
-    Vibration.vibrate(auto ? [0, 250, 120, 250] : 60); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    Vibration.vibrate(auto ? [0, 250, 120, 250] : 60); haptic('warning');
   }
-  function toggle() { if (phase === 'run') { bank(); setPhase('pause'); } else { acc.current.since = now(); setPhase('run'); } Haptics.selectionAsync().catch(() => {}); }
+  function toggle() { if (phase === 'run') { bank(); setPhase('pause'); } else { acc.current.since = now(); setPhase('run'); } haptic('select'); }
   function finish() {
     if (phase === 'run') bank();
     const min = Math.round(acc.current.total / 60);
-    update(st => { st.runs[date] = { ...(st.runs[date] || {}), min: String(min), steps: Object.fromEntries(run.steps.map((_, i) => [i, i <= seg.step])) }; });
+    update(st => { const k = sessionKey(st, date); st.runs[k] = { ...(st.runs[k] || {}), min: String(min) }; run.steps.forEach((_, i) => { if (i <= seg.step) setCheck(st, date, `step:${run.kind}:${i + 1}`, true); }); });
     router.replace({ pathname: '/run/[date]', params: { date, finished: '1' } });
   }
   function confirmEnd() { Alert.alert('Terminer la séance ?', `${mmss(elapsed())} enregistrées. Ta montre transmettra la distance et l'allure via Strava.`, [{ text: 'Continuer', style: 'cancel' }, { text: 'Terminer', style: 'destructive', onPress: finish }]); }
@@ -59,7 +60,7 @@ export default function RunLive() {
     setPlanB(false);
     if (kind === 'easy') { setEasyRest(true); update(st => { st.overrides[date] = { ...(st.overrides[date] || {}), adj: { kind: 'easy', reason: 'Plan B pendant la séance : fin en footing facile.', proposalId: `planb-${date}` } }; }); }
     else { const last = segs.length - 1; if (phase === 'run') bank(); acc.current.seg = 0; acc.current.since = now(); setIdx(last); update(st => { st.overrides[date] = { ...(st.overrides[date] || {}), adj: { kind: 'easy', reason: 'Plan B pendant la séance : séance raccourcie.', proposalId: `planb-${date}` } }; }); }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    haptic('success');
   }
 
   if (phase === 'count') return (
