@@ -41,14 +41,17 @@ export default function Program() {
   return (
     <Screen>
       <View style={{ paddingTop: space.s4 }}>
-        <Row between><Row gap={space.s2} style={{ flex: 1 }}><T v="small" muted>{`Semaine ${w} sur ${s.program.weeks}`}</T><Chip label={ph.name} /></Row>
-          <Row gap={space.s3}><Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="Coach" onPress={() => router.push({ pathname: '/coach', params: { context: 'program' } })} /><Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="Mes programmes" onPress={() => router.push('/programs')} /></Row></Row>
+        <Row gap={space.s2}><T v="small" muted>{`Semaine ${w} sur ${s.program.weeks}`}</T><Chip label={ph.name} /></Row>
         <Row between style={{ marginTop: space.s1 }}>
           <T v="title" style={{ flex: 1 }} numberOfLines={1}>{range}</T>
           <Row gap={6}>
             <NavBtn label="Semaine précédente" glyph="‹" disabled={w <= 1} onPress={() => goWeek(w - 1)} />
             <NavBtn label="Semaine suivante" glyph="›" disabled={w >= s.program.weeks} onPress={() => goWeek(w + 1)} />
           </Row>
+        </Row>
+        <Row gap={space.s4} style={{ marginTop: space.s1 }}>
+          <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="Mes programmes" onPress={() => router.push('/programs')} />
+          <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="Demander au coach" onPress={() => router.push({ pathname: '/coach', params: { context: 'program' } })} />
         </Row>
       </View>
 
