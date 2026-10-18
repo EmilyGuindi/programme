@@ -7,7 +7,10 @@ import { energy } from '@/engine/energy';
 import { ListGroup, ListRow, Row, Screen, T } from '@/components/ui';
 import { adapted, doneOn, weekOf, weekStart, weightSeries } from '@/engine/coach';
 import { addDays, daysBetween, fmtShort, mmss, sportDay } from '@/engine/dates';
-import { achievements, bodyJourney, runningJourney, weekSuccess } from '@/engine/journey';
+import { bodyJourney, chapters, runningJourney, weekSuccess } from '@/engine/journey';
+import { achievementsMemo, nextMilestone, toCelebrate } from '@/engine/achievements';
+import { MilestoneRow, UnlockMoment } from '@/components/achievement-ui';
+import { AchBadge } from '@/components/badges';
 import { availableRecaps } from '@/engine/recap';
 import { newRecords, recordsUntil } from '@/engine/records';
 import { useApp } from '@/store/store';
@@ -26,7 +29,9 @@ export default function Progress() {
   const bodyStep = bodyJourney(s, today).find(x => x.status === 'en cours');
   const recs = recordsUntil(s, today); const best10 = recs.find(r => r.id === 'run-10k'); const ev = s.events.filter(e => e.type === 'course' && ['upcoming', 'today'].includes(eventState(s, e, today))).sort((a, b) => a.date.localeCompare(b.date))[0];
   const weighs = weightSeries(s); const nextMonday = addDays(today, (7 - ((new Date().getDay() + 6) % 7)) % 7 || 7);
-  const fresh = [...newRecords(s, addDays(today, -14), today).map(r => ({ t: `Record · ${r.label}`, d: r.date })), ...achievements(s, today).filter(a => a.date && daysBetween(a.date, today) <= 14).map(a => ({ t: a.title, d: a.date! }))].sort((a, b) => b.d.localeCompare(a.d))[0];
+  const fresh = newRecords(s, addDays(today, -14), today).map(r => ({ t: `Record · ${r.label} : ${r.value}`, d: r.date })).sort((a, b) => b.d.localeCompare(a.d))[0];
+  const ach = achievementsMemo(s, today); const got = ach.filter(a => a.date).sort((a, b) => b.date!.localeCompare(a.date!)); const nxt = nextMilestone(s, today, undefined, ach);
+  const chs = chapters(s, today, ach); const ch = chs.find(x => x.state === 'en cours') || chs[chs.length - 1]; const celebrating = toCelebrate(s, today, ach).length > 0;
   const recap = availableRecaps(s)[0]; const recapNew = recap && !s.recapsSeen?.[String(recap)];
 
   return (
@@ -40,18 +45,28 @@ export default function Progress() {
           <T v="display" color={c.accentInk}>{planned ? `${done}/${planned}` : '—'}</T>
           <T v="small" color={c.accentInk} style={{ flex: 1, paddingBottom: 6 }}>{planned ? 'séances prévues réalisées cette semaine' : 'aucune séance prévue jusqu\'ici cette semaine'}</T>
         </Row>
-        <View style={{ flexDirection: 'row', gap: 3, marginTop: space.s4 }}>
-          {Array.from({ length: s.program.weeks }, (_, i) => { const p = past.find(x => x.w === i + 1); const cur = i + 1 === w;
-            return <View key={i} style={{ flex: 1, height: cur ? 10 : 6, borderRadius: 3, alignSelf: 'flex-end', backgroundColor: p ? (p.ok ? c.accentInk : 'rgba(11,13,10,0.4)') : cur ? c.accentInk : 'rgba(11,13,10,0.15)' }} />; })}
+        {/* Le cycle en chapitres : une case par semaine, regroupées par phase */}
+        <View style={{ flexDirection: 'row', gap: 6, marginTop: space.s4 }}>
+          {chs.map(x => (
+            <View key={x.n} style={{ flex: x.weeks.length, gap: 4 }}>
+              <View style={{ flexDirection: 'row', gap: 2 }}>{x.weeks.map(k => <View key={k.w} style={{ flex: 1, height: k.state === 'current' ? 10 : 6, borderRadius: 3, alignSelf: 'flex-end', backgroundColor: k.state === 'ok' ? c.accentInk : k.state === 'ko' ? 'rgba(11,13,10,0.4)' : k.state === 'current' ? c.accentInk : 'rgba(11,13,10,0.15)' }} />)}</View>
+              <T v="xs" color={c.accentInk} style={{ opacity: x.state === 'à venir' ? 0.55 : 1, fontWeight: x.n === ch.n ? '700' : '400' }}>{x.n}</T>
+            </View>))}
         </View>
-        <Row between style={{ marginTop: 6 }}><T v="xs" color={c.accentInk} style={{ opacity: 0.7 }}>14 oct.</T><T v="xs" color={c.accentInk} style={{ opacity: 0.7 }}>28 févr.</T></Row>
-        {runStep || bodyStep ? <Row gap={8} style={{ marginTop: space.s4 }}><Icon name="chevrons" size={16} color={c.accentInk} filled /><T v="small" color={c.accentInk} style={{ fontWeight: '600' }}>{`Étape en cours : ${(runStep || bodyStep)!.title.toLowerCase()}`}</T></Row> : null}
+        <Row gap={8} style={{ marginTop: space.s3 }}><Icon name="chevrons" size={16} color={c.accentInk} filled /><T v="small" color={c.accentInk} style={{ fontWeight: '600', flex: 1 }}>{`Chapitre ${ch.n} · ${ch.name} · ${ch.next}`}</T></Row>
       </Stage></Pressable>
 
-      {fresh ? <Pressable onPress={() => go('records')} style={{ flexDirection: 'row', alignItems: 'center', gap: space.s3, marginTop: space.s3, padding: space.s4, borderRadius: radius.r2, backgroundColor: c.surface }}>
-        <Badge achieved size={40} />
-        <View style={{ flex: 1 }}><T v="overline" color={c.accent}>Nouveau</T><T v="label">{fresh.t}</T></View><T v="xs" muted>{fmtShort(fresh.d)}</T>
-      </Pressable> : null}
+      <View style={{ height: space.s3 }} />
+      <UnlockMoment />
+      {/* Accomplissements : les réussites d'abord, puis un seul prochain jalon (pas de liste de badges verrouillés) */}
+      <Pressable onPress={() => go('records')} accessibilityRole="button" accessibilityLabel={`Accomplissements : ${got.length} atteints sur ${ach.length}`} style={({ pressed }) => ({ backgroundColor: c.surface, borderRadius: radius.r2, marginBottom: space.s3, opacity: pressed ? 0.9 : 1, overflow: 'hidden' })}>
+        <Row between style={{ paddingHorizontal: space.s4, paddingTop: space.s4 }}><T v="small" muted style={{ fontWeight: '600' }}>Accomplissements</T><T v="small" muted>{`${got.length} sur ${ach.length}`}</T></Row>
+        {got.length && !celebrating ? <Row gap={space.s2} style={{ paddingHorizontal: space.s3, paddingTop: space.s3 }}>
+          {got.slice(0, 5).map(a => <AchBadge key={a.id} cat={a.cat} status="unlocked" major={a.tier === 'major'} size={52} label={a.title} />)}
+        </Row> : !got.length ? <T v="small" muted style={{ paddingHorizontal: space.s4, paddingTop: 6 }}>Tes premiers accomplissements arrivent avec tes séances réelles.</T> : null}
+        {fresh ? <T v="small" color={c.accent} style={{ paddingHorizontal: space.s4, paddingTop: space.s2, fontWeight: '600' }}>{`${fresh.t} · ${fmtShort(fresh.d)}`}</T> : null}
+        {nxt ? <View style={{ marginTop: space.s2 }}><T v="xs" muted style={{ paddingHorizontal: space.s4 }}>Prochain jalon</T><MilestoneRow a={nxt} last /></View> : <View style={{ height: space.s4 }} />}
+      </Pressable>
 
       {/* Aperçus : uniquement des faits mesurés, jamais d'estimation présentée comme un résultat */}
       <Row gap={space.s3} style={{ marginTop: space.s3, marginBottom: space.s5, alignItems: 'stretch' }}>
@@ -67,8 +82,8 @@ export default function Progress() {
       <Insights max={2} title="Ce qui évolue" />
       <ListGroup title="Analyses">
         <ListRow title={recapNew ? `Bilan de la semaine ${recap}` : 'Bilans de la semaine'} sub={recapNew ? 'Nouveau · quelques cartes, 30 secondes' : recap ? `${availableRecaps(s).length} bilan${availableRecaps(s).length > 1 ? 's' : ''}` : 'Le premier arrive dimanche soir'} left={<Icon name="story" color={recapNew ? c.accent : undefined} />} onPress={() => (recapNew ? router.push({ pathname: '/recap/[week]', params: { week: String(recap) } }) : go('recaps'))} />
-        <ListRow title="Mon parcours" sub={runStep ? `Running : ${runStep.title.toLowerCase()}` : undefined} left={<Icon name="path" />} onPress={() => go('journey')} />
-        <ListRow title="Records et paliers" sub={recs.length ? `${recs.length} record${recs.length > 1 ? 's' : ''}` : 'Tes premiers records arrivent avec tes séances'} left={<Icon name="peak" />} onPress={() => go('records')} />
+        <ListRow title="Mon parcours" sub={`Chapitre ${ch.n} · ${ch.name}`} left={<Icon name="path" />} onPress={() => go('journey')} />
+        <ListRow title="Accomplissements et records" sub={`${got.length} accomplissement${got.length > 1 ? 's' : ''} · ${recs.length} record${recs.length > 1 ? 's' : ''}`} left={<Icon name="peak" />} onPress={() => go('records')} />
         <ListRow title="Régularité" left={<Icon name="calendar" />} onPress={() => go('regularity')} />
         <ListRow title="Dépense des activités" sub={(() => { const e = energy(s, addDays(today, -6), today); return e.withData ? `${e.total.toLocaleString('fr-FR')} kcal estimées sur 7 jours` : 'Estimations de ta montre via Strava'; })()} left={<Icon name="flame" />} onPress={() => go('energy')} />
         <ListRow last title="Renforcement" sub={Object.keys(s.strength).length ? `${Object.keys(s.strength).length} séance${Object.keys(s.strength).length > 1 ? 's' : ''} enregistrée${Object.keys(s.strength).length > 1 ? 's' : ''}` : 'Charges notées le dimanche'} left={<Icon name="dumbbell" />} onPress={() => go('strength')} />

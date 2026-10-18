@@ -1,9 +1,13 @@
 import { adapted, comparable, countsFor, planFor, runsList } from './coach';
 import { addDays, DAYS_SHORT, dow } from './dates';
-import { recordsUntil } from './records';
+import { newRecords, recordsUntil } from './records';
+import { contribution } from './achievements';
+import { sessionProgress } from './session';
 import type { Activity, AppState } from './types';
 
-export interface Closure { title: string; stats: string[]; goal: string; facts: string[]; next: string | null; askEffort: boolean; askPain: boolean }
+export interface Closure { title: string; stats: string[]; goal: string; facts: string[]; next: string | null; askEffort: boolean; askPain: boolean;
+  /** Étapes cochées pendant la séance (« 14 sur 16 séries et étapes »), records du jour, jalons que la séance a fait avancer, adaptation. */
+  steps: string | null; records: string[]; contributions: { title: string; text: string; unlocked: boolean }[]; adapted: string | null }
 const pace = (a: Activity) => (a.durationMin! * 60) / a.distanceKm!;
 
 /** Écran de fin : uniquement des faits. Une amélioration n'est affichée que si les données la montrent. */
@@ -32,7 +36,11 @@ export function buildClosure(s: AppState, a: Activity): Closure {
   let next: string | null = null;
   for (let i = 1; i <= 7; i++) { const d = addDays(a.date, i), x = adapted(s, d); if (x.type !== 'rest' && !x.optional) { next = `${DAYS_SHORT[dow(d)]} · ${(x.replaced || x).title}`; break; } }
   const c = s.checkins[a.date];
-  return { title: a.title, stats, goal, facts, next, askEffort: a.effort == null, askPain: !(c && c.pain) };
+  const sp = sessionProgress(s, a.date, a.date); const ad = adapted(s, a.date);
+  const steps = sp.total && sp.done ? `${sp.done} sur ${sp.total} ${sp.items.some(x => x.parent) ? 'séries et étapes' : sp.units.label} cochées` : null;
+  const records = newRecords(s, a.date, a.date).filter(r => !(a.type === 'renfo' && r.id.startsWith('str-'))).map(r => `${r.label} : ${r.value}`);
+  if (a.effort != null) stats.push(`effort ${a.effort}/10`);
+  return { title: a.title, stats, goal, facts, next, askEffort: a.effort == null, askPain: !(c && c.pain), steps, records, contributions: contribution(s, a, a.date).slice(0, 3), adapted: ad.reason && a.date === ad.date && countsFor(a, a.date) ? ad.reason : null };
 }
 /** Activité qui mérite un écran de fin, pas encore montré. */
 export function pendingClosure(s: AppState, from: string, to = '9999-12-31'): Activity | undefined {

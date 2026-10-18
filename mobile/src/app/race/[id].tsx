@@ -1,4 +1,4 @@
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/feedback';
 import { router, useLocalSearchParams } from 'expo-router';
 import { View } from 'react-native';
 import { Bullets, Disclosure } from '@/components/guide';
@@ -73,7 +73,7 @@ export default function RaceScreen() {
           <View style={{ marginTop: space.s4 }}>
             <Row between style={{ marginBottom: space.s2 }}><Kicker>Checklist</Kicker><Ring value={ok / items.length} label={`${ok}/${items.length}`} /></Row>
             <ListGroup>{items.map((item, i) => { const on = !!ev.checklist?.[item]; return (
-              <Pressable key={item} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => { Haptics.selectionAsync().catch(() => {}); setEv(e => { e.checklist = { ...(e.checklist || {}), [item]: !on }; }); }}
+              <Pressable key={item} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => { haptic('select'); setEv(e => { e.checklist = { ...(e.checklist || {}), [item]: !on }; }); }}
                 style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, minHeight: 52, paddingHorizontal: space.s4, borderTopWidth: i ? 0.5 : 0, borderTopColor: c.line2, backgroundColor: pressed ? c.surface2 : 'transparent' })}>
                 <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: on ? 0 : 1.5, borderColor: c.ink3, backgroundColor: on ? c.ok : 'transparent', alignItems: 'center', justifyContent: 'center' }}>{on ? <T v="xs" color={c.paper} style={{ fontWeight: '700' }}>✓</T> : null}</View>
                 <T style={{ flex: 1, textDecorationLine: on ? 'line-through' : 'none', color: on ? c.ink3 : c.ink }}>{item}</T>
@@ -108,7 +108,7 @@ export default function RaceScreen() {
             {r.elevM != null ? <KV k="Dénivelé" v={`${r.elevM} m`} /> : null}
             {r.effort ? <KV k="Effort ressenti" v={`${r.effort}/10`} /> : null}
           </Card>
-          <Button block label="Modifier le résultat" onPress={() => { Haptics.selectionAsync().catch(() => {}); router.push({ pathname: '/result/[id]', params: { id: ev!.id } }); }} />
+          <Button block label="Modifier le résultat" onPress={() => { haptic('select'); router.push({ pathname: '/result/[id]', params: { id: ev!.id } }); }} />
         </>}
       </>
     );

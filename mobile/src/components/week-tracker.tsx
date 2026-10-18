@@ -1,14 +1,14 @@
 import type React from 'react';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/feedback';
 import { useEffect, useRef } from 'react';
-import { AccessibilityInfo, Animated, Pressable, View } from 'react-native';
+import { Animated, Pressable, View } from 'react-native';
 import { adapted } from '@/engine/coach';
 import { dayStatus } from '@/engine/status';
 import { addDays, dow, parseISO } from '@/engine/dates';
 import type { AdaptedPlan, AppState } from '@/engine/types';
 import { space, useTheme } from '@/theme/tokens';
 import { STATUS_LABEL, type Status, type WeekSummary } from '@/engine/status';
-import { useReducedMotion } from '@/feedback';
+import { reducedMotion, useReducedMotion } from '@/feedback';
 import { Icon, type IconName } from './icons';
 import { Row, T } from './ui';
 
@@ -53,7 +53,7 @@ function Mark({ status, children }: { status: Status; children: React.ReactNode 
   const v = useRef(new Animated.Value(1)).current; const first = useRef(true);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
-    AccessibilityInfo.isReduceMotionEnabled().then(r => { if (r) return; v.setValue(0.9); Animated.spring(v, { toValue: 1, friction: 6, tension: 180, useNativeDriver: true }).start(); }).catch(() => {});
+    if (reducedMotion()) return; v.setValue(0.9); Animated.spring(v, { toValue: 1, friction: 6, tension: 180, useNativeDriver: true }).start();
   }, [status]);
   return <Animated.View style={{ transform: [{ scale: v }] }}>{children}</Animated.View>;
 }
@@ -88,7 +88,7 @@ export function WeekTracker({ s, start, today, selected, onSelect }: { s: AppSta
         return (
           <Pressable key={a.date} disabled={pre || !onSelect} accessibilityRole="button" accessibilityState={{ selected: isSel, disabled: pre }}
             accessibilityLabel={`${DAY[dow(a.date)]} ${parseISO(a.date).getDate()}${isToday ? ", aujourd'hui" : ''} : ${(a.replaced || a).title}, ${STATUS_LABEL[st] || 'avant le programme'}`}
-            onPress={() => { Haptics.selectionAsync().catch(() => {}); onSelect?.(a.date); }}
+            onPress={() => { haptic('select'); onSelect?.(a.date); }}
             style={({ pressed }) => ({ flex: 1, alignItems: 'center', opacity: pre ? 0.3 : pressed ? 0.75 : 1 })}>
             <T v="xs" color={isToday ? c.ink : c.ink3} style={{ fontFamily: isToday ? 'Inter_700Bold' : 'Inter_500Medium', fontSize: 11, lineHeight: 14, marginBottom: 6 }} maxFontSizeMultiplier={1.2}>{isToday ? 'Auj.' : LETTERS[dow(a.date)]}</T>
             <View style={{ padding: 2, borderRadius: 18, borderWidth: 2, borderColor: isSel ? c.accent : 'transparent', alignSelf: 'stretch' }}>

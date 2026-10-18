@@ -18,7 +18,9 @@ import { weekSummary } from '@/engine/status';
 import { activitiesOn, adapted, coachLine, doneOn, phaseOf, recovery, weekOf, weekStart } from '@/engine/coach';
 import { addDays, clock, daysBetween, fmtLong, fmtShort, mmss, sportDay } from '@/engine/dates';
 import { insights } from '@/engine/insights';
-import { achievements } from '@/engine/journey';
+import { achievementsMemo, toCelebrate, unlocked, type Achievement } from '@/engine/achievements';
+import { UnlockMoment } from '@/components/achievement-ui';
+import { AchBadge } from '@/components/badges';
 import { eventState } from '@/engine/status';
 import { newRecords } from '@/engine/records';
 import { update, useApp } from '@/store/store';
@@ -39,7 +41,8 @@ export default function Today() {
   const wActs = s.activities.filter(x => x.date >= ws && x.date <= d && !x.complementary);
   const wMin = Math.round(wActs.reduce((t, x) => t + (x.durationMin || 0), 0)); const wKm = wActs.filter(x => x.type === 'running' || x.type === 'course').reduce((t, x) => t + (x.distanceKm || 0), 0);
   const lvlCol = { vert: c.ok, orange: c.warn, rouge: c.stop, inconnu: c.ink3 }[r.level];
-  const recent = [...newRecords(s, addDays(d, -14), d).map(x => ({ t: `Record · ${x.label} : ${x.value}`, d: x.date })), ...achievements(s, d).filter(x => x.date && daysBetween(x.date, d) <= 14).map(x => ({ t: x.title, d: x.date! }))].sort((x, y) => y.d.localeCompare(x.d))[0];
+  const recent = [...newRecords(s, addDays(d, -14), d).map(x => ({ t: `Record · ${x.label} : ${x.value}`, d: x.date })), ...unlocked(s, d, achievementsMemo(s, d)).filter(x => daysBetween(x.date!, d) <= 14).map(x => ({ t: x.title, d: x.date!, a: x }))].sort((x, y) => y.d.localeCompare(x.d))[0] as { t: string; d: string; a?: Achievement } | undefined;
+  const celebrating = toCelebrate(s, d, achievementsMemo(s, d)).length > 0;
   const trend = insights(s, d).find(i => i.level !== 'observation');
   const checkinFirst = r.level === 'inconnu' && !isEvent;
 
@@ -122,16 +125,17 @@ export default function Today() {
 
       {/* E · Actions utiles */}
       <Row gap={space.s2} style={{ marginBottom: space.s3 }}>
-        {([['coach', 'Coach', () => router.push('/coach')], ['plus', 'Ajouter une activité', () => router.push({ pathname: '/activity', params: { date: d } })]] as [IconName, string, () => void][]).map(([ic, l, go]) => (
+        {([['coach', 'Coach', () => router.push('/coach')], ['plus', 'Ajouter', () => router.push({ pathname: '/activity', params: { date: d } })]] as [IconName, string, () => void][]).map(([ic, l, go]) => (
           <Pressable key={l} accessibilityRole="button" accessibilityLabel={l} onPress={go} style={({ pressed }) => ({ flex: 1, height: 52, borderRadius: radius.r2, backgroundColor: pressed ? c.surface2 : c.surface, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' })}>
             <Icon name={ic} size={18} color={c.ink} /><T v="label">{l}</T>
           </Pressable>))}
       </Row>
 
-      {/* F · Progrès personnel */}
-      {recent || trend ? (
+      {/* F · Accomplissement significatif : mis en scène une fois, puis rappelé en une ligne */}
+      <UnlockMoment />
+      {!celebrating && (recent || trend) ? (
         <Pressable onPress={() => router.push('/progress')} accessibilityRole="button" style={({ pressed }) => ({ flexDirection: 'row', gap: space.s3, alignItems: 'center', backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, opacity: pressed ? 0.88 : 1 })}>
-          {recent ? <Badge achieved size={40} /> : <Icon name="chevrons" size={22} color={c.accent} />}
+          {recent?.a ? <AchBadge cat={recent.a.cat} status="unlocked" major={recent.a.tier === 'major'} size={44} /> : recent ? <Badge achieved size={40} /> : <Icon name="stats" size={22} color={c.accent} />}
           <View style={{ flex: 1 }}><T v="xs" muted style={{ fontWeight: '600' }}>{recent ? `Récent · ${fmtShort(recent.d)}` : 'Ce qui évolue'}</T><T v="label">{recent ? recent.t : trend!.text}</T></View>
         </Pressable>) : null}
     </Screen>

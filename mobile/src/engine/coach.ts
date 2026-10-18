@@ -7,13 +7,16 @@ export const DELOAD = [12];
 export const daysBetweenSafe = (a: ISODate, b: ISODate) => daysBetween(a, b);
 export const weekOf = (s: AppState, d: ISODate) => Math.floor(daysBetween(s.program.start, d) / 7) + 1;
 export const weekStart = (s: AppState, w: number) => addDays(s.program.start, (w - 1) * 7);
-export function phaseOf(w: number) {
-  if (w <= 5) return { n: 'A', name: 'Évaluation' };
-  if (w <= 10) return { n: 'B', name: 'Base aérobie' };
-  if (w <= 15) return { n: 'C', name: 'Seuil' };
-  if (w <= 19) return { n: 'D', name: 'Spécifique 10 km' };
-  return { n: 'E', name: 'Bilan' };
-}
+/** Phases du cycle : les chapitres du parcours. Calendrier inchangé ; un futur programme fournit sa propre liste. */
+export interface Phase { n: string; name: string; from: number; to: number; goal: string; /** Jalon principal du chapitre (identifiant d'accomplissement). */ milestone: string }
+export const PHASES: Phase[] = [
+  { n: 'A', name: 'Évaluation', from: 1, to: 5, goal: 'Poser tes repères : premières courses chronométrées, premières charges notées.', milestone: 'run-10k-first' },
+  { n: 'B', name: 'Base aérobie', from: 6, to: 10, goal: 'Allonger les footings faciles sans accumuler de fatigue.', milestone: 'run-45' },
+  { n: 'C', name: 'Seuil', from: 11, to: 15, goal: 'Tenir plus longtemps une allure soutenue, semaine allégée comprise.', milestone: 'run-endurance' },
+  { n: 'D', name: 'Spécifique 10 km', from: 16, to: 19, goal: 'Rapprocher ton allure de course de l\'objectif 10 km.', milestone: 'run-pr-10k' },
+  { n: 'E', name: 'Bilan', from: 20, to: 20, goal: 'Mesurer le chemin parcouru et préparer la suite.', milestone: 'reg-cycle' },
+];
+export function phaseOf(w: number): Phase { return PHASES.find(p => w <= p.to) || PHASES[PHASES.length - 1]; }
 export const eventOn = (s: AppState, d: ISODate) => s.events.find(e => e.date === d && e.status !== 'annulé');
 export const activitiesOn = (s: AppState, d: ISODate) => s.activities.filter(a => a.date === d);
 /** Une séance est validée par une activité non complémentaire ce jour-là. Les promenades ne valident rien. */
