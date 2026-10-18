@@ -29,7 +29,7 @@ export function PlanRow({ a, showDay = true }: { a: AdaptedPlan; showDay?: boole
   const s = getState(); const shown = a.replaced || a; const done = doneOn(s, a.date); const acts = activitiesOn(s, a.date);
   const isToday = a.date === today();
   const stripe = a.type === 'event' ? c.accent : shown.type === 'run' ? c.accent : shown.type === 'box' ? c.ink : shown.type === 'renfo' ? c.ink2 : 'transparent';
-  const sub = done ? acts.filter(x => !x.complementary).map(x => x.title + (x.durationMin ? ` ${Math.round(x.durationMin)} min` : '')).join(', ') : [shown === a ? a.dur : '', shown.type !== 'box' ? shown.goal : a.note].filter(Boolean).join(' · ');
+  const sub = done ? acts.filter(x => !x.complementary).map(x => x.title + (x.durationMin ? ` ${Math.round(x.durationMin)} min` : '')).join(', ') : [shown === a ? a.dur : '', shown.type !== 'box' ? shown.goal : a.note].filter(Boolean).join(', ');
   return (
     <Pressable onPress={() => (a.type === 'event' && a.event ? openPlan(a) : openDay(a.date))} accessibilityRole="button" accessibilityHint="Voir le détail du jour"
       style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, backgroundColor: a.type === 'event' ? c.accentSoft : c.surface, borderWidth: isToday ? 2 : 1, borderColor: isToday ? c.accent : c.line, borderLeftWidth: 4, borderLeftColor: stripe, borderStyle: shown.type === 'run' ? 'dashed' : 'solid', borderRadius: radius.r2, paddingVertical: space.s3, paddingHorizontal: space.s4, minHeight: 72, opacity: pressed ? 0.85 : 1 })}>
