@@ -11,7 +11,7 @@ import { adapted, sessionKey, ZONE_NAME, zoneText } from '@/engine/coach';
 import { segments, totalSec } from '@/engine/segments';
 import { setCheck } from '@/engine/session';
 import { update, useApp } from '@/store/store';
-import { font, radius, space, useTheme } from '@/theme/tokens';
+import { font, layout, radius, space, useTheme } from '@/theme/tokens';
 
 const mmss = (sec: number) => { sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`; };
 
@@ -74,17 +74,17 @@ export default function RunLive() {
   const zone = seg.zone; const nextSeg = segs[idx + 1]; const pct = totalSec(segs) ? Math.min(1, elapsed() / totalSec(segs)) : 0;
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}>
-      <Row between style={{ paddingHorizontal: space.s4, paddingTop: space.s3 }}>
+      <Row between style={{ paddingHorizontal: layout.gutter, paddingTop: space.s3 }}>
         <View style={{ flex: 1 }}><T v="overline" muted>{`Segment ${idx + 1} / ${segs.length}`}</T><T v="small" muted numberOfLines={1}>{run.title}</T></View>
         <Pressable accessibilityRole="button" onPress={() => setPlanB(true)} hitSlop={8}><GlassSurface r={18}><Row gap={6} style={{ paddingHorizontal: 14, height: 40 }}><Icon name="swap" size={18} color={c.ink} /><T v="label">Plan B</T></Row></GlassSurface></Pressable>
       </Row>
       <View style={{ height: 4, marginHorizontal: space.s4, marginTop: space.s3, borderRadius: 2, backgroundColor: c.line2 }}><View style={{ width: `${pct * 100}%`, height: 4, borderRadius: 2, backgroundColor: c.accent }} /></View>
 
-      <View style={{ flex: 1, paddingHorizontal: space.s5, justifyContent: 'center' }} accessibilityLiveRegion="polite">
+      <View style={{ flex: 1, paddingHorizontal: layout.gutter, justifyContent: 'center' }} accessibilityLiveRegion="polite">
         <T v="h2" style={{ fontSize: 26, lineHeight: 32 }}>{seg.label}</T>
         {zone ? <View style={{ marginTop: space.s5 }}><T v="overline" muted>Allure cible</T>
           <T style={{ fontFamily: font.displayHeavy, fontSize: 64, lineHeight: 70, color: c.accent, letterSpacing: -2, fontVariant: ['tabular-nums'] }}>{zoneText(s, zone).replace(' /km', '')}</T>
-          <T muted>{`/km · ${ZONE_NAME[zone].split(' ·')[0].toLowerCase()}`}</T></View> : null}
+          <T muted>{`par km, ${ZONE_NAME[zone].toLowerCase()}`}</T></View> : null}
         <View style={{ marginTop: space.s5 }}>
           <T v="overline" muted>{left != null ? 'Reste sur ce segment' : 'Segment libre'}</T>
           <T style={{ fontFamily: font.displayHeavy, fontSize: 88, lineHeight: 94, color: c.ink, letterSpacing: -3, fontVariant: ['tabular-nums'] }}>{left != null ? mmss(left) : mmss(segElapsed())}</T>
@@ -96,7 +96,7 @@ export default function RunLive() {
         <T v="xs" muted style={{ marginTop: space.s4 }}>Distance et allure réelle : ta montre les enregistre, elles arrivent par Strava après la séance.</T>
       </View>
 
-      <View style={{ paddingHorizontal: space.s4, paddingBottom: space.s4 }}>
+      <View style={{ paddingHorizontal: layout.gutter, paddingBottom: space.s4 }}>
         <GlassSurface r={34}>
           <Row style={{ padding: 10, justifyContent: 'space-between' }}>
             <Pressable accessibilityRole="button" accessibilityLabel="Terminer la séance" onPress={confirmEnd} style={({ pressed }) => ({ width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? c.stopSoft : c.surface2 })}><Icon name="stop" size={22} color={c.stop} /></Pressable>

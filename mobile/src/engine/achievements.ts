@@ -68,7 +68,7 @@ export function achievementsFor(s: AppState, today: ISODate): Achievement[] {
     const xs = timedEfforts(s, today, lo, hi); const imp = firstImprovement(xs);
     const best = xs.length ? Math.min(...xs.map(x => x.t)) : null;
     add({ id, cat: 'running', tier, title: `Record battu sur ${km} km`, description: `Battre ton meilleur temps fiable sur ${km} km.`, criterion: `Un ${km} km chronométré (course ou test) plus rapide que ton précédent meilleur temps. Les allures GPS aberrantes sont exclues.`, source: `${SRC.race}, tests`,
-      progress: { value: xs.length ? 1 : 0, target: 2, label: best ? `Repère actuel : ${mmss(best / km)} /km` : `Pas encore de ${km} km chronométré` }, date: imp?.date || null, detail: imp ? `${mmss(imp.t / km)} /km · ${imp.label}` : undefined });
+      progress: { value: xs.length ? 1 : 0, target: 2, label: best ? `Repère actuel : ${mmss(best / km)} /km` : `Pas encore de ${km} km chronométré` }, date: imp?.date || null, detail: imp ? `${mmss(imp.t / km)} /km, ${imp.label}` : undefined });
   }
 
   const easyRuns = runs.filter(r => r.type === 'running' && (r.kind || 'facile') === 'facile');
@@ -136,7 +136,7 @@ export function achievementsFor(s: AppState, today: ISODate): Achievement[] {
   const donePh = PHASES.find(ph => addDays(weekStart(s, ph.to), 6) < today && phaseRate(ph.from, ph.to) >= 0.6);
   const curPh = PHASES.find(ph => curW <= ph.to) || PHASES[PHASES.length - 1];
   add({ id: 'reg-phase', cat: 'regularite', tier: 'standard', title: 'Chapitre bouclé', description: 'Un chapitre du parcours terminé avec au moins 60 % des séances prévues.', criterion: 'Fin d\'une phase du programme avec au moins 60 % des séances prévues réalisées.', source: SRC.prog,
-    progress: { value: Math.max(0, Math.min(curW, curPh.to) - curPh.from + 1), target: curPh.to - curPh.from + 1, label: `Phase ${curPh.n} · ${curPh.name}` }, date: donePh ? addDays(weekStart(s, donePh.to), 6) : null, detail: donePh ? `Phase ${donePh.n} · ${donePh.name}` : undefined });
+    progress: { value: Math.max(0, Math.min(curW, curPh.to) - curPh.from + 1), target: curPh.to - curPh.from + 1, label: `Chapitre ${curPh.n}, ${curPh.name.toLowerCase()}` }, date: donePh ? addDays(weekStart(s, donePh.to), 6) : null, detail: donePh ? `Chapitre ${donePh.n}, ${donePh.name.toLowerCase()}` : undefined });
   const end = addDays(weekStart(s, s.program.weeks), 6);
   add({ id: 'reg-cycle', cat: 'regularite', tier: 'major', title: 'Premier cycle terminé', description: `${s.program.weeks} semaines, du ${fmtShort(s.user.startDate)} au ${fmtShort(end)}.`, criterion: 'Arriver au bout du cycle avec au moins 60 % des séances prévues réalisées.', source: SRC.prog,
     progress: { value: Math.max(0, Math.min(s.program.weeks, curW - 1)), target: s.program.weeks, label: `Semaine ${Math.max(1, Math.min(s.program.weeks, curW))} sur ${s.program.weeks}` }, date: end < today && phaseRate(1, s.program.weeks) >= 0.6 ? end : null });

@@ -4,7 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Bullets, Disclosure } from '@/components/guide';
 import { Sheet } from '@/components/sheet';
 import { EX_GUIDE } from '@/engine/guides';
-import { Button, Card, Coach, Gap, Input, Row, Segmented, T, Tick } from '@/components/ui';
+import { Button, Card, Coach, Gap, Input, Row, Segmented, T, Tick, SectionHeader } from '@/components/ui';
 import { adapted, bestKg, doneOn, recovery, sessionKey, strengthBlocks, suggestKg } from '@/engine/coach';
 import { fmtDay, uid } from '@/engine/dates';
 import { isOn, strengthMode, toggleCheck } from '@/engine/session';
@@ -26,7 +26,7 @@ export default function RenfoScreen() {
   const ex = (id: string): ExerciseLog => log.ex?.[id] || { kg: [], reps: [], done: [] };
   const setEx = (id: string, fn: (e: ExerciseLog) => void) => update(st => { const l = (st.strength[key] = st.strength[key] || { ex: {} }); const e = (l.ex[id] = l.ex[id] || { kg: [], reps: [], done: [] }); fn(e); });
   return (
-    <Sheet title={a.title} sub={`${fmtDay(date)} · optionnel · ${a.dur}`} footer={mode === 'x' ? undefined : <SessionFooter date={date}><Button kind="primary" block label={finished ? 'Séance terminée · revoir le bilan' : 'Terminer la séance'} onPress={finish} /></SessionFooter>}>
+    <Sheet title={a.title} sub={`${fmtDay(date)}, ${a.dur}`} footer={mode === 'x' ? undefined : <SessionFooter date={date}><Button kind="primary" block label={finished ? 'Revoir le bilan' : 'Terminer la séance'} onPress={finish} /></SessionFooter>}>
       {a.reason ? <Coach>{a.reason}</Coach> : null}
       <T v="label" style={{ marginBottom: 6 }}>Aujourd'hui je la fais</T>
       <Segmented options={[['n', 'Normale'], ['r', 'Réduite'], ['x', 'Je passe']]} value={mode} onChange={v => update(st => { st.overrides[date] = { ...(st.overrides[date] || {}), level: v === 'x' ? 'rouge' : v === 'r' ? 'orange' : 'vert' }; })} />
@@ -42,16 +42,16 @@ export default function RenfoScreen() {
             'Note la charge et les répétitions de chaque série, puis coche : c\'est ce qui permet de progresser.',
           ]} />
         </Disclosure>
-        <Card><T v="h3">Échauffement · 6–8 min</T>{WARMUP.map(w => { const on = isOn(s, date, `warm:${w.id}`); return <Row key={w.id} style={{ paddingVertical: 6 }}><Tick sizePx={28} on={on} label={w.text} onPress={() => check(`warm:${w.id}`)} /><T style={{ flex: 1 }} color={on ? c.ink2 : c.ink}>{w.text}</T></Row>; })}</Card>
+        <Card><Row between><T v="h3">Échauffement</T><T v="small" muted>6 à 8 min</T></Row>{WARMUP.map(w => { const on = isOn(s, date, `warm:${w.id}`); return <Row key={w.id} style={{ paddingVertical: 6 }}><Tick sizePx={28} on={on} label={w.text} onPress={() => check(`warm:${w.id}`)} /><T style={{ flex: 1 }} color={on ? c.ink2 : c.ink}>{w.text}</T></Row>; })}</Card>
         {blocks.map((b, bi) => (
           <View key={b.title}>
-            <T v="small" muted style={{ marginTop: space.s3, marginBottom: 6, fontWeight: '600' }}>{b.title}</T>
+            <SectionHeader title={b.title} />
             {b.leg ? <View style={{ marginBottom: 8 }}><Segmented options={LEGS} value={b.legSel!} onChange={v => update(st => { st.strength[key] = { ...(st.strength[key] || { ex: {} }), leg: v }; })} /></View> : null}
             {b.items.map((e, ii) => {
               const x = ex(e.id); const setOn = (j: number) => isOn(s, date, `set:${e.id}:${j + 1}`); const nDone = Array.from({ length: e.nSets }, (_, j) => setOn(j)).filter(Boolean).length; const full = nDone >= e.nSets; const sug = suggestKg(s, e, date); const last = bestKg(s, e.id, date);
               return (
                 <Card key={e.id} style={full ? { borderColor: c.accent } : undefined}>
-                  <Row between style={{ alignItems: 'flex-start' }}><T v="h3" style={{ flex: 1 }}>{`${b.items.length > 1 ? 'ABCDEF'[bi] + (ii + 1) + ' · ' : ''}${e.name}`}</T><T v="small" color={full ? c.accent : c.ink2} style={{ fontWeight: '600', fontVariant: ['tabular-nums'] }}>{full ? 'Fait' : `${nDone}/${e.nSets}`}</T></Row>
+                  <Row between style={{ alignItems: 'flex-start' }}><T v="h3" style={{ flex: 1 }}>{e.name}</T><T v="small" color={full ? c.accent : c.ink2} style={{ fontWeight: '600', fontVariant: ['tabular-nums'] }}>{full ? 'Fait' : `${nDone}/${e.nSets}`}</T></Row>
                   <Row gap={6} style={{ flexWrap: 'wrap', marginVertical: 8 }}>
                     <Chip hot>{`${e.nSets} × ${e.repsTxt}`}</Chip><Chip>{`RIR ${e.rirTxt}`}</Chip><Chip>{`Repos ${b.items.length > 1 ? 'en fin de tour' : e.rest}`}</Chip>{sug ? <Chip>{`Suggéré ${String(sug).replace('.', ',')} kg`}</Chip> : null}
                   </Row>

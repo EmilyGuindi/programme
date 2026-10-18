@@ -20,7 +20,7 @@ export default function ResultScreen() {
     router.back();
   }
   return (
-    <Sheet title={`Résultat · ${e.name}`} sub={fmtLong(e.date)}>
+    <Sheet title="Résultat" sub={`${e.name}, ${fmtLong(e.date).toLowerCase()}`}>
       {r?.source && r.source !== 'saisi' ? <T v="small" muted style={{ marginBottom: 12 }}>{r.source === 'montre' ? 'Pré-rempli depuis ta montre (Strava) : temps total, pauses et obstacles compris. Remplace-le par ton temps officiel si tu l\'as.' : 'Repris de la description de ton activité Strava.'}</T> : null}
       <Field label="Temps officiel" hint="h:mm:ss ou mm:ss"><Input big defaultValue={time} placeholder="59:30" onChangeText={setTime} /></Field>
       <Row><View style={{ flex: 1 }}><Field label="Dénivelé (m D+)"><Input keyboardType="number-pad" defaultValue={elev} onChangeText={setElev} /></Field></View><View style={{ flex: 1 }}><Field label="FC moyenne"><Input keyboardType="number-pad" defaultValue={hr} onChangeText={setHr} /></Field></View></Row>

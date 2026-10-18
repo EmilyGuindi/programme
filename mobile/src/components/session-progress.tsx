@@ -17,16 +17,16 @@ export function SessionProgressLine({ p, compact }: { p: SessionProgress; compac
   if (!p.total) return null;
   const finished = p.state === 'terminee' || p.state === 'terminee-adaptee';
   const head = finished ? SESSION_LABEL[p.state] : p.allChecked ? 'Tout est coché' : p.done ? `${p.units.done} sur ${p.units.total} ${p.units.label}` : 'Pas encore commencée';
-  const sets = p.items.some(x => x.parent) ? `${p.done}/${p.total} séries et étapes` : `${p.done}/${p.total}`;
+  const sets = `${p.done}/${p.total}`;
   return (
     <View accessibilityRole="progressbar" accessibilityLabel={`${head}. ${sets}${p.current ? `. En cours : ${p.current.label}` : ''}`} accessibilityValue={{ min: 0, max: p.total, now: p.done }} style={{ paddingHorizontal: compact ? 4 : 0, paddingBottom: compact ? space.s2 : 0 }}>
       <Row between><T v="small" style={{ fontWeight: '600' }} color={finished || p.allChecked ? c.accent : c.ink}>{head}</T><T v="xs" muted style={{ fontVariant: ['tabular-nums'] }}>{sets}</T></Row>
-      <View style={{ height: 4, borderRadius: 2, backgroundColor: c.line2, marginTop: 6, overflow: 'hidden' }}>
-        <Animated.View style={{ height: 4, borderRadius: 2, backgroundColor: c.accent, width: w.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />
+      <View style={{ height: 6, borderRadius: 3, backgroundColor: c.line2, marginTop: space.s2, overflow: 'hidden' }}>
+        <Animated.View style={{ height: 6, borderRadius: 3, backgroundColor: c.accent, width: w.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />
       </View>
       {!compact && !finished && p.current ? <View style={{ marginTop: space.s2, gap: 2 }}>
-        <T v="xs" muted numberOfLines={1}>{`Maintenant · ${p.current.label}`}</T>
-        {p.next ? <T v="xs" muted numberOfLines={1}>{`Ensuite · ${p.next.label}`}</T> : null}
+        <Row gap={8}><T v="xs" color={c.accent} style={{ width: 76, fontWeight: '600' }}>Maintenant</T><T v="xs" muted numberOfLines={2} style={{ flex: 1 }}>{p.current.label}</T></Row>
+        {p.next ? <Row gap={8}><T v="xs" muted style={{ width: 76, fontWeight: '600' }}>Ensuite</T><T v="xs" muted numberOfLines={2} style={{ flex: 1 }}>{p.next.label}</T></Row> : null}
       </View> : null}
     </View>
   );

@@ -4,8 +4,8 @@ import { activitiesOn, doneOn } from '@/engine/coach';
 import { DAYS_SHORT, dow, fmtShort, today } from '@/engine/dates';
 import type { Activity, AdaptedPlan } from '@/engine/types';
 import { getState, update } from '@/store/store';
-import { radius, space, useTheme } from '@/theme/tokens';
-import { Button, Row, T, Tag, Tick } from './ui';
+import { layout, radius, space, useTheme } from '@/theme/tokens';
+import { Button, Chevron, Chip, Meta, Row, T, Tag, Tick } from './ui';
 
 export const TYPE_LABEL = { box: 'Box', run: 'Running', renfo: 'Renforcement', rest: 'Repos', recup: 'Récupération', event: 'Événement' } as const;
 
@@ -29,14 +29,14 @@ export function PlanRow({ a, showDay = true }: { a: AdaptedPlan; showDay?: boole
   const s = getState(); const shown = a.replaced || a; const done = doneOn(s, a.date); const acts = activitiesOn(s, a.date);
   const isToday = a.date === today();
   const stripe = a.type === 'event' ? c.accent : shown.type === 'run' ? c.accent : shown.type === 'box' ? c.ink : shown.type === 'renfo' ? c.ink2 : 'transparent';
-  const sub = done ? acts.filter(x => !x.complementary).map(x => x.title + (x.durationMin ? ` ${Math.round(x.durationMin)} min` : '')).join(', ') : [shown === a ? a.dur : '', shown.type !== 'box' ? shown.goal : a.note].filter(Boolean).join(' · ');
+  const sub = done ? acts.filter(x => !x.complementary).map(x => x.title + (x.durationMin ? ` ${Math.round(x.durationMin)} min` : '')).join(', ') : [shown === a ? a.dur : '', shown.type !== 'box' ? shown.goal : a.note].filter(Boolean).join(', ');
   return (
     <Pressable onPress={() => (a.type === 'event' && a.event ? openPlan(a) : openDay(a.date))} accessibilityRole="button" accessibilityHint="Voir le détail du jour"
       style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, backgroundColor: a.type === 'event' ? c.accentSoft : c.surface, borderWidth: isToday ? 2 : 1, borderColor: isToday ? c.accent : c.line, borderLeftWidth: 4, borderLeftColor: stripe, borderStyle: shown.type === 'run' ? 'dashed' : 'solid', borderRadius: radius.r2, paddingVertical: space.s3, paddingHorizontal: space.s4, minHeight: 72, opacity: pressed ? 0.85 : 1 })}>
       {showDay ? <View style={{ width: 44 }}><T v="label">{DAYS_SHORT[dow(a.date)]}</T><T v="xs" muted>{fmtShort(a.date)}</T></View> : null}
       <View style={{ flex: 1, gap: 2 }}>
         <Row gap={6} style={{ flexWrap: 'wrap' }}><T v="label">{shown.title}{done ? '  ✓' : ''}</T>{a.optional && !done ? <Tag>optionnel</Tag> : null}{a.reason ? <Tag tone="accent">adaptée</Tag> : null}</Row>
-        {sub ? <T v="small" muted numberOfLines={2}>{sub}{acts.some(x => x.complementary) ? ' · + marche' : ''}</T> : null}
+        {sub ? <T v="small" muted numberOfLines={2}>{sub}{acts.some(x => x.complementary) ? ', plus une marche' : ''}</T> : null}
       </View>
       {a.hyrox && a.date >= today() ? <Button small label="Pas de HYROX" onPress={() => update(st => { st.overrides[a.date] = { ...(st.overrides[a.date] || {}), noHyrox: true }; })} /> : null}
       {a.alt && a.date >= today() ? <Button small kind="ghost" label="HYROX" onPress={() => update(st => { delete st.overrides[a.date].noHyrox; })} /> : null}
@@ -55,10 +55,14 @@ export function toggleDone(a: AdaptedPlan) {
 
 export function ActivityRow({ x }: { x: Activity }) {
   const { c } = useTheme();
-  const meta = [x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.distanceKm ? `${String(x.distanceKm).replace('.', ',')} km` : '', x.effort ? `effort ${x.effort}/10` : '', x.calories ? `${Math.round(x.calories)} kcal estimées` : ''].filter(Boolean).join(' · ');
+  const meta = [x.durationMin ? `${Math.round(x.durationMin)} min` : null, x.distanceKm ? `${String(x.distanceKm).replace('.', ',')} km` : null, x.effort ? `effort ${x.effort}/10` : null, x.calories ? `${Math.round(x.calories)} kcal` : null];
   return (
-    <Pressable onPress={() => router.push({ pathname: '/activity', params: { id: x.id } })} style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: radius.r2, padding: space.s3, paddingHorizontal: space.s4, marginBottom: space.s2 }}>
-      <Row between><View style={{ flex: 1 }}><Row gap={6}><T v="label">{x.title}</T>{x.complementary ? <Tag>complémentaire</Tag> : null}</Row>{meta ? <T v="small" muted>{meta}</T> : null}</View><T v="small" color={c.accent}>Modifier</T></Row>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${x.title}, modifier`} onPress={() => router.push({ pathname: '/activity', params: { id: x.id } })} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, backgroundColor: pressed ? c.surface2 : c.surface, borderRadius: radius.r2, padding: layout.pad, marginBottom: space.s2 })}>
+      <View style={{ flex: 1 }}>
+        <Row gap={8}><T v="label" style={{ flexShrink: 1 }}>{x.title}</T>{x.complementary ? <Chip label="complémentaire" /> : x.source === 'strava' ? <Chip label="Strava" /> : null}</Row>
+        <Meta items={meta} style={{ marginTop: 2 }} />
+      </View>
+      <Chevron />
     </Pressable>
   );
 }

@@ -6,7 +6,7 @@ import { Icon } from '@/components/icons';
 import { Wordmark } from '@/components/logo';
 import { ListGroup, ListRow, Meter, Row, Screen, T } from '@/components/ui';
 import { useTheme } from '@/theme/tokens';
-import { phaseOf, weekOf } from '@/engine/coach';
+import { phaseOf, programName, weekOf } from '@/engine/coach';
 import { DAYS_SHORT, sportDay } from '@/engine/dates';
 import { stravaStatus, useApp, useServer, useStrava, useSync } from '@/store/store';
 import { space } from '@/theme/tokens';
@@ -19,27 +19,27 @@ export default function Profile() {
   useEffect(() => { stravaStatus(); }, [sv.url, sv.key]);
   const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, sportDay()))); const ph = phaseOf(w); const pr = s.user.prefs;
   const rem = [pr.notifCheckin ? `check-in ${h(pr.checkinTime)}` : '', pr.notifWeigh ? `pesée ${DAYS_SHORT[pr.weighDay].toLowerCase()}. ${h(pr.weighTime)}` : '', pr.notifRecap !== false ? 'bilan dim.' : ''].filter(Boolean);
-  const conn = !sv.url ? 'Données sur ce téléphone uniquement' : [sync.status === 'ok' ? 'Serveur synchronisé' : sync.status === 'err' ? 'Serveur : erreur' : 'Serveur configuré', st?.connected ? 'Strava connecté' : 'Strava non connecté'].join(' · ');
+  const conn = !sv.url ? 'Données sur ce téléphone uniquement' : `${sync.status === 'ok' ? 'Serveur synchronisé' : sync.status === 'err' ? 'Erreur de synchronisation' : 'Serveur configuré'}, ${st?.connected ? 'Strava connecté' : 'Strava non connecté'}`;
   return (
     <Screen>
       <Row gap={space.s4} style={{ paddingTop: space.s5, marginBottom: space.s5 }}>
         <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: c.stage, alignItems: 'center', justifyContent: 'center' }}><T v="display" color={c.stageInk} style={{ fontSize: 30, lineHeight: 32 }}>{s.user.name.charAt(0)}</T></View>
         <View style={{ flex: 1 }}>
           <T v="title">{s.user.name}</T>
-          <T v="small" muted>{`${s.program.name} · semaine ${w} sur ${s.program.weeks}`}</T>
+          <T v="small" muted>{`Semaine ${w} sur ${s.program.weeks}, ${ph.name.toLowerCase()}`}</T>
           <View style={{ marginTop: 8 }}><Meter value={w / s.program.weeks} color={c.accent} /></View>
         </View>
       </Row>
       <ListGroup title="Mon entraînement">
-        <ListRow title="Objectifs" sub={`10 km à 5'30/km · ${String(s.user.goals.weightTarget).replace('.', ',')} kg souhaités`} left={<Icon name="target" />} onPress={() => open('goals')} />
-        <ListRow title="Programme" sub={`Phase ${ph.n} · ${ph.name}`} left={<Icon name="cycle" />} onPress={() => open('program')} />
-        <ListRow last title="Rappels" sub={rem.length ? rem.join(' · ') : 'Désactivés'} left={<Icon name="bell" />} onPress={() => open('reminders')} />
+        <ListRow title="Objectifs" sub={`10 km à 5'30/km, ${String(s.user.goals.weightTarget).replace('.', ',')} kg souhaités`} left={<Icon name="target" />} onPress={() => open('goals')} />
+        <ListRow title="Programme" sub={programName(s)} left={<Icon name="cycle" />} onPress={() => open('program')} />
+        <ListRow last title="Rappels" sub={rem.length ? rem.join(', ').replace(/^./, x => x.toUpperCase()) : 'Désactivés'} left={<Icon name="bell" />} onPress={() => open('reminders')} />
       </ListGroup>
       <ListGroup title="Connexions">
         <ListRow last title="Serveur et Strava" sub={conn} left={<Icon name="link" />} onPress={() => open('connections')} />
       </ListGroup>
       <ListGroup title="Application">
-        <ListRow title="Retours et animations" sub={[pr.haptics !== false ? 'haptique' : 'sans haptique', pr.motion === 'reduced' ? 'animations réduites' : 'animations', pr.celebrate !== false ? 'accomplissements mis en scène' : ''].filter(Boolean).join(' · ')} left={<Icon name="spark" />} onPress={() => open('feedback')} />
+        <ListRow title="Retours et animations" sub={[pr.haptics !== false ? 'haptique' : 'sans haptique', pr.motion === 'reduced' ? 'animations réduites' : 'animations', pr.celebrate !== false ? 'accomplissements mis en scène' : ''].filter(Boolean).join(', ').replace(/^./, x => x.toUpperCase())} left={<Icon name="spark" />} onPress={() => open('feedback')} />
         <ListRow title="Mes données" sub="Sauvegarde, import, préférences" left={<Icon name="data" />} onPress={() => open('data')} />
         <ListRow last title="Quoi de neuf" sub={`Version ${APP_VERSION}`} left={<Icon name="story" />} onPress={() => open('news')} />
       </ListGroup>

@@ -52,7 +52,7 @@ export default function MoveScreen() {
       footer={can.ok ? <Button kind={check?.verdict === 'warn' ? 'secondary' : 'primary'} block disabled={!to || check?.verdict === 'block'} label={!to ? 'Choisis un jour' : check?.verdict === 'block' ? 'Impossible ce jour-là' : `${check?.verdict === 'warn' ? 'Déplacer quand même' : 'Déplacer'} au ${fmtDay(to).replace(/ \d+ .*/, '')} ${parseISO(to).getDate()}`} onPress={confirm} /> : undefined}>
       {/* Séance d'origine */}
       <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s4 }}>
-        <Row gap={space.s3}><Icon name={dayIcon(a)} size={22} color={c.accent} /><View style={{ flex: 1 }}><T v="label">{p.title}</T><T v="small" muted>{[p.dur, p.goal].filter(Boolean).join(' · ')}</T></View></Row>
+        <Row gap={space.s3}><Icon name={dayIcon(a)} size={22} color={c.accent} /><View style={{ flex: 1 }}><T v="label">{p.title}</T>{p.dur ? <T v="small" muted>{p.dur}</T> : null}{p.goal ? <T v="small" muted>{p.goal}</T> : null}</View></Row>
         {p.movedFrom ? <Button small kind="ghost" style={{ alignSelf: 'flex-start', paddingHorizontal: 0, marginTop: space.s2 }} label={`Revenir au ${fmtDay(p.movedFrom)}`} onPress={() => { update(st => cancelMove(st, date)); haptic('select'); router.back(); }} /> : null}
       </View>
       {!can.ok ? <T muted>{can.why}</T> : <>

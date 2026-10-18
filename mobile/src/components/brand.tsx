@@ -2,7 +2,7 @@ import type React from 'react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, G, Line, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
-import { radius, space, useTheme } from '@/theme/tokens';
+import { layout, radius, space, useTheme } from '@/theme/tokens';
 import { Row, T } from './ui';
 import { STATUS_LABEL, type Status } from '@/engine/status';
 
@@ -27,7 +27,7 @@ export function Stage({ children, mark = false, tone = 'ink', style, glow }: { c
   // Cadrage : le symbole s'ancre en bas à droite, sa moitié gauche reste hors du bloc de texte principal.
   const scale = Math.min(2.6, Math.max(1.5, sz.h / 95)); const mw = 102 * scale, mh = 102 * scale;
   return (
-    <View onLayout={onLayout} style={[{ padding: space.s5, marginBottom: space.s3, borderRadius: radius.r3, overflow: 'hidden', backgroundColor: bg, borderWidth: tone === 'ink' ? StyleSheet.hairlineWidth : 0, borderColor: c.line }, style]}>
+    <View onLayout={onLayout} style={[{ padding: layout.padHero, marginBottom: layout.gap, borderRadius: radius.r3, overflow: 'hidden', backgroundColor: bg, borderWidth: tone === 'ink' ? StyleSheet.hairlineWidth : 0, borderColor: c.line }, style]}>
       {sz.w > 0 ? <Svg width={sz.w} height={sz.h} style={{ position: 'absolute', left: 0, top: 0 }}>
         {glow && !lime ? <><Defs><RadialGradient id="g" cx="100%" cy="0%" r="80%"><Stop offset="0" stopColor={c.accent} stopOpacity={0.16} /><Stop offset="1" stopColor={c.accent} stopOpacity={0} /></RadialGradient></Defs><Rect width={sz.w} height={sz.h} fill="url(#g)" /></> : null}
         {mark ? <G opacity={lime ? 0.09 : 0.05} transform={`translate(${sz.w - mw * 0.58},${sz.h - mh * 0.82}) scale(${scale})`}><Path d={P1} fill={lime ? '#0B0D0A' : '#F5F7F2'} transform="translate(-12,-12)" /><Path d={P2} fill={lime ? '#0B0D0A' : '#F5F7F2'} transform="translate(-12,-12)" /></G> : null}
@@ -98,7 +98,7 @@ export function EffortProfile({ km, levels }: { km: number; levels: number[] }) 
   return (
     <View>
       <Row gap={4} style={{ alignItems: 'flex-end', height: 64 }}>
-        {levels.map((l, i) => <View key={i} style={{ flex: 1, height: 14 + (l / mx) * 50, borderRadius: 3, backgroundColor: l >= 8 ? c.accent : l >= 7 ? 'rgba(77,123,255,0.65)' : 'rgba(244,242,238,0.35)' }} />)}
+        {levels.map((l, i) => <View key={i} style={{ flex: 1, height: 14 + (l / mx) * 50, borderRadius: 3, backgroundColor: l >= 8 ? c.accent : l >= 7 ? 'rgba(184,242,13,0.45)' : 'rgba(245,247,242,0.22)' }} />)}
       </Row>
       <Row between style={{ marginTop: 6 }}><T v="xs" color={c.stageInk2}>km 1</T><T v="xs" color={c.stageInk2}>{`km ${km}`}</T></Row>
     </View>
