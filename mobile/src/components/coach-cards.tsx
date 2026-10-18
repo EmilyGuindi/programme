@@ -21,13 +21,13 @@ export function CoachCardView({ card, decision, onDecide }: { card: CoachCard; d
     <Row gap={6}>{card.head.map(h => <T key={h} v="xs" muted style={{ flex: 1 }}>{h}</T>)}</Row>
     {card.rows.map((r, i) => <Row key={i} gap={6} style={{ paddingVertical: 6, borderTopWidth: 1, borderTopColor: c.line }}>{r.map((x, k) => <T key={k} v="small" style={{ flex: 1, fontVariant: ['tabular-nums'] }}>{x}</T>)}</Row>)}</View>;
   const blocked = card.issues.some(i => i.severity === 'block');
-  const actions = decision ? <T v="small" color={decision === 'accepted' ? c.ok : c.ink2} style={{ marginTop: space.s3, fontWeight: '600' }}>{decision === 'accepted' ? (card.kind === 'program' ? 'Brouillon enregistré' : 'Appliqué') : 'Refusé : rien n\'a changé'}</T>
+  const actions = decision ? <T v="small" color={decision === 'accepted' ? c.ok : c.ink2} style={{ marginTop: space.s3, fontWeight: '600' }}>{decision === 'accepted' ? (card.kind === 'program' && (card.accept || '').startsWith('Appliquer') ? 'Nouveau plan appliqué' : card.kind === 'program' ? 'Brouillon enregistré' : 'Appliqué') : 'Refusé : rien n\'a changé'}</T>
     : onDecide ? <View style={{ marginTop: space.s3, gap: space.s2 }}>
-      <Button kind="primary" block disabled={blocked} label={blocked ? 'Bloqué par les règles BYYND' : card.kind === 'program' ? 'Enregistrer le brouillon' : 'Accepter'} onPress={() => onDecide(true)} />
+      <Button kind="primary" block disabled={blocked} label={blocked ? 'Bloqué par les règles BYYND' : card.kind === 'program' ? card.accept || 'Enregistrer le brouillon' : 'Accepter'} onPress={() => onDecide(true)} />
       <Row gap={space.s2}>{card.modify ? <Button style={{ flex: 1 }} label="Modifier" onPress={() => router.push(card.modify as any)} /> : null}<Button style={{ flex: 1 }} kind="ghost" label="Refuser" onPress={() => onDecide(false)} /></Row>
     </View> : null;
   if (card.kind === 'program') return <View style={box}>
-    <T v="overline" color={c.accent}>Brouillon de programme</T><T v="label" style={{ marginTop: 2 }}>{card.title}</T><T v="small" muted>{card.summary}</T>
+    <T v="overline" color={c.accent}>{(card.accept || '').startsWith('Appliquer') ? 'Changement de plan' : 'Brouillon de programme'}</T><T v="label" style={{ marginTop: 2 }}>{card.title}</T><T v="small" muted>{card.summary}</T>
     <T v="xs" muted style={{ marginTop: space.s3 }}>Phases</T><T v="small">{card.phases.join(' → ')}</T>
     <T v="xs" muted style={{ marginTop: space.s3 }}>Semaine 1</T>{card.week.map(w => <Row key={w.label} gap={space.s3}><T v="small" muted style={{ width: 36 }}>{w.label}</T><T v="small" style={{ flex: 1 }}>{w.detail}</T></Row>)}
     <IssueList issues={card.issues} />{actions}

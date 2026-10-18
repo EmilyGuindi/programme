@@ -14,7 +14,11 @@ Appuie tes conseils sur ces données et cite les chiffres utiles. Si une informa
 Pour modifier quelque chose, utilise uniquement les outils fournis : ils créent une PROPOSITION que l'utilisatrice accepte ou refuse dans l'app. Ne prétends jamais avoir modifié quoi que ce soit. Après une proposition, résume en une phrase ce qu'elle change.
 - apply_workout_reschedule : déplacer une séance de course ou de renforcement à un autre jour (dates AAAA-MM-JJ).
 - adapt_today : alléger la séance d'un jour (easy = même séance en facile, reduced = moins de volume, rest = repos ou récupération active).
-- create_program_draft : préparer un brouillon de programme. spec.days liste les 7 jours du lundi au dimanche avec : crossfit, hyrox, run (séance de course clé), long (sortie longue facile), renfo, recup, rest. spec.focus : 10k, 5k, endurance ou maintien. spec.deloadEvery : semaine allégée toutes les n semaines (3 à 5). Facultatifs : start (un lundi futur), weeks (4 à 30), name, spec.goalEventId (id d'une compétition du contexte), spec.tests, spec.constraints.
+- change_current_program : CHANGER LE PLAN EN COURS à partir d'un lundi à venir (par défaut programme.prochainLundi). À utiliser quand elle veut modifier son programme actuel (jours, objectif, allègement). spec ne contient que ce qui change, le reste est repris du programme actuel. Les semaines passées et l'historique sont gardés.
+- update_program_draft : modifier un BROUILLON existant (id dans autresProgrammes, statut draft) : spec partielle, start, weeks, name.
+- confirm_program_activation : proposer d'activer un brouillon existant (id). L'app montre les conséquences avant.
+- create_program_draft : préparer un brouillon de programme pour PLUS TARD (le prochain cycle). spec.days liste les 7 jours du lundi au dimanche avec : crossfit, hyrox, run (séance de course clé), long (sortie longue facile), renfo, recup, rest. spec.focus : 10k, 5k, endurance ou maintien. spec.deloadEvery : semaine allégée toutes les n semaines (3 à 5). Facultatifs : start (un lundi futur), weeks (4 à 30), name, spec.goalEventId (id d'une compétition du contexte), spec.tests, spec.constraints.
+Quand elle a défini un changement avec toi, propose-le avec l'outil adapté pour qu'elle puisse l'appliquer en un geste : ne te contente pas de le décrire.
 Les règles de sécurité de BYYND vérifient chaque proposition ; si elle est refusée, l'utilisatrice le verra.
 
 Santé : pour une douleur vive, persistante ou inhabituelle, conseille d'arrêter et de consulter. Tu ne remplaces pas un avis médical.
@@ -34,6 +38,16 @@ export const TOOLS = [
         focus: { type: "string", enum: ["10k", "5k", "endurance", "maintien"] }, deloadEvery: { type: "integer" }, goalEventId: { type: "string" }, tests: { type: "boolean" }, constraints: { type: "string" } },
         required: ["days", "focus"], additionalProperties: false },
       start: { type: "string", description: "Lundi de début, AAAA-MM-JJ" }, weeks: { type: "integer" }, name: { type: "string" } }, required: ["spec"], additionalProperties: false } },
+  { name: "change_current_program", description: "Propose de changer le programme en cours à partir d'un lundi à venir (historique gardé). L'utilisatrice confirme dans l'app.",
+    input_schema: { type: "object", properties: { spec: { type: "object", properties: {
+        days: { type: "array", items: { type: "string", enum: ["crossfit", "hyrox", "run", "long", "renfo", "recup", "rest"] }, minItems: 7, maxItems: 7 },
+        focus: { type: "string", enum: ["10k", "5k", "endurance", "maintien"] }, deloadEvery: { type: "integer" }, goalEventId: { type: "string" }, tests: { type: "boolean" }, constraints: { type: "string" } }, additionalProperties: false }, from: { type: "string", description: "Lundi à venir, AAAA-MM-JJ" }, weeks: { type: "integer" }, name: { type: "string" } }, required: ["spec"], additionalProperties: false } },
+  { name: "update_program_draft", description: "Propose de modifier un brouillon de programme existant. L'utilisatrice confirme dans l'app.",
+    input_schema: { type: "object", properties: { id: { type: "string" }, spec: { type: "object", properties: {
+        days: { type: "array", items: { type: "string", enum: ["crossfit", "hyrox", "run", "long", "renfo", "recup", "rest"] }, minItems: 7, maxItems: 7 },
+        focus: { type: "string", enum: ["10k", "5k", "endurance", "maintien"] }, deloadEvery: { type: "integer" }, goalEventId: { type: "string" }, tests: { type: "boolean" }, constraints: { type: "string" } }, additionalProperties: false }, start: { type: "string" }, weeks: { type: "integer" }, name: { type: "string" } }, required: ["id"], additionalProperties: false } },
+  { name: "confirm_program_activation", description: "Propose d'activer un brouillon existant. L'app montre les conséquences et demande confirmation.",
+    input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"], additionalProperties: false } },
 ];
 
 /** Quota quotidien par personne : borne le coût même en cas d'usage anormal. */

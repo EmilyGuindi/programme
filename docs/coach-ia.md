@@ -10,7 +10,7 @@
   - Exclus : titres d'activités, notes libres, e-mail, jetons.
   - Taille : environ 1 500 jetons.
 - **Actions** :
-  - Claude ne dispose que de trois outils de **proposition** : `apply_workout_reschedule`, `adapt_today`, `create_program_draft`.
+  - Claude ne dispose que d'outils de **proposition** : `apply_workout_reschedule`, `adapt_today`, `create_program_draft`, `update_program_draft`, `change_current_program` (nouveau plan à partir d'un lundi à venir, l'actuel s'arrête la veille avec son historique), `confirm_program_activation`.
   - Le téléphone revalide chaque proposition avec les règles BYYND (`checkCall` / `prepare`) et l'affiche en carte.
   - Rien n'est appliqué sans « Accepter » ; à l'exécution, les contrôles sont refaits.
 - **Secours** : si Claude est hors ligne, sans crédit, au-delà du quota ou non configuré, le coach à règles répond et le dit.
