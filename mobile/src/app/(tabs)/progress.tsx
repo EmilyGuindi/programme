@@ -4,7 +4,8 @@ import { Icon } from '@/components/icons';
 import { Badge, Kicker, Stage, StepMark } from '@/components/brand';
 import { Insights } from '@/components/insights';
 import { energy } from '@/engine/energy';
-import { Chevron, Chip, ListGroup, ListRow, Row, Screen, SectionHeader, T } from '@/components/ui';
+import { Chevron, Chip, ListGroup, ListRow, Panel, Row, Screen, SectionHeader, T } from '@/components/ui';
+import { programEnd } from '@/engine/generator';
 import { adapted, doneOn, weekOf, weekStart, weightSeries } from '@/engine/coach';
 import { addDays, daysBetween, fmtShort, mmss, sportDay } from '@/engine/dates';
 import { bodyJourney, chapters, runningJourney, weekSuccess } from '@/engine/journey';
@@ -41,11 +42,14 @@ export default function Progress() {
           <T v="title" color={c.accentInk} style={{ marginTop: space.s2 }}>{ch.name}</T>
           <T v="small" color={c.accentInk} style={{ marginTop: 2, opacity: 0.8 }}>{ch.goal}</T>
           <CycleTrack chapters={chs} week={w} total={s.program.weeks} />
-          <Row between style={{ marginTop: space.s2 }}><T v="xs" color={c.accentInk} style={{ opacity: 0.7 }}>{fmtShort(s.user.startDate)}</T><T v="xs" color={c.accentInk} style={{ opacity: 0.7 }}>{fmtShort(addDays(weekStart(s, s.program.weeks), 6))}</T></Row>
+          <Row between style={{ marginTop: space.s2 }}><T v="xs" color={c.accentInk} style={{ opacity: 0.7 }}>{fmtShort(s.program.template === 'custom' ? s.program.start : s.user.startDate)}</T><T v="xs" color={c.accentInk} style={{ opacity: 0.7 }}>{fmtShort(addDays(weekStart(s, s.program.weeks), 6))}</T></Row>
           <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(11,13,10,0.18)', marginVertical: space.s3 }} />
           <Row gap={space.s2}><Icon name="flag" size={16} color={c.accentInk} filled={!!ch.milestone.reached} /><T v="small" color={c.accentInk} style={{ flex: 1, fontWeight: '600' }} numberOfLines={2}>{ch.milestone.reached ? `Jalon atteint : ${ch.milestone.title.toLowerCase()}` : `Jalon du chapitre : ${ch.milestone.title.toLowerCase()}`}</T><Chevron color={c.accentInk} /></Row>
         </Stage>
       </Pressable>
+
+      <NextProgram />
+      <Panel onPress={() => router.push({ pathname: '/coach', params: { context: 'progress' } })} accessibilityLabel="Demander au coach"><T v="label">Demander au coach</T><T v="small" muted>Allure, dernières sorties, prochain objectif.</T></Panel>
 
       {/* 2 · Accomplissements : les réussites d'abord, un seul prochain jalon */}
       <UnlockMoment />
@@ -109,4 +113,18 @@ function Preview({ icon, label, value, unit, sub, onPress }: { icon: 'run' | 'bo
       <T v="xs" muted style={{ marginTop: space.s1 }}>{sub}</T>
     </Pressable>
   );
+}
+
+/** Suite du parcours : le prochain programme s'il est prêt, sinon l'invitation à le préparer (plus visible en fin de cycle). */
+function NextProgram() {
+  const s = useApp(); const { c } = useTheme(); const today = sportDay();
+  const next = (s.programs || []).filter(p => p.status === 'planned' && p.start > today).sort((a, b) => a.start.localeCompare(b.start))[0];
+  const drafts = (s.programs || []).filter(p => p.status === 'draft').length;
+  const left = daysBetween(today, programEnd(s.program));
+  if (next) return <Panel onPress={() => router.push({ pathname: '/programs/[id]', params: { id: next.id } })} accessibilityLabel={`Prochain programme : ${next.name}`}>
+    <T v="xs" muted>Prochain programme</T><T v="label">{next.name}</T><T v="small" muted>{`À partir du ${fmtShort(next.start)}, ${next.weeks} semaines`}</T></Panel>;
+  return <Panel onPress={() => router.push(drafts ? '/programs' : '/programs/new')} accessibilityLabel="Préparer mon prochain programme" style={left <= 28 ? { borderWidth: 1, borderColor: c.accent } : undefined}>
+    <T v="label">Préparer mon prochain programme</T>
+    <T v="small" muted>{drafts ? `${drafts} brouillon${drafts > 1 ? 's' : ''} en cours. Bilan de ce cycle, puis seulement ce qui change.` : left > 0 ? `Ce cycle se termine dans ${left} jours. Bilan, puis seulement ce qui change.` : 'Bilan de ton dernier cycle, puis seulement ce qui change.'}</T>
+  </Panel>;
 }

@@ -2,14 +2,14 @@
   "expo": {
     "name": "BYYND",
     "slug": "byynd",
-    "version": "3.3.0",
+    "version": "5.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "byynd",
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.emilyguindi.byynd",
-      "versionCode": 9,
+      "versionCode": 10,
       "adaptiveIcon": {
         "backgroundColor": "#0B0D0A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

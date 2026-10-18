@@ -36,7 +36,7 @@ export default function Today() {
   const d = sportDay(); const a = adapted(s, d); const r = recovery(s, d); const acts = activitiesOn(s, d);
   const shown = a.replaced || a; const done = doneOn(s, d); const isEvent = a.type === 'event';
   const finished = isEvent && !!a.event && eventState(s, a.event, d) === 'done';
-  const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, d))); const ph = phaseOf(w); const ws = weekStart(s, w);
+  const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, d))); const ph = phaseOf(w, s.program); const ws = weekStart(s, w);
   const wk = weekSummary(s, ws, d); const sp = sessionProgress(s, d, d); const dur = a.replaced ? a.replaced.dur : a.dur;
   const wActs = s.activities.filter(x => x.date >= ws && x.date <= d && !x.complementary);
   const wMin = Math.round(wActs.reduce((t, x) => t + (x.durationMin || 0), 0)); const wKm = wActs.filter(x => x.type === 'running' || x.type === 'course').reduce((t, x) => t + (x.distanceKm || 0), 0);
@@ -58,7 +58,7 @@ export default function Today() {
     : shown.type === 'recup' ? { label: sp.done ? 'Reprendre la routine' : 'Ouvrir la routine', go: () => openDay(d) }
     : shown.type === 'box' ? { label: 'Marquer comme fait', go: () => markDone(a) }
     : null;
-  const links = [checkinFirst && primary ? { label: primary.label, go: primary.go } : null, !isEvent && !done && shown.type !== 'rest' ? { label: 'Adapter avec le coach', go: () => router.push('/coach') } : null,
+  const links = [checkinFirst && primary ? { label: primary.label, go: primary.go } : null, !isEvent && !done && shown.type !== 'rest' ? { label: 'Adapter avec le coach', go: () => router.push({ pathname: '/coach', params: { context: 'today' } }) } : null,
     done || shown.type === 'rest' ? { label: 'Détail du jour', go: () => openDay(d) } : null].filter(Boolean).slice(0, 2) as { label: string; go: () => void }[];
 
   return (
@@ -132,7 +132,7 @@ export default function Today() {
 
       {/* Raccourcis */}
       <Row gap={layout.gap} style={{ marginBottom: layout.gap }}>
-        {([['coach', 'Coach', () => router.push('/coach')], ['plus', 'Ajouter', () => router.push({ pathname: '/activity', params: { date: d } })]] as [IconName, string, () => void][]).map(([ic, l, go]) => (
+        {([['coach', 'Coach', () => router.push({ pathname: '/coach', params: { context: 'today' } })], ['plus', 'Ajouter', () => router.push({ pathname: '/activity', params: { date: d } })]] as [IconName, string, () => void][]).map(([ic, l, go]) => (
           <Pressable key={l} accessibilityRole="button" accessibilityLabel={l} onPress={go} style={({ pressed }) => ({ flex: 1, height: 52, borderRadius: radius.r2, backgroundColor: pressed ? c.surface2 : c.surface, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' })}>
             <Icon name={ic} size={18} color={c.ink} /><T v="label">{l}</T>
           </Pressable>))}

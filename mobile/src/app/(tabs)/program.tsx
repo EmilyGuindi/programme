@@ -24,7 +24,7 @@ type Kind = 'pre' | 'event' | 'done' | 'rest' | 'optional' | 'planned';
 export default function Program() {
   const s = useApp(); const { c } = useTheme(); const today = sportDay(); const { date: asked } = useLocalSearchParams<{ date?: string }>();
   const [w, setW] = useState(Math.min(s.program.weeks, Math.max(1, weekOf(s, today))));
-  const ws = weekStart(s, w); const ph = phaseOf(w);
+  const ws = weekStart(s, w); const ph = phaseOf(w, s.program);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => adapted(s, addDays(ws, i))), [s, ws]);
   const inWeek = (d: string) => d >= ws && d <= addDays(ws, 6);
   const [sel, setSel] = useState<string>(inWeek(today) ? today : days.find(a => a.date >= s.user.startDate)?.date || ws);
@@ -48,6 +48,10 @@ export default function Program() {
             <NavBtn label="Semaine précédente" glyph="‹" disabled={w <= 1} onPress={() => goWeek(w - 1)} />
             <NavBtn label="Semaine suivante" glyph="›" disabled={w >= s.program.weeks} onPress={() => goWeek(w + 1)} />
           </Row>
+        </Row>
+        <Row gap={space.s4} style={{ marginTop: space.s1 }}>
+          <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="Mes programmes" onPress={() => router.push('/programs')} />
+          <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="Demander au coach" onPress={() => router.push({ pathname: '/coach', params: { context: 'program' } })} />
         </Row>
       </View>
 

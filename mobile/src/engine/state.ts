@@ -10,7 +10,7 @@ export const DEFAULT_STATE: AppState = {
     prefs: { checkinTime: '07:00', weighDay: 0, weighTime: '07:30', notifCheckin: true, notifWeigh: true, cycleOptIn: false },
     ref: { k10: null, k5: null },
   },
-  program: { id: 'c1', name: 'Cycle 1, octobre à février', start: '2026-10-12', weeks: 20 },
+  program: { id: 'c1', name: 'Cycle 1, octobre à février', start: '2026-10-12', weeks: 20, template: 'cycle1', status: 'active' },
   events: [], activities: [], checkins: {}, measurements: [], strength: {}, runs: {}, overrides: {}, migrated: false,
 };
 
@@ -27,8 +27,13 @@ export function seed(s: AppState): AppState {
 }
 
 /** Reprend un état venant de l'ancienne app (v1 PWA ou tracker de programme). */
+/** Le cycle d'origine reçoit son modèle (calendrier d'octobre à février) ; la liste des programmes existe toujours. */
+function upgradePrograms(s: AppState) {
+  if (!s.program.template) s.program.template = s.program.id === 'c1' || !s.program.spec ? 'cycle1' : 'custom';
+  if (!s.programs) s.programs = [];
+}
 export function migrate(raw: any): AppState {
-  if (raw && raw.v >= 1 && Array.isArray(raw.activities)) { const s = seed({ ...structuredClone(DEFAULT_STATE), ...raw, v: 3 }); upgradeChecks(s); return s; }
+  if (raw && raw.v >= 1 && Array.isArray(raw.activities)) { const s = seed({ ...structuredClone(DEFAULT_STATE), ...raw, v: 3 }); upgradeChecks(s); upgradePrograms(s); return s; }
   const s = structuredClone(DEFAULT_STATE);
   if (raw && raw.weeks) {
     const keys = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
@@ -49,5 +54,5 @@ export function migrate(raw: any): AppState {
     if (raw.k5) s.user.ref.k5 = raw.k5;
   }
   s.migrated = true;
-  const out = seed(s); upgradeChecks(out); return out;
+  const out = seed(s); upgradeChecks(out); upgradePrograms(out); return out;
 }

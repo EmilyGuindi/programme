@@ -1,4 +1,4 @@
-import { adapted, comparable, countsFor, DELOAD, mandatoryStats, PHASES, runsList, trend, weekOf, weekStart, weightSeries } from './coach';
+import { adapted, comparable, countsFor, deloadOf, mandatoryStats, phasesOf, runsList, trend, weekOf, weekStart, weightSeries } from './coach';
 import { achievementsFor } from './achievements';
 import { addDays, fmtShort, mmss, num } from './dates';
 import { newRecords, recordsUntil } from './records';
@@ -16,7 +16,7 @@ export function weekSuccess(s: AppState, today: ISODate) {
     for (let i = 0; i < 7; i++) { const d = addDays(weekStart(s, w), i), a = adapted(s, d); const v = s.activities.filter(x => x.date === d && countsFor(x, d));
       if (a.mandatory && !a.skipped) { planned++; if (v.length) done++; }
       easy += v.filter(x => x.type === 'running' && (x.kind || 'facile') === 'facile').length; }
-    out.push({ w, ok: planned > 0 && done / planned >= (DELOAD.includes(w) ? 0.6 : 0.75), easyRuns: easy });
+    out.push({ w, ok: planned > 0 && done / planned >= (deloadOf(s).includes(w) ? 0.6 : 0.75), easyRuns: easy });
   }
   return out;
 }
@@ -88,7 +88,7 @@ export interface Chapter {
 }
 export function chapters(s: AppState, today: ISODate, ach = achievementsFor(s, today)): Chapter[] {
   const cur = weekOf(s, today); const ws = weekSuccess(s, today);
-  return PHASES.map(ph => {
+  return phasesOf(s.program).map(ph => {
     const end = addDays(weekStart(s, ph.to), 6); const state: ChapterState = end < today ? 'terminé' : cur >= ph.from ? 'en cours' : 'à venir';
     const weeks = Array.from({ length: ph.to - ph.from + 1 }, (_, i) => { const w = ph.from + i; const r = ws.find(x => x.w === w); return { w, state: (r ? (r.ok ? 'ok' : 'ko') : w === cur ? 'current' : 'next') as Chapter['weeks'][number]['state'] }; });
     const m = ach.find(a => a.id === ph.milestone);

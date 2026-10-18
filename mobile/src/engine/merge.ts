@@ -1,4 +1,4 @@
-import type { AppState, ExerciseLog, Mark, StrengthLog } from './types';
+import type { AppState, ExerciseLog, Mark, ProgramDef, StrengthLog } from './types';
 
 /** Fusion de deux versions de l'état (téléphone / serveur) : rien n'est perdu.
  *  Listes fusionnées par identifiant, journaux champ par champ, coches élément par élément (la plus récente gagne).
@@ -30,6 +30,23 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
   out.recapsSeen = maxMap(local.recapsSeen, remote.recapsSeen);
   out.celebrated = maxMap(local.celebrated, remote.celebrated);
   out.proposals = { ...(remote.proposals || {}), ...(local.proposals || {}) };
+  // Profil et programme : pas d'horodatage par champ, la version modifiée le plus récemment l'emporte (jamais un état de départ).
+  if ((remote.updatedAt || 0) > (local.updatedAt || 0) && remote.user) out.user = structuredClone(remote.user);
+  // Programmes : union par identifiant, la version modifiée le plus récemment gagne. Le programme en cours est le plus avancé des deux (le relais ne recule jamais).
+  const progs = new Map<string, ProgramDef>();
+  for (const p of [remote.program, ...(remote.programs || []), local.program, ...(local.programs || [])]) { if (!p) continue; const o = progs.get(p.id); if (!o || (p.updatedAt || 0) > (o.updatedAt || 0)) progs.set(p.id, p); }
+  const curId = (remote.program && remote.program.start > local.program.start ? remote.program : local.program).id;
+  out.program = structuredClone(progs.get(curId)!); out.programs = structuredClone([...progs.values()].filter(p => p.id !== curId));
+  // Coach : conversations et décisions réunies (la version la plus récente d'une conversation gagne), permissions du côté le plus récent.
+  if (local.coach || remote.coach) {
+    const l = local.coach || { perms: {}, threads: [], decisions: [] }, r = remote.coach || { perms: {}, threads: [], decisions: [] };
+    const th = new Map(r.threads.map(t => [t.id, t])); l.threads.forEach(t => { const o = th.get(t.id); if (!o || t.at >= o.at) th.set(t.id, t); });
+    const dec = new Map(r.decisions.map(d => [d.id, d])); l.decisions.forEach(d => dec.set(d.id, d));
+    const newer = (remote.updatedAt || 0) > (local.updatedAt || 0) ? r : l;
+    const cleared = Math.max(l.clearedAt || 0, r.clearedAt || 0); const gone = (id: string) => !!out.deleted?.[`thread:${id}`];
+    out.coach = structuredClone({ perms: newer.perms, provider: newer.provider, clearedAt: cleared || undefined,
+      threads: [...th.values()].filter(t => t.at > cleared && !gone(t.id)).sort((a, b) => b.at - a.at).slice(0, 20), decisions: [...dec.values()].filter(d => d.at > cleared).sort((a, b) => b.at - a.at).slice(0, 100) });
+  }
   out.user.ref = { k10: min(local.user.ref.k10, remote.user?.ref?.k10), k5: min(local.user.ref.k5, remote.user?.ref?.k5) };
   out.strava = { since: Math.max(local.strava?.since || 0, remote.strava?.since || 0), fillAt: Math.max(local.strava?.fillAt || 0, remote.strava?.fillAt || 0) || undefined };
   out.updatedAt = Math.max(local.updatedAt || 0, remote.updatedAt || 0);

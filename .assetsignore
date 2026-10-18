@@ -1,6 +1,10 @@
+.git/
+.wrangler/
+node_modules/
 worker/
 .github/
 wrangler.toml
 .assetsignore
 README.md
 mobile/
+docs/

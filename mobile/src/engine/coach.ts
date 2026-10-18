@@ -1,6 +1,7 @@
 import { addDays, daysBetween, dow, mmss, num, parseISO } from './dates';
 import { EX, FIXED, RECUP, RUN, WED, type Exercise } from './library';
-import type { Activity, AdaptedPlan, AppState, ISODate, Level, Measurement, Plan, RunSession, SportEvent, Zone } from './types';
+import { customDay, deloadWeeks, phasesFor, programEnd } from './generator';
+import type { Activity, AdaptedPlan, AppState, ISODate, Level, Measurement, Plan, ProgramDef, RunSession, SportEvent, Zone } from './types';
 
 /* ---------- calendrier ---------- */
 export const DELOAD = [12];
@@ -18,7 +19,21 @@ export const PHASES: Phase[] = [
   { n: 'D', name: 'Spécifique 10 km', from: 16, to: 19, goal: 'Rapprocher ton allure de course de l\'objectif 10 km.', milestone: 'run-pr-10k' },
   { n: 'E', name: 'Bilan', from: 20, to: 20, goal: 'Mesurer le chemin parcouru et préparer la suite.', milestone: 'reg-cycle' },
 ];
-export function phaseOf(w: number): Phase { return PHASES.find(p => w <= p.to) || PHASES[PHASES.length - 1]; }
+/** Phases d'un programme : celles du cycle d'origine, ou celles générées pour un programme personnalisé. */
+export const phasesOf = (p?: ProgramDef): Phase[] => !p || p.template !== 'custom' ? PHASES : phasesFor(p).map(x => ({ n: x.n, name: x.name, from: x.from, to: x.to, goal: x.goal, milestone: x.milestone }));
+export function phaseOf(w: number, p?: ProgramDef): Phase { const ph = phasesOf(p); return ph.find(x => w <= x.to) || ph[ph.length - 1]; }
+/** Semaines allégées du programme en cours (ou de celui donné). */
+export const deloadOf = (s: AppState, p: ProgramDef = s.program) => deloadWeeks(p);
+/** Tous les programmes engagés (hors brouillons et archives), du plus ancien au plus récent. */
+export const committed = (s: AppState): ProgramDef[] => [s.program, ...(s.programs || []).filter(p => p.status === 'done' || p.status === 'planned' || p.status === 'active')].sort((a, b) => a.start.localeCompare(b.start));
+/** Programme qui couvre une date : le plus récent démarré à cette date. Hors de tout programme : celui en cours. */
+export function programAt(s: AppState, d: ISODate): ProgramDef {
+  let best: ProgramDef | null = null;
+  for (const p of committed(s)) if (p.start <= d && d <= programEnd(p) && (!best || p.start > best.start)) best = p;
+  return best || s.program;
+}
+/** Vue de l'état centrée sur un autre programme (calculs de semaines, phases, bilans). */
+export const withProgram = (s: AppState, p: ProgramDef): AppState => p === s.program ? s : { ...s, program: p };
 export const eventOn = (s: AppState, d: ISODate) => s.events.find(e => e.date === d && e.status !== 'annulé');
 export const activitiesOn = (s: AppState, d: ISODate) => s.activities.filter(a => a.date === d);
 /** Une séance est validée par une activité non complémentaire ce jour-là. Les promenades ne valident rien. */
@@ -26,7 +41,7 @@ export const countsFor = (a: Activity, d: ISODate) => !a.complementary && (a.sou
 export const doneOn = (s: AppState, d: ISODate) => activitiesOn(s, d).some(a => countsFor(a, d));
 
 function satRun(s: AppState, w: number, wed: RunSession): RunSession {
-  const ph = phaseOf(w);
+  const ph = phaseOf(w, s.program);
   const nearEvent = s.events.some(e => e.status !== 'annulé' && e.date >= weekStart(s, w) && e.date <= addDays(weekStart(s, w), 13));
   if (wed.kind === 'qualite' || wed.kind === 'test' || nearEvent || ph.n === 'A') return RUN.easy(ph.n === 'A' ? 40 : 45, 4);
   if (ph.n === 'B') return RUN.easy(50, 6);
@@ -35,21 +50,22 @@ function satRun(s: AppState, w: number, wed: RunSession): RunSession {
 
 /* ---------- replanification ---------- */
 type MoveMap = { to: Map<ISODate, ISODate>; from: Map<ISODate, ISODate> };
-const moveCache = new WeakMap<object, { events: unknown; start: ISODate; m: MoveMap }>();
+const moveCache = new WeakMap<object, { events: unknown; start: ISODate; programs: unknown; m: MoveMap }>();
 /** Correspondance origine ↔ nouvelle date : déplacements ponctuels, puis jours habituels changés (sans écraser un déplacement ponctuel). */
 export function moveMap(s: AppState): MoveMap {
   const r = s.reschedule; const m: MoveMap = { to: new Map(), from: new Map() };
   if (!r) return m;
-  const c = moveCache.get(r); if (c && c.events === s.events && c.start === s.program.start) return c.m;
+  const c = moveCache.get(r); if (c && c.events === s.events && c.start === s.program.start && c.programs === s.programs) return c.m;
   for (const [o, x] of Object.entries(r.moves || {})) if (x.to !== o && !m.from.has(x.to)) { m.to.set(o, x.to); m.from.set(x.to, o); }
-  for (const h of r.habits || []) for (let w = 1; w <= s.program.weeks; w++) {
-    const o = addDays(weekStart(s, w), h.fromDow), t = addDays(weekStart(s, w), h.toDow);
+  for (const h of r.habits || []) for (const P of committed(s)) for (let w = 1; w <= P.weeks; w++) {
+    const ws = addDays(P.start, (w - 1) * 7); const o = addDays(ws, h.fromDow), t = addDays(ws, h.toDow);
+    if (o > programEnd(P)) break;
     if (o < h.since || m.to.has(o) || m.from.has(t) || m.to.has(t) || r.moves?.[o]) continue;
     const b = basePlan(s, o), bt = basePlan(s, t);
     if (b.type !== h.type || bt.type === 'event' || (bt.type !== 'rest' && bt.type !== h.type)) continue;
     m.to.set(o, t); m.from.set(t, o);
   }
-  moveCache.set(r, { events: s.events, start: s.program.start, m }); return m;
+  moveCache.set(r, { events: s.events, start: s.program.start, programs: s.programs, m }); return m;
 }
 /** Identifiant de la séance affichée un jour donné : sa date d'origine (les coches, charges et notes y restent attachées). */
 export const sessionKey = (s: AppState, d: ISODate) => moveMap(s).from.get(d) ?? d;
@@ -63,17 +79,19 @@ export function planFor(s: AppState, d: ISODate): Plan {
   return basePlan(s, d);
 }
 const DAYS_LONG = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
-export function basePlan(s: AppState, d: ISODate): Plan {
+export function basePlan(s0: AppState, d: ISODate): Plan {
+  const P = programAt(s0, d); const s = withProgram(s0, P);
   const w = weekOf(s, d), i = dow(d), ov = s.overrides[d] || {}, ev = eventOn(s, d);
   let p: Omit<Plan, 'optional' | 'mandatory' | 'date' | 'week'> & Partial<Plan>;
   const fx = FIXED[d];
   if (ev) p = { type: 'event', title: ev.name, dur: ev.distanceKm ? `${ev.distanceKm} km` : '', goal: ev.goal, event: ev };
   else if (d < s.user.startDate) p = { type: 'rest', title: 'Avant le début', goal: 'Le programme a commencé le 14 octobre.' };
-  else if (fx) {
+  else if (fx && P.template !== 'custom') {
     if (fx.type === 'run') p = { type: 'run', title: fx.run.title, dur: fx.run.dur, goal: fx.run.goal, run: fx.run, note: fx.note, optional: !!fx.optional };
     else if (fx.type === 'renfo') p = strength(true);
     else p = { ...fx };
-  } else if (w < 1 || w > s.program.weeks) p = { type: 'rest', title: 'Hors cycle' };
+  } else if (w < 1 || d > programEnd(P)) p = { type: 'rest', title: 'Hors cycle', goal: 'Aucun programme ce jour-là. Prépare le suivant depuis Progression.' };
+  else if (P.template === 'custom') p = customDay(P, d, s.events, !!ov.noHyrox);
   else {
     const run = WED[w] || RUN.easy(40);
     if (i === 0 || i === 4) p = { type: 'rest', title: 'Repos', goal: i === 4 ? 'Repos avant le week-end.' : 'Repos complet. Une marche est bienvenue.' };
@@ -83,7 +101,7 @@ export function basePlan(s: AppState, d: ISODate): Plan {
       if (ov.noHyrox) { const r = satRun(s, w, run); p = { type: 'run', title: r.title, dur: r.dur, goal: r.goal, run: r, alt: true, note: 'Remplace le cours HYROX' }; }
       else p = { type: 'box', title: 'Cours HYROX', hyrox: true };
     } else p = strength(false);
-    if (DELOAD.includes(w) && p.type === 'renfo') p.note = 'Semaine allégée';
+    if (deloadWeeks(P).includes(w) && p.type === 'renfo') p.note = 'Semaine allégée';
   }
   const optional = p.type === 'renfo' || p.type === 'recup' || !!p.optional;
   const mandatory = !optional && (p.type === 'box' || p.type === 'run' || p.type === 'event');

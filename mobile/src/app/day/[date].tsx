@@ -4,7 +4,7 @@ import { Bullets, MoveList } from '@/components/guide';
 import { ActivityRow, markDone, TYPE_LABEL } from '@/components/plan-row';
 import { Sheet } from '@/components/sheet';
 import { Button, Card, Chip, Coach, Gap, Row, SectionHeader, T, Tag } from '@/components/ui';
-import { activitiesOn, adapted, doneOn, phaseOf } from '@/engine/coach';
+import { activitiesOn, adapted, doneOn, phaseOf, programAt } from '@/engine/coach';
 import { fmtDay, fmtLong, sportDay } from '@/engine/dates';
 import { movable } from '@/engine/reschedule';
 import { BOX_GUIDE, MOBILITY, REST_GUIDE } from '@/engine/guides';
@@ -17,7 +17,7 @@ import { space, useTheme } from '@/theme/tokens';
 export default function DayScreen() {
   const { date } = useLocalSearchParams<{ date: string }>(); const s = useApp(); const { c } = useTheme();
   const a = adapted(s, date); const shown = a.replaced || a; const acts = activitiesOn(s, date); const done = doneOn(s, date);
-  const ph = phaseOf(a.week); const sp = useSession(date);
+  const ph = phaseOf(a.week, programAt(s, date)); const sp = useSession(date);
   return (
     <Sheet title={fmtLong(date)} sub={`Semaine ${a.week}, ${ph.name.toLowerCase()}`}>
       <Row gap={6} style={{ flexWrap: 'wrap' }}><Chip label={TYPE_LABEL[shown.type]} />{done ? <Chip tone="accent" label="Faite" /> : a.reason ? <Chip tone="warn" label="Adaptée" /> : a.optional ? <Chip label="Optionnelle" /> : null}</Row>

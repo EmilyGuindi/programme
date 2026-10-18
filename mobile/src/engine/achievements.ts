@@ -1,4 +1,5 @@
-import { adapted, comparable, countsFor, DELOAD, doneOn, PHASES, recovery, weekOf, weekStart } from './coach';
+import { adapted, committed, comparable, countsFor, deloadOf, doneOn, phasesOf, recovery, weekOf, weekStart, withProgram } from './coach';
+import { programEnd } from './generator';
 import { addDays, fmtShort, mmss, num } from './dates';
 import { EX } from './library';
 import { weekSuccess } from './journey';
@@ -19,6 +20,7 @@ export type AchStatus = 'locked' | 'progress' | 'unlocked';
 export interface Achievement {
   id: string; cat: AchCat; title: string; description: string; criterion: string; tier: 'standard' | 'major';
   status: AchStatus; progress: { value: number; target: number; label: string } | null; source: string; date: ISODate | null; detail?: string;
+  /** global : vaut pour toute ton histoire ; program : propre à un programme. Jamais remis à zéro. */ scope?: 'global' | 'program'; programId?: string;
 }
 
 const plausible = (a: Activity) => !!(a.distanceKm && a.durationMin) && (a.durationMin! * 60) / a.distanceKm! >= 180 && (a.durationMin! * 60) / a.distanceKm! <= 720;
@@ -37,7 +39,27 @@ function timedEfforts(s: AppState, until: ISODate, lo: number, hi: number) {
 /** Première amélioration d'un meilleur temps précédent (au moins 1 s). */
 function firstImprovement<T extends { date: ISODate; t: number }>(xs: T[]) { let best = Infinity; for (const x of xs) { if (best !== Infinity && x.t < best - 1) return x; best = Math.min(best, x.t); } return null; }
 
+/** Accomplissements sur toute l'histoire : chaque programme engagé est évalué, un accomplissement gagné dans un cycle reste acquis
+ *  (date la plus ancienne). « Premier cycle terminé » reste celui du premier programme ; chaque programme suivant terminé a le sien. */
 export function achievementsFor(s: AppState, today: ISODate): Achievement[] {
+  const progs = committed(s).filter(p => p.start <= today);
+  if (progs.length <= 1) return achievementsIn(s, today).map(a => ({ ...a, scope: a.scope || 'global' }));
+  const cur = achievementsIn(s, today); const views = progs.filter(p => p.id !== s.program.id).map(p => achievementsIn(withProgram(s, p), [programEnd(p), today].sort()[0]));
+  const first = progs[0];
+  const out: Achievement[] = cur.map(a => {
+    if (a.id === 'reg-cycle') return { ...(first.id === s.program.id ? a : achievementsIn(withProgram(s, first), [programEnd(first), today].sort()[0]).find(x => x.id === a.id)!), scope: 'global' as const };
+    const earlier = views.map(v => v.find(x => x.id === a.id)).filter((x): x is Achievement => !!x?.date).sort((x, y) => x.date!.localeCompare(y.date!))[0];
+    return { ...(earlier && (!a.date || earlier.date! < a.date) ? earlier : a), scope: 'global' as const };
+  });
+  for (const p of progs.slice(1)) {
+    const end = programEnd(p); const sum = p.summary || null; const finished = end < today;
+    out.push({ id: `cycle-${p.id}`, cat: 'regularite', tier: 'major', title: `${p.name} terminé`, description: `${p.weeks} semaines, du ${fmtShort(p.start)} au ${fmtShort(end)}.`, criterion: 'Arriver au bout de ce programme.', source: SRC.prog,
+      status: finished ? 'unlocked' : 'progress', progress: finished ? null : { value: Math.max(0, Math.min(p.weeks, Math.floor((Date.parse(today) - Date.parse(p.start)) / 6048e5))), target: p.weeks, label: `${p.name}` },
+      date: finished ? end : null, detail: sum ? `${sum.done} séances sur ${sum.planned}` : undefined, scope: 'program', programId: p.id });
+  }
+  return out;
+}
+function achievementsIn(s: AppState, today: ISODate): Achievement[] {
   const out: Achievement[] = [];
   const add = (a: Omit<Achievement, 'status'> & { status?: AchStatus }) => out.push({ ...a, status: a.date ? 'unlocked' : a.progress && a.progress.value > 0 ? 'progress' : 'locked' });
   const runs = runsOf(s, today).filter(plausible);
@@ -133,6 +155,7 @@ export function achievementsFor(s: AppState, today: ISODate): Achievement[] {
   add({ id: 'reg-10w', cat: 'regularite', tier: 'standard', title: '10 semaines réussies', description: 'Pas forcément d\'affilée : la régularité se mesure sur la durée.', criterion: '10 semaines réussies dans le cycle.', source: SRC.prog,
     progress: { value: Math.min(10, okW.length), target: 10, label: `${Math.min(10, okW.length)} sur 10` }, date: w10 ? addDays(weekStart(s, w10.w), 6) : null });
   const phaseRate = (from: number, to: number) => { let p = 0, d = 0; for (let x = weekStart(s, from); x <= addDays(weekStart(s, to), 6); x = addDays(x, 1)) { const a = adapted(s, x); if (a.mandatory && !a.skipped) { p++; if (doneOn(s, x)) d++; } } return p ? d / p : 0; };
+  const PHASES = phasesOf(s.program);
   const donePh = PHASES.find(ph => addDays(weekStart(s, ph.to), 6) < today && phaseRate(ph.from, ph.to) >= 0.6);
   const curPh = PHASES.find(ph => curW <= ph.to) || PHASES[PHASES.length - 1];
   add({ id: 'reg-phase', cat: 'regularite', tier: 'standard', title: 'Chapitre bouclé', description: 'Un chapitre du parcours terminé avec au moins 60 % des séances prévues.', criterion: 'Fin d\'une phase du programme avec au moins 60 % des séances prévues réalisées.', source: SRC.prog,
@@ -145,8 +168,8 @@ export function achievementsFor(s: AppState, today: ISODate): Achievement[] {
     progress: { value: Math.min(20, cis.length), target: 20, label: `${Math.min(20, cis.length)} sur 20` }, date: cis[19] || null });
 
   /* ---------- Récupération ---------- */
-  const deload = ws.find(w => DELOAD.includes(w.w) && w.ok);
-  add({ id: 'rec-deload', cat: 'recuperation', tier: 'standard', title: 'Semaine allégée respectée', description: 'Lever le pied quand c\'est prévu, c\'est aussi s\'entraîner.', criterion: `Semaine allégée (semaine ${DELOAD.join(', ')}) suivie : au moins 60 % des séances prévues, sans en rajouter.`, source: SRC.prog,
+  const deload = ws.find(w => deloadOf(s).includes(w.w) && w.ok);
+  add({ id: 'rec-deload', cat: 'recuperation', tier: 'standard', title: 'Semaine allégée respectée', description: 'Lever le pied quand c\'est prévu, c\'est aussi s\'entraîner.', criterion: `Semaine allégée (semaine ${deloadOf(s).join(', ') || '—'}) suivie : au moins 60 % des séances prévues, sans en rajouter.`, source: SRC.prog,
     progress: null, date: deload ? addDays(weekStart(s, deload.w), 6) : null });
   let adaptDay: ISODate | null = null;
   for (let d = s.user.startDate; d <= today && !adaptDay; d = addDays(d, 1)) {

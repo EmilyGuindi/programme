@@ -1,4 +1,4 @@
-import { activitiesOn, adapted, countsFor, DELOAD, phaseOf, weekOf, weekStart } from './coach';
+import { activitiesOn, adapted, countsFor, deloadOf, phaseOf, weekOf, weekStart } from './coach';
 import { addDays, DAYS_SHORT, dow } from './dates';
 import { newRecords } from './records';
 import { insights } from './insights';
@@ -25,7 +25,7 @@ export function buildRecap(s: AppState, w: number): Recap {
       if (x.effort) hard.push({ t: `${x.title} (${DAYS_SHORT[dow(d)]})`, e: x.effort });
     });
   }
-  const deload = DELOAD.includes(w); const ratio = planned ? done / planned : 0;
+  const deload = deloadOf(s).includes(w); const ratio = planned ? done / planned : 0;
   const success = deload ? ratio >= 0.6 : ratio >= 0.75;
   cards.push({ kind: 'numbers', title: deload ? 'Semaine allégée' : `Semaine ${w}`, big: `${done}/${planned}`, bigLabel: 'séances prévues réalisées',
     lines: [optional ? `+ ${optional} séance${optional > 1 ? 's' : ''} optionnelle${optional > 1 ? 's' : ''}` : '', minutes ? `${Math.round(minutes)} min d'entraînement` : '', km ? `${String(Math.round(km * 10) / 10).replace('.', ',')} km courus` : '',
@@ -58,10 +58,10 @@ export function buildRecap(s: AppState, w: number): Recap {
     const good = cis.filter(c => c!.sleep === 'bien' || c!.sleep === 'tres').length; const avgE = cis.reduce((t, c) => t + (c!.energy || 0), 0) / cis.length;
     cards.push({ kind: 'recovery', title: 'Ta récupération', lines: [`${cis.length} check-ins cette semaine.`, `${good} nuit${good > 1 ? 's' : ''} notée${good > 1 ? 's' : ''} bonne${good > 1 ? 's' : ''} ou très bonne${good > 1 ? 's' : ''}.`, `Énergie moyenne : ${avgE.toFixed(1).replace('.', ',')} sur 5.`] });
   }
-  const nf = addDays(to, 1); const ph = phaseOf(w + 1); const next: string[] = [];
+  const nf = addDays(to, 1); const ph = phaseOf(w + 1, s.program); const next: string[] = [];
   for (let i = 0; i < 7; i++) { const d = addDays(nf, i), a = adapted(s, d); if (a.type === 'event' || (a.type === 'run' && a.run && a.run.kind !== 'facile') || (a.type !== 'rest' && a.mandatory && i === 2)) next.push(`${DAYS_SHORT[dow(d)]}. ${(a.replaced || a).title}`); }
   const nm = nextMilestone(s, to);
-  if (w < s.program.weeks) cards.push({ kind: 'next', title: 'La semaine prochaine', lines: [`Chapitre ${ph.n}, ${ph.name.toLowerCase()}${DELOAD.includes(w + 1) ? ', semaine allégée' : ''}`, ...next, ...(nm ? [`Prochain objectif : ${nm.title.toLowerCase()} (${nm.progress!.label.toLowerCase()})`] : [])] });
+  if (w < s.program.weeks) cards.push({ kind: 'next', title: 'La semaine prochaine', lines: [`Chapitre ${ph.n}, ${ph.name.toLowerCase()}${deloadOf(s).includes(w + 1) ? ', semaine allégée' : ''}`, ...next, ...(nm ? [`Prochain objectif : ${nm.title.toLowerCase()} (${nm.progress!.label.toLowerCase()})`] : [])] });
   return { week: w, from, to, cards, success };
 }
 /** Bilans disponibles : semaines terminées, plus la semaine en cours à partir du dimanche 18 h. */

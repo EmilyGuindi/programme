@@ -68,8 +68,12 @@ export interface AppState {
     prefs: { checkinTime: string; weighDay: number; weighTime: string; notifCheckin: boolean; notifWeigh: boolean; cycleOptIn: boolean; notifRecap?: boolean;
       /** Retours haptiques (défaut : activés). */ haptics?: boolean; /** Animations : celles du système, ou réduites dans BYYND. */ motion?: 'system' | 'reduced'; /** Mettre en scène les accomplissements débloqués (défaut : oui). */ celebrate?: boolean };
     ref: { k10: number | null; k5: number | null };
+    /** Contraintes durables (import du profil), reprises à la création d'un programme. */ constraints?: string;
   };
-  program: { id: string; name: string; start: ISODate; weeks: number };
+  /** Programme en cours (ou le dernier, ou le prochain si aucun n'est en cours). Les autres sont dans `programs`. */
+  program: ProgramDef;
+  /** Programmes passés, à venir, brouillons et archivés. L'historique n'est jamais effacé. */
+  programs?: ProgramDef[];
   events: SportEvent[]; activities: Activity[]; checkins: Record<ISODate, CheckIn>; measurements: Measurement[];
   strength: Record<ISODate, StrengthLog>; runs: Record<ISODate, RunLog>; overrides: Record<ISODate, Override>;
   migrated: boolean;
@@ -89,6 +93,8 @@ export interface AppState {
   reschedule?: Reschedule;
   /** Accomplissements déjà mis en scène (id → date) : l'animation de déverrouillage n'est jouée qu'une fois. */
   celebrated?: Record<string, number>;
+  /** Coach Studio : permissions, conversations, décisions. */
+  coach?: CoachMemory;
 }
 
 export interface Reschedule {
@@ -104,3 +110,55 @@ export interface Plan {
   /** Séance déplacée : date d'origine (identifiant de la séance) ou nouvelle date pour le jour quitté. */ movedFrom?: ISODate; movedTo?: ISODate;
 }
 export interface AdaptedPlan extends Plan { level: Level; reason: string | null; replaced?: { type: 'recup'; title: string; goal: string; dur?: string } }
+
+/* ---------- Programmes successifs ---------- */
+export type ProgramStatus = 'draft' | 'planned' | 'active' | 'done' | 'archived';
+/** Contenu d'un jour type. */
+export type Slot = 'crossfit' | 'hyrox' | 'run' | 'long' | 'renfo' | 'recup' | 'rest';
+export type RunFocus = '10k' | '5k' | 'endurance' | 'maintien';
+export interface ProgramPhase { n: string; name: string; from: number; to: number; goal: string; milestone: string; kind?: 'base' | 'dev' | 'spec' | 'taper' | 'bilan' }
+/** Description d'un programme personnalisé : c'est tout ce que l'assistant ou l'utilisatrice fournit. Le calendrier en est déduit par BYYND. */
+export interface ProgramSpec {
+  /** Jour de la semaine (0 = lundi) → contenu type. */
+  days: Slot[];
+  focus: RunFocus;
+  /** Semaine allégée toutes les n semaines (0 : aucune). */
+  deloadEvery: number;
+  /** Compétition objectif (identifiant d'événement), pour l'affûtage. */
+  goalEventId?: string | null;
+  /** Contraintes libres, affichées et gardées en mémoire (jamais interprétées comme des ordres). */
+  constraints?: string;
+  /** Tests chronométrés prévus. */
+  tests?: boolean;
+}
+export interface ProgramSummary { planned: number; done: number; rate: number; km: number; runs: number; records: number; weightDelta: number | null; pace: { first: number | null; last: number | null }; at: number }
+export interface ProgramDef {
+  id: string; name: string; start: ISODate; weeks: number;
+  status?: ProgramStatus;
+  /** cycle1 : le calendrier d'origine (octobre à février). custom : généré depuis `spec`. */
+  template?: 'cycle1' | 'custom';
+  spec?: ProgramSpec;
+  phases?: ProgramPhase[];
+  /** Fin anticipée (un nouveau programme a démarré avant la fin prévue). */
+  end?: ISODate;
+  goal?: string;
+  summary?: ProgramSummary;
+  basedOn?: string;
+  createdAt?: number; updatedAt?: number; activatedAt?: number;
+}
+
+/* ---------- Coach Studio ---------- */
+/** Catégories de données que le coach peut lire. Chacune se révoque séparément. */
+export type DataScope = 'programs' | 'history' | 'strava' | 'recovery' | 'body' | 'sensitive';
+export interface ToolCall { name: string; args: Record<string, unknown> }
+/** Cartes structurées : des données affichées par des composants natifs, jamais du HTML ni du code. */
+export type CoachCard =
+  | { kind: 'facts'; id: string; title: string; items: string[] }
+  | { kind: 'week'; id: string; title: string; days: { date: ISODate; label: string; title: string; changed?: boolean }[] }
+  | { kind: 'compare'; id: string; title: string; head: string[]; rows: string[][] }
+  | { kind: 'action'; id: string; title: string; summary: string; consequences: string[]; issues: { severity: 'block' | 'warn' | 'info' | 'ok'; text: string }[]; call: ToolCall; modify?: { pathname: string; params: Record<string, string> } }
+  | { kind: 'program'; id: string; title: string; summary: string; phases: string[]; week: { label: string; detail: string }[]; issues: { severity: 'block' | 'warn' | 'info' | 'ok'; text: string }[]; call: ToolCall; modify?: { pathname: string; params: Record<string, string> } };
+export interface CoachMsg { id: string; role: 'user' | 'coach'; at: number; text: string; cards?: CoachCard[]; scopes?: DataScope[]; tools?: string[]; decisions?: Record<string, 'accepted' | 'refused'> }
+export interface CoachThread { id: string; title: string; at: number; messages: CoachMsg[] }
+export interface CoachDecision { id: string; at: number; text: string; outcome: 'accepted' | 'refused' }
+export interface CoachMemory { perms: Partial<Record<DataScope, boolean>>; threads: CoachThread[]; decisions: CoachDecision[]; provider?: 'local' | 'chatgpt'; /** « Tout oublier » : rien d'antérieur ne revient par la synchro. */ clearedAt?: number }
