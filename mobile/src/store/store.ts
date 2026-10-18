@@ -33,9 +33,11 @@ export async function loadStore() {
     if (raw) { const before = JSON.parse(raw); state = migrate(before); if (before.v !== state.v) persist(); }
     const sv = await AsyncStorage.getItem(SERVER_KEY);
     if (sv) server = { ...server, ...JSON.parse(sv) };
-    // Migration : l'ancienne version gardait la clé en clair ; elle passe dans le stockage sécurisé.
-    if (server.key) { await secureSet('byynd-key', server.key); saveServerMeta(); }
-    server.key = (await secureGet('byynd-key')) || server.key || '';
+    // Migration : l'ancienne version gardait la clé en clair ; elle passe dans le stockage sécurisé,
+    // et la copie en clair n'est retirée qu'une fois la clé relue depuis le stockage sécurisé (sinon on la garde : perdre la synchro serait pire).
+    const plain = server.key;
+    if (plain) { await secureSet('byynd-key', plain); if ((await secureGet('byynd-key')) === plain) saveServerMeta(); else keepPlainKey = true; }
+    server.key = (await secureGet('byynd-key')) || plain || '';
     server.session = (await secureGet('byynd-session')) || undefined;
     if (!server.url) server.url = DEFAULT_URL;
   } catch {}
@@ -76,7 +78,9 @@ export const useSync = () => useSyncExternalStore(cb => { listeners.add(cb); ret
 export const useServer = () => useSyncExternalStore(cb => { listeners.add(cb); return () => listeners.delete(cb); }, () => server);
 
 /* ---------- synchronisation avec le Worker (lot 2) ---------- */
-function saveServerMeta() { const { key: _k, session: _s, ...meta } = server; AsyncStorage.setItem(SERVER_KEY, JSON.stringify(meta)).catch(() => {}); }
+/** Stockage sécurisé défaillant sur cet appareil : la clé reste aussi dans le stockage local de l'app (comportement d'avant la 5.0). */
+let keepPlainKey = false;
+function saveServerMeta() { const { key: _k, session: _s, ...meta } = server; AsyncStorage.setItem(SERVER_KEY, JSON.stringify(keepPlainKey && server.key ? { ...meta, key: server.key } : meta)).catch(() => {}); }
 export function setServer(next: Partial<Server>) {
   server = { ...server, ...next }; emit();
   if ('key' in next) { if (next.key) secureSet('byynd-key', next.key); else secureDel('byynd-key'); }
@@ -87,6 +91,8 @@ const base = () => server.url.replace(/\/$/, '');
 const configured = () => !!server.url && !!(server.session || server.key);
 export const hasAccount = () => !!server.session;
 export const canSync = () => configured();
+/** Pourquoi la synchro n'est pas possible (affiché par le coach). */
+export const syncBlocker = () => !server.url ? 'adresse du serveur manquante' : !(server.session || server.key) ? 'aucune clé de synchronisation ni connexion Google sur ce téléphone' : null;
 const setSync = (s: SyncStatus) => { sync = { lastOk: sync.lastOk, ...s, ...(s.status === 'ok' ? { lastOk: s.at } : {}) }; emit(); };
 /** Appel authentifié : session du compte en priorité, clé historique sinon. Une session refusée est oubliée (reconnexion demandée). */
 export async function api(path: string, init: RequestInit = {}) {
