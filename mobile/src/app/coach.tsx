@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, View } from 'react-native';
-import { ask, appendMessages, decide, memory, providerFor, threadById } from '@/ai/studio';
+import { ask, appendMessages, decide, ensureMemory, memory, providerFor, threadById } from '@/ai/studio';
 import { SUGGESTIONS } from '@/ai/local';
 import { setupRemoteCoach } from '@/ai/remote';
 import { useDictation } from '@/ai/voice';
@@ -86,6 +86,11 @@ export default function CoachStudio() {
     <Sheet title="Coach" sub={prov.id === 'claude' ? 'Claude, avec tes données BYYND' : `${prov.name}, règles locales`} footer={composer} scrollEndKey={msgs.length + (busy ? 1 : 0)}>
       <Row gap={space.s2} style={{ marginBottom: space.s4, flexWrap: 'wrap' }}>
         {threadId ? <Button small label="Nouvelle conversation" onPress={() => { setThreadId(null); setNote(''); }} /> : null}
+        {s.coach?.provider === 'local' ? <View style={{ width: '100%', backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s3, gap: space.s2 }}>
+          <T v="small" style={{ fontWeight: '700' }}>Mode règles locales</T>
+          <T v="small" muted>Ce coach simple ne comprend que quelques phrases et ne lit pas les photos. Claude comprend tout, avec tes données.</T>
+          <Button small kind="primary" style={{ alignSelf: 'flex-start' }} label="Passer à Claude" onPress={() => { update(st => { ensureMemory(st).provider = 'claude'; }); haptic('select'); }} />
+        </View> : null}
         {prov.id !== 'claude' && s.coach?.provider !== 'local' ? <View style={{ width: '100%', backgroundColor: c.warnSoft, borderRadius: radius.r2, padding: space.s3 }}><T v="small" color={c.warn} style={{ fontWeight: '700' }}>Claude n'est pas actif</T><T v="small">{remoteDetail()}</T></View> : null}
         <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label={`Historique et données${memory(s).threads.length ? ` (${memory(s).threads.length})` : ''}`} onPress={() => router.push('/coach-settings')} />
       </Row>
