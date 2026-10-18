@@ -2,7 +2,9 @@
 
 ## Claude (actif dès que la clé est configurée)
 
-- **Modèle** : Claude Haiku (`claude-haiku-5-5`), appelé par le Worker (`worker/coach.js`) avec le SDK officiel `@anthropic-ai/sdk`. Effort « low » pour des réponses rapides.
+- **Modèle** : au choix dans les réglages, Claude Haiku (`claude-haiku-5-5`, effort medium) ou Claude Sonnet (`claude-sonnet-5-5`, effort low).
+  - Sonnet passe par l'API beta avec `fallbacks: "default"` : en cas de refus d'un filtre de sécurité, la requête est relancée automatiquement sur un modèle de repli.
+  - Haiku reste le modèle par défaut, appelé par le Worker (`worker/coach.js`) avec le SDK officiel `@anthropic-ai/sdk`. Effort « low » pour des réponses rapides.
 - **Clé** : secret GitHub `ANTHROPIC_API_KEY`, poussé vers le Worker au déploiement. Elle n'est jamais sur le téléphone ni dans le dépôt.
 - **Accès** : réservé à une personne authentifiée (session Google ou clé historique). Quota de 60 messages par jour et par personne, réglable avec le secret `COACH_DAILY_LIMIT`.
 - **Données envoyées** : `coachContext()` (`mobile/src/engine/tools.ts`), filtré par les permissions du coach.
@@ -13,6 +15,7 @@
   - Claude ne dispose que d'outils de **proposition** : `apply_workout_reschedule`, `adapt_today`, `create_program_draft`, `update_program_draft`, `change_current_program` (nouveau plan à partir d'un lundi à venir, l'actuel s'arrête la veille avec son historique), `confirm_program_activation`.
   - Le téléphone revalide chaque proposition avec les règles BYYND (`checkCall` / `prepare`) et l'affiche en carte.
   - Rien n'est appliqué sans « Accepter » ; à l'exécution, les contrôles sont refaits.
+- **Mémoire** : outil `remember`. Les faits durables (compétitions, standards, préférences) sont enregistrés dans `coach.notes`, 40 au plus, renvoyés dans le contexte, visibles et supprimables ; une suppression reste valable après synchronisation.
 - **Pièces jointes** : photo (galerie, compressée en JPEG), PDF ou fichier texte (txt, md, csv, json, gpx, tcx), 3 au maximum par message.
   - Le Worker contrôle les types, la taille (image ≤ 3,9 Mo et PDF ≤ 4,1 Mo en base64, 8 Mo au total) et la forme du base64.
   - Les fichiers sont transmis comme données : images et PDF en blocs natifs, texte encadré.

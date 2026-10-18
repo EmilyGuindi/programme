@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import type { CoachCard } from '@/engine/types';
-import { radius, space, useTheme } from '@/theme/tokens';
+import { font, radius, space, useTheme } from '@/theme/tokens';
 import { Button, Row, T } from './ui';
 
 type Sev = 'block' | 'warn' | 'info' | 'ok';
@@ -37,4 +37,20 @@ export function CoachCardView({ card, decision, onDecide }: { card: CoachCard; d
     {card.consequences.length ? <View style={{ marginTop: 6, gap: 2 }}>{card.consequences.map((x, i) => <T key={i} v="small" muted={i > 0}>{x}</T>)}</View> : null}
     {card.issues.length ? <IssueList issues={card.issues} /> : null}{actions}
   </View>;
+}
+
+/** Texte du coach avec une mise en forme minimale : **gras**, listes « - » ou « 1. », titres « # » rendus en gras.
+ *  Analyse maison en composants natifs : aucun HTML ni Markdown n'est interprété par un moteur de rendu. */
+export function RichText({ text }: { text: string }) {
+  const { c } = useTheme();
+  const inline = (s: string, key: string) => s.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((p, i) =>
+    p.startsWith('**') && p.endsWith('**') ? <Text key={`${key}-${i}`} style={{ fontFamily: font.semibold, color: c.ink }}>{p.slice(2, -2)}</Text> : <Text key={`${key}-${i}`}>{p.replace(/\*\*/g, '')}</Text>);
+  const lines = text.replace(/\r/g, '').split('\n');
+  return <View style={{ gap: 4 }}>{lines.map((raw, i) => {
+    const l = raw.trimEnd(); if (!l.trim()) return <View key={i} style={{ height: 4 }} />;
+    const h = l.match(/^#{1,4}\s+(.*)$/); if (h) return <T key={i} v="label">{h[1].replace(/\*\*/g, '')}</T>;
+    const b = l.match(/^\s*(?:[-•*]|(\d+)[.)])\s+(.*)$/);
+    if (b) return <Row key={i} gap={8} style={{ alignItems: 'flex-start', paddingLeft: /^\s{2,}/.test(l) ? 16 : 0 }}><T color={c.accent} style={{ minWidth: 14 }}>{b[1] ? `${b[1]}.` : '•'}</T><T style={{ flex: 1 }}>{inline(b[2], `l${i}`)}</T></Row>;
+    return <T key={i}>{inline(l, `l${i}`)}</T>;
+  })}</View>;
 }

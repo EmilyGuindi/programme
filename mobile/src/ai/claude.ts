@@ -40,16 +40,18 @@ export function makeClaudeProvider(send: Transport): CoachProvider {
       const fallback = async (why: string) => { const r = await localProvider.respond(input, ctx); return { ...r, text: `(${why} : réponse du coach à règles${ctx.attachments?.length ? ', qui ne lit pas les pièces jointes' : ''}.) ${r.text}` }; };
       let res;
       const attachments = (ctx.attachments || []).map(a => a.kind === 'image' ? { kind: 'image', mediaType: a.mediaType, data: a.data, name: a.name } : a.kind === 'pdf' ? { kind: 'pdf', data: a.data, name: a.name } : { kind: 'text', text: a.text, name: a.name });
-      try { res = await send({ messages: [...historyText(ctx.history), { role: 'user', text: input.slice(0, 2000) || 'Regarde la pièce jointe.' }], context: coachContext(ctx.state as any, ctx.today), attachments }); }
+      try { res = await send({ messages: [...historyText(ctx.history), { role: 'user', text: input.slice(0, 2000) || 'Regarde la pièce jointe.' }], context: coachContext(ctx.state as any, ctx.today), attachments, model: (ctx.state as any).coach?.model === 'sonnet' ? 'sonnet' : 'haiku' }); }
       catch { return fallback('Hors ligne'); }
       if (res.status !== 200) { if (res.data?.error === 'coach_not_configured') setClaudeAvailability(false); return fallback(ERR[res.data?.error] || `erreur ${res.status}`); }
-      const cards: CoachCard[] = []; const notes: string[] = [];
-      for (const call of (Array.isArray(res.data.calls) ? res.data.calls : []).slice(0, 3)) {
+      const cards: CoachCard[] = []; const notes: string[] = []; const memo: string[] = [];
+      for (const call of (Array.isArray(res.data.calls) ? res.data.calls : []).slice(0, 6)) {
+        if (call?.name === 'remember') { const f = typeof call.args?.fact === 'string' ? call.args.fact.replace(/\s+/g, ' ').trim().slice(0, 240) : ''; if (f) memo.push(f); continue; }
+        if (cards.length >= 3) continue;
         const c = ctx.propose({ name: String(call?.name), args: call?.args && typeof call.args === 'object' ? call.args : {} });
         if ('error' in c) notes.push(`Proposition écartée par les règles BYYND : ${c.error}`); else cards.push(c);
       }
       const text = [String(res.data.text || '').trim() || (cards.length ? 'Voici ma proposition.' : '…'), ...notes].join('\n\n');
-      return { text: res.data.truncated ? `${text}\n\n(Réponse coupée : repose ta question plus précisément.)` : text, cards };
+      return { text: res.data.truncated ? `${text}\n\n(Réponse coupée : repose ta question plus précisément.)` : text, cards, memo: memo.slice(0, 5) };
     },
   };
 }

@@ -13,7 +13,7 @@ export interface CoachContext {
   /** Pièces jointes du message en cours (photo, PDF, texte). */
   attachments?: readonly import('./attachments').Attachment[];
 }
-export interface CoachReply { text: string; cards: CoachCard[]; suggestions?: string[] }
+export interface CoachReply { text: string; cards: CoachCard[]; suggestions?: string[]; memo?: string[] }
 export interface ProviderStatus { available: boolean; label: string; detail: string; blockers?: string[] }
 export interface CoachProvider { id: 'local' | 'chatgpt' | 'claude'; name: string; status(): ProviderStatus; respond(input: string, ctx: CoachContext): Promise<CoachReply> }
 export type { DataScope };

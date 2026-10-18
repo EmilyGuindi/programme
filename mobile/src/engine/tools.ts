@@ -201,6 +201,7 @@ export function coachContext(s: AppState, today: ISODate): Record<string, unknow
     out.recuperation = [today, addDays(today, -1)].map(d => { const r = recovery(s, d); return { date: d, niveau: r.level, raisons: r.reasons }; });
     out.checkins = Object.keys(s.checkins).filter(k => k >= addDays(today, -7) && k <= today).sort().map(k => { const c = s.checkins[k]; return { date: k, sommeil: c.sleep, energie: c.energy, courbatures: c.soreness, douleur: c.pain === 'oui' ? 'oui' : 'non', motivation: c.motivation }; });
   }
+  const notes = (s.coach?.notes || []).map(n => n.text); if (notes.length) out.notesRetenues = notes;
   if (p.body) out.poids = s.measurements.filter(m => m.weight).sort((a, b) => a.date.localeCompare(b.date)).slice(-6).map(m => ({ date: m.date, kg: m.weight }));
   return JSON.parse(JSON.stringify(out)); // retire les champs vides
 }

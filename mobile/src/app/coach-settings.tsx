@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Alert, View } from 'react-native';
-import { deleteThread, ensureMemory, forgetAll, memory, setPerm } from '@/ai/studio';
+import { deleteNote, deleteThread, ensureMemory, forgetAll, memory, setPerm } from '@/ai/studio';
 import { localProvider } from '@/ai/local';
 import { setupRemoteCoach } from '@/ai/remote';
 import { providerFor } from '@/ai/studio';
@@ -32,6 +32,10 @@ export default function CoachSettings() {
   return (
     <Sheet title="Coach : mémoire et données" sub="Tu gardes la main">
       <View style={{ marginBottom: space.s3 }}><Segmented options={[['claude', 'Claude'], ['local', 'Règles locales']]} value={pref} onChange={v => update(st => { ensureMemory(st).provider = v as 'claude' | 'local'; })} /></View>
+      {pref === 'claude' ? <View style={{ marginBottom: space.s3 }}>
+        <Segmented options={[['haiku', 'Haiku, rapide'], ['sonnet', 'Sonnet, plus fin']]} value={s.coach?.model === 'sonnet' ? 'sonnet' : 'haiku'} onChange={v => update(st => { ensureMemory(st).model = v as 'haiku' | 'sonnet'; })} />
+        <T v="xs" muted style={{ marginTop: 6 }}>{s.coach?.model === 'sonnet' ? 'Sonnet : raisonnement plus fin pour les plans et la nutrition. Environ 1 à 2 centimes par message.' : 'Haiku : réponses rapides. Environ 0,1 centime par message.'}</T>
+      </View> : null}
       <ListGroup title="Assistant">
         <ListRow chevron={false} title="Claude (Haiku)" sub={cur.id === 'claude' ? 'Conversation libre avec tes données BYYND, via ton serveur. Propose des changements, tu valides.' : pref === 'claude' ? 'Pas disponible pour l\'instant : le coach à règles répond.' : 'Désactivé : le coach à règles répond.'}
           right={<Chip tone={cur.id === 'claude' ? 'accent' : 'neutral'} label={cur.id === 'claude' ? 'Actif' : pref === 'claude' ? 'Indisponible' : 'Désactivé'} />} />
@@ -47,6 +51,11 @@ export default function CoachSettings() {
         <T v="small" muted>{`Avec ces réglages : ${Object.keys(ctx).filter(k => k !== 'aujourdhui').map(k => ({ programme: 'programme et phase', objectifs: 'objectifs', planning: 'séances des 7 derniers et 14 prochains jours', competitions: 'compétitions', autresProgrammes: 'autres programmes', activitesRecentes: 'activités des 4 dernières semaines (chiffres seulement)', records: 'records', allures: 'allures', recuperation: 'récupération', checkins: 'check-ins de la semaine', poids: 'dernières pesées' } as Record<string, string>)[k] || k).join(', ') || 'rien'}. Jamais de jeton, de clé, d'adresse e-mail, de note libre ni de titre d'activité. Par défaut, Anthropic n'utilise pas les données envoyées par l'API pour entraîner ses modèles.`}</T>
       </View>
 
+      <ListGroup title="Ce que le coach retient">
+        {(m.notes || []).length ? [...(m.notes || [])].reverse().map((n, i, a) => <ListRow key={n.id} last={i === a.length - 1} chevron={false} title={n.text} sub={when(n.at)}
+          right={<Button small kind="ghost" label="Oublier" onPress={() => update(st => deleteNote(st, n.id))} />} />)
+          : <ListRow last chevron={false} title="Rien pour l'instant" sub="Le coach retient tes infos durables : compétitions, standards, charges, préférences alimentaires…" />}
+      </ListGroup>
       <ListGroup title="Conversations">
         {m.threads.length ? m.threads.map((t, i) => <ListRow key={t.id} last={i === m.threads.length - 1} title={t.title} sub={`${t.messages.length} messages, ${when(t.at)}`}
           onPress={() => Alert.alert(t.title, undefined, [{ text: 'Annuler', style: 'cancel' }, { text: 'Supprimer', style: 'destructive', onPress: () => update(st => deleteThread(st, t.id)) }, { text: 'Ouvrir', onPress: () => router.replace({ pathname: '/coach', params: { thread: t.id } }) }])} />)
@@ -56,7 +65,7 @@ export default function CoachSettings() {
         {m.decisions.length ? m.decisions.slice(0, 12).map((d, i, a) => <ListRow key={d.id} last={i === a.length - 1} chevron={false} title={d.text} sub={`${d.outcome === 'accepted' ? 'Acceptée' : 'Refusée'}, ${when(d.at)}`} />)
           : <ListRow last chevron={false} title="Aucune décision" sub="Chaque proposition acceptée ou refusée est notée ici." />}
       </ListGroup>
-      <Button kind="danger" block label="Tout oublier" onPress={() => Alert.alert('Effacer la mémoire du coach ?', 'Conversations et décisions seront supprimées sur tous tes appareils. Ton programme et tes séances ne changent pas.', [{ text: 'Annuler', style: 'cancel' }, { text: 'Effacer', style: 'destructive', onPress: () => update(st => forgetAll(st)) }])} />
+      <Button kind="danger" block label="Tout oublier" onPress={() => Alert.alert('Effacer la mémoire du coach ?', 'Conversations, décisions et informations retenues seront supprimées sur tous tes appareils. Ton programme et tes séances ne changent pas.', [{ text: 'Annuler', style: 'cancel' }, { text: 'Effacer', style: 'destructive', onPress: () => update(st => forgetAll(st)) }])} />
     </Sheet>
   );
 }

@@ -43,8 +43,10 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
     const th = new Map(r.threads.map(t => [t.id, t])); l.threads.forEach(t => { const o = th.get(t.id); if (!o || t.at >= o.at) th.set(t.id, t); });
     const dec = new Map(r.decisions.map(d => [d.id, d])); l.decisions.forEach(d => dec.set(d.id, d));
     const newer = (remote.updatedAt || 0) > (local.updatedAt || 0) ? r : l;
+    const notes = new Map([...(r.notes || []), ...(l.notes || [])].map(n => [n.id, n]));
     const cleared = Math.max(l.clearedAt || 0, r.clearedAt || 0); const gone = (id: string) => !!out.deleted?.[`thread:${id}`];
-    out.coach = structuredClone({ perms: newer.perms, provider: newer.provider, clearedAt: cleared || undefined,
+    out.coach = structuredClone({ perms: newer.perms, provider: newer.provider, model: newer.model, clearedAt: cleared || undefined,
+      notes: [...notes.values()].filter(n => n.at > cleared && !out.deleted?.[`note:${n.id}`]).sort((a, b) => a.at - b.at).slice(-40),
       threads: [...th.values()].filter(t => t.at > cleared && !gone(t.id)).sort((a, b) => b.at - a.at).slice(0, 20), decisions: [...dec.values()].filter(d => d.at > cleared).sort((a, b) => b.at - a.at).slice(0, 100) });
   }
   out.user.ref = { k10: min(local.user.ref.k10, remote.user?.ref?.k10), k5: min(local.user.ref.k5, remote.user?.ref?.k5) };

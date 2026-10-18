@@ -76,3 +76,15 @@ test('pièces jointes : image, PDF et texte transmis comme données ; formats et
   assert.equal(await bad([1, 2, 3, 4]), 400, '3 pièces jointes maximum');
   assert.equal(await bad([{ kind: 'image', mediaType: 'image/png', data: 'A'.repeat(4_000_000) }]), 413);
 });
+
+test('modèle : Haiku par défaut, Sonnet sur demande (avec repli de sécurité), valeur inconnue ignorée', async () => {
+  const seen = []; const c = { messages: { create: async p => { seen.push(['std', p]); return { content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} }; } },
+    beta: { messages: { create: async p => { seen.push(['beta', p]); return { content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: {} }; } } } };
+  await coachChat({ DB: d1() }, { userId: 'u1' }, ok, c);
+  await coachChat({ DB: d1() }, { userId: 'u1' }, { ...ok, model: 'sonnet' }, c);
+  await coachChat({ DB: d1() }, { userId: 'u1' }, { ...ok, model: '__proto__' }, c);
+  assert.equal(seen[0][1].model, 'claude-haiku-5-5'); assert.equal(seen[0][0], 'std');
+  assert.equal(seen[1][1].model, 'claude-sonnet-5-5'); assert.equal(seen[1][0], 'beta'); assert.equal(seen[1][1].fallbacks, 'default');
+  assert.equal(seen[2][1].model, 'claude-haiku-5-5');
+  assert.ok(TOOLS.some(t => t.name === 'remember'));
+});
