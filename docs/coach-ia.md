@@ -17,6 +17,9 @@
   - Le Worker contrôle les types, la taille (image ≤ 3,9 Mo et PDF ≤ 4,1 Mo en base64, 8 Mo au total) et la forme du base64.
   - Les fichiers sont transmis comme données : images et PDF en blocs natifs, texte encadré.
   - Ils ne sont ni stockés ni synchronisés, et ne sont pas renvoyés aux messages suivants.
+- **Dictée** : bouton micro dans la saisie, avec `expo-speech-recognition` (57.1.1, MIT), qui utilise la reconnaissance vocale d'Android (service Google), en français.
+  - Le texte s'écrit en direct dans le champ ; rien n'est envoyé au coach avant « Envoyer ».
+  - Module natif : APK 5.4 nécessaire. Sur une version antérieure, le bouton est masqué.
 - **Secours** : si Claude est hors ligne, sans crédit, au-delà du quota ou non configuré, le coach à règles répond et le dit.
 - **Coût** : environ 0,07 centime par message, sur un crédit prépayé sans rechargement automatique.
 

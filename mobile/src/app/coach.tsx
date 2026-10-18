@@ -4,6 +4,7 @@ import { Alert, Image, Pressable, View } from 'react-native';
 import { ask, appendMessages, decide, memory, providerFor, threadById } from '@/ai/studio';
 import { SUGGESTIONS } from '@/ai/local';
 import { setupRemoteCoach } from '@/ai/remote';
+import { useDictation } from '@/ai/voice';
 import { attachmentLabel, MAX_ATTACHMENTS, pickFile, pickPhoto, type Attachment } from '@/ai/attachments';
 import { remoteDetail } from '@/ai/claude';
 import { CoachCardView } from '@/components/coach-cards';
@@ -34,6 +35,7 @@ export default function CoachStudio() {
   const [, setReady] = useState(0); useEffect(() => { setupRemoteCoach().then(() => setReady(x => x + 1)); }, []);
 
   const [files, setFiles] = useState<Attachment[]>([]);
+  const voice = useDictation(setText);
   async function attach(kind: 'photo' | 'file') {
     if (files.length >= MAX_ATTACHMENTS) { setNote(`${MAX_ATTACHMENTS} pièces jointes maximum par message.`); return; }
     const r = kind === 'photo' ? await pickPhoto() : await pickFile();
@@ -42,6 +44,7 @@ export default function CoachStudio() {
   }
   async function send(input = text) {
     const t = input.trim(); if ((!t && !files.length) || busy) return;
+    if (voice.listening) voice.stop();
     const sent = files; setBusy(true); setText(''); setFiles([]); setNote(''); haptic('select');
     const user: CoachMsg = { id: Math.random().toString(36).slice(2, 10), role: 'user', at: Date.now(), text: t.slice(0, 500), files: sent.length ? sent.map(f => ({ name: f.name, kind: f.kind })) : undefined };
     const reply = await ask(getState(), t, today, msgs, undefined, sent);
@@ -54,6 +57,7 @@ export default function CoachStudio() {
 
   const canSend = (!!text.trim() || files.length > 0) && !busy;
   const composer = (<View style={{ gap: space.s2 }}>
+    {voice.listening ? <View accessibilityLiveRegion="polite"><T v="xs" color={c.stop} style={{ fontWeight: '700' }}>● Je t'écoute… appuie sur ■ quand tu as fini</T></View> : voice.error ? <T v="xs" color={c.warn}>{voice.error}</T> : null}
     {files.length ? <Row gap={6} style={{ flexWrap: 'wrap' }}>{files.map((f, i) => (
       <Pressable key={i} accessibilityRole="button" accessibilityLabel={`Retirer ${f.name}`} onPress={() => setFiles(x => x.filter((_, k) => k !== i))}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: c.surface2, borderRadius: 14, paddingVertical: 4, paddingLeft: f.kind === 'image' ? 4 : 10, paddingRight: 10, maxWidth: '100%' }}>
@@ -66,7 +70,12 @@ export default function CoachStudio() {
         style={({ pressed }) => ({ width: 44, height: 48, borderRadius: 22, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
         <Icon name="plus" size={24} color={c.ink2} />
       </Pressable>
-      <Input style={{ flex: 1 }} value={text} onChangeText={setText} placeholder="Demande à ton coach…" maxLength={500} returnKeyType="send" onSubmitEditing={() => send()} accessibilityLabel="Message au coach" />
+      <Input style={{ flex: 1 }} value={text} onChangeText={setText} placeholder={voice.listening ? 'Parle, le texte s\'écrit ici…' : 'Demande à ton coach…'} maxLength={500} returnKeyType="send" onSubmitEditing={() => send()} accessibilityLabel="Message au coach" />
+      {voice.supported ? <Pressable accessibilityRole="button" accessibilityLabel={voice.listening ? 'Arrêter la dictée' : 'Dicter un message'} disabled={busy} hitSlop={4}
+        onPress={() => { haptic('select'); if (voice.listening) voice.stop(); else voice.start(text); }}
+        style={({ pressed }) => ({ width: 44, height: 48, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: voice.listening ? c.stopSoft : 'transparent', opacity: pressed ? 0.6 : 1 })}>
+        {voice.listening ? <View style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: c.stop }} /> : <Icon name="mic" size={22} color={c.ink2} />}
+      </Pressable> : null}
       <Pressable accessibilityRole="button" accessibilityLabel="Envoyer" disabled={!canSend} onPress={() => send()} style={({ pressed }) => ({ width: 48, height: 48, borderRadius: 24, backgroundColor: canSend ? c.accent : c.surface2, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}>
         <T v="label" color={canSend ? c.accentInk : c.ink3} style={{ fontSize: 20 }}>↑</T>
       </Pressable>
