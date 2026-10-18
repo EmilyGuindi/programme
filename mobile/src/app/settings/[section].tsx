@@ -10,7 +10,7 @@ import { manualUpdateCheck } from '@/components/update-banner';
 import { Bullets } from '@/components/guide';
 import { AccountSection } from '@/components/account-section';
 import { BackLink, Button, Card, Field, Gap, Input, ListGroup, ListRow, Row, Screen, Segmented, T, Toggle, Chip } from '@/components/ui';
-import { PHASES, phaseOf, weekOf } from '@/engine/coach';
+import { phasesOf, weekOf } from '@/engine/coach';
 import { addDays, DAYS_SHORT, fmtShort, num, today } from '@/engine/dates';
 import { planReminders } from '@/engine/reminders';
 import { askPermission, nextScheduled, permission, syncReminders, testNotification } from '@/notifications';
@@ -113,7 +113,7 @@ function Connections() {
 
 function Program() {
   const s = useApp(); const { c } = useTheme(); const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, today())));
-  const PH = PHASES;
+  const PH = phasesOf(s.program);
   return (
     <>
       <T muted style={{ marginBottom: space.s4 }}>{`Du ${fmtShort(s.program.start)} au ${fmtShort(addDays(s.program.start, s.program.weeks * 7 - 1))}. Semaine ${w} sur ${s.program.weeks}.`}</T>
@@ -126,7 +126,8 @@ function Program() {
       <ListGroup title="Compétitions du cycle">
         {s.events.filter(e => e.status !== 'annulé').sort((a, b) => a.date.localeCompare(b.date)).map((e, i, arr) => <ListRow key={e.id} last={i === arr.length - 1} title={e.name} sub={`${fmtShort(e.date)}${e.result ? ', terminée' : ''}`} onPress={() => router.push({ pathname: '/race/[id]', params: { id: e.id } })} />)}
       </ListGroup>
-      <T v="small" muted>Semaine allégée en S12. Une séance manquée ne se rattrape pas : la suite s'ajuste.</T>
+      <T v="small" muted>{s.program.template === 'custom' ? 'Une séance manquée ne se rattrape pas : la suite s\'ajuste.' : 'Semaine allégée en S12. Une séance manquée ne se rattrape pas : la suite s\'ajuste.'}</T>
+      <Button block style={{ marginTop: space.s4 }} label="Mes programmes" onPress={() => router.push('/programs')} />
     </>
   );
 }

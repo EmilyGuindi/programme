@@ -24,7 +24,7 @@ type Kind = 'pre' | 'event' | 'done' | 'rest' | 'optional' | 'planned';
 export default function Program() {
   const s = useApp(); const { c } = useTheme(); const today = sportDay(); const { date: asked } = useLocalSearchParams<{ date?: string }>();
   const [w, setW] = useState(Math.min(s.program.weeks, Math.max(1, weekOf(s, today))));
-  const ws = weekStart(s, w); const ph = phaseOf(w);
+  const ws = weekStart(s, w); const ph = phaseOf(w, s.program);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => adapted(s, addDays(ws, i))), [s, ws]);
   const inWeek = (d: string) => d >= ws && d <= addDays(ws, 6);
   const [sel, setSel] = useState<string>(inWeek(today) ? today : days.find(a => a.date >= s.user.startDate)?.date || ws);
@@ -41,7 +41,8 @@ export default function Program() {
   return (
     <Screen>
       <View style={{ paddingTop: space.s4 }}>
-        <Row gap={space.s2}><T v="small" muted>{`Semaine ${w} sur ${s.program.weeks}`}</T><Chip label={ph.name} /></Row>
+        <Row between><Row gap={space.s2} style={{ flex: 1 }}><T v="small" muted>{`Semaine ${w} sur ${s.program.weeks}`}</T><Chip label={ph.name} /></Row>
+          <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="Mes programmes" onPress={() => router.push('/programs')} /></Row>
         <Row between style={{ marginTop: space.s1 }}>
           <T v="title" style={{ flex: 1 }} numberOfLines={1}>{range}</T>
           <Row gap={6}>

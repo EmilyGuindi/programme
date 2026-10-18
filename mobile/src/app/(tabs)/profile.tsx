@@ -17,7 +17,7 @@ const h = (t: string) => { const [a, b] = t.split(':'); return `${+a} h${b !== '
 export default function Profile() {
   const s = useApp(); const sv = useServer(); const sync = useSync(); const st = useStrava(); const { c } = useTheme();
   useEffect(() => { stravaStatus(); }, [sv.url, sv.key, sv.session]);
-  const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, sportDay()))); const ph = phaseOf(w); const pr = s.user.prefs;
+  const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, sportDay()))); const ph = phaseOf(w, s.program); const pr = s.user.prefs;
   const rem = [pr.notifCheckin ? `check-in ${h(pr.checkinTime)}` : '', pr.notifWeigh ? `pesée ${DAYS_SHORT[pr.weighDay].toLowerCase()}. ${h(pr.weighTime)}` : '', pr.notifRecap !== false ? 'bilan dim.' : ''].filter(Boolean);
   const conn = !(sv.session || sv.key) ? 'Non connecté : données sur ce téléphone uniquement' : `${sv.account?.email || 'Clé historique'}, ${sync.status === 'ok' ? 'synchronisé' : sync.status === 'err' ? 'erreur de synchronisation' : sync.status === 'pending' || sync.status === 'off' ? 'envoi en attente' : 'connecté'}, ${st?.connected ? 'Strava connecté' : 'Strava non connecté'}`;
   return (

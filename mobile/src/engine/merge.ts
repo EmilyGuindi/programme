@@ -1,4 +1,4 @@
-import type { AppState, ExerciseLog, Mark, StrengthLog } from './types';
+import type { AppState, ExerciseLog, Mark, ProgramDef, StrengthLog } from './types';
 
 /** Fusion de deux versions de l'état (téléphone / serveur) : rien n'est perdu.
  *  Listes fusionnées par identifiant, journaux champ par champ, coches élément par élément (la plus récente gagne).
@@ -31,7 +31,12 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
   out.celebrated = maxMap(local.celebrated, remote.celebrated);
   out.proposals = { ...(remote.proposals || {}), ...(local.proposals || {}) };
   // Profil et programme : pas d'horodatage par champ, la version modifiée le plus récemment l'emporte (jamais un état de départ).
-  if ((remote.updatedAt || 0) > (local.updatedAt || 0) && remote.user) { out.user = structuredClone(remote.user); if (remote.program) out.program = structuredClone(remote.program); }
+  if ((remote.updatedAt || 0) > (local.updatedAt || 0) && remote.user) out.user = structuredClone(remote.user);
+  // Programmes : union par identifiant, la version modifiée le plus récemment gagne. Le programme en cours est le plus avancé des deux (le relais ne recule jamais).
+  const progs = new Map<string, ProgramDef>();
+  for (const p of [remote.program, ...(remote.programs || []), local.program, ...(local.programs || [])]) { if (!p) continue; const o = progs.get(p.id); if (!o || (p.updatedAt || 0) > (o.updatedAt || 0)) progs.set(p.id, p); }
+  const curId = (remote.program && remote.program.start > local.program.start ? remote.program : local.program).id;
+  out.program = structuredClone(progs.get(curId)!); out.programs = structuredClone([...progs.values()].filter(p => p.id !== curId));
   out.user.ref = { k10: min(local.user.ref.k10, remote.user?.ref?.k10), k5: min(local.user.ref.k5, remote.user?.ref?.k5) };
   out.strava = { since: Math.max(local.strava?.since || 0, remote.strava?.since || 0), fillAt: Math.max(local.strava?.fillAt || 0, remote.strava?.fillAt || 0) || undefined };
   out.updatedAt = Math.max(local.updatedAt || 0, remote.updatedAt || 0);

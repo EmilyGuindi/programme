@@ -3,6 +3,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { useSyncExternalStore } from 'react';
 import { fillEventResults, mergeStrava } from '@/engine/strava';
 import { mergeStates } from '@/engine/merge';
+import { sportDay } from '@/engine/dates';
+import { rollover } from '@/engine/programs';
 import { DEFAULT_STATE, migrate, seed } from '@/engine/state';
 import type { AppState } from '@/engine/types';
 import { secureDel, secureGet, secureSet } from '@/secure';
@@ -39,6 +41,7 @@ export async function loadStore() {
   } catch {}
   ready = true; emit();
   if (fillEventResults(structuredClone(state))) update(st => { fillEventResults(st); });
+  dayTick();
   pull();
 }
 
@@ -62,6 +65,8 @@ export function update(fn: (s: AppState) => void) {
 }
 export function replaceState(raw: unknown) { state = migrate(raw); state.updatedAt = Date.now(); emit(); persist(); schedulePush(); }
 export const getState = () => state;
+/** Nouveau jour : un programme activé dont la date est arrivée prend le relais (l'ancien est clos avec son bilan). */
+export function dayTick() { const t = sportDay(); if (rollover(structuredClone(state), t)) update(st => { rollover(st, t); }); }
 
 export function useApp<T = AppState>(sel?: (s: AppState) => T): T {
   return useSyncExternalStore(cb => { listeners.add(cb); return () => listeners.delete(cb); }, () => (sel ? sel(state) : (state as unknown as T)));

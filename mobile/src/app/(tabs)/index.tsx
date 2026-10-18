@@ -36,7 +36,7 @@ export default function Today() {
   const d = sportDay(); const a = adapted(s, d); const r = recovery(s, d); const acts = activitiesOn(s, d);
   const shown = a.replaced || a; const done = doneOn(s, d); const isEvent = a.type === 'event';
   const finished = isEvent && !!a.event && eventState(s, a.event, d) === 'done';
-  const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, d))); const ph = phaseOf(w); const ws = weekStart(s, w);
+  const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, d))); const ph = phaseOf(w, s.program); const ws = weekStart(s, w);
   const wk = weekSummary(s, ws, d); const sp = sessionProgress(s, d, d); const dur = a.replaced ? a.replaced.dur : a.dur;
   const wActs = s.activities.filter(x => x.date >= ws && x.date <= d && !x.complementary);
   const wMin = Math.round(wActs.reduce((t, x) => t + (x.durationMin || 0), 0)); const wKm = wActs.filter(x => x.type === 'running' || x.type === 'course').reduce((t, x) => t + (x.distanceKm || 0), 0);

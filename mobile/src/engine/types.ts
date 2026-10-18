@@ -69,7 +69,10 @@ export interface AppState {
       /** Retours haptiques (défaut : activés). */ haptics?: boolean; /** Animations : celles du système, ou réduites dans BYYND. */ motion?: 'system' | 'reduced'; /** Mettre en scène les accomplissements débloqués (défaut : oui). */ celebrate?: boolean };
     ref: { k10: number | null; k5: number | null };
   };
-  program: { id: string; name: string; start: ISODate; weeks: number };
+  /** Programme en cours (ou le dernier, ou le prochain si aucun n'est en cours). Les autres sont dans `programs`. */
+  program: ProgramDef;
+  /** Programmes passés, à venir, brouillons et archivés. L'historique n'est jamais effacé. */
+  programs?: ProgramDef[];
   events: SportEvent[]; activities: Activity[]; checkins: Record<ISODate, CheckIn>; measurements: Measurement[];
   strength: Record<ISODate, StrengthLog>; runs: Record<ISODate, RunLog>; overrides: Record<ISODate, Override>;
   migrated: boolean;
@@ -104,3 +107,39 @@ export interface Plan {
   /** Séance déplacée : date d'origine (identifiant de la séance) ou nouvelle date pour le jour quitté. */ movedFrom?: ISODate; movedTo?: ISODate;
 }
 export interface AdaptedPlan extends Plan { level: Level; reason: string | null; replaced?: { type: 'recup'; title: string; goal: string; dur?: string } }
+
+/* ---------- Programmes successifs ---------- */
+export type ProgramStatus = 'draft' | 'planned' | 'active' | 'done' | 'archived';
+/** Contenu d'un jour type. */
+export type Slot = 'crossfit' | 'hyrox' | 'run' | 'long' | 'renfo' | 'recup' | 'rest';
+export type RunFocus = '10k' | '5k' | 'endurance' | 'maintien';
+export interface ProgramPhase { n: string; name: string; from: number; to: number; goal: string; milestone: string; kind?: 'base' | 'dev' | 'spec' | 'taper' | 'bilan' }
+/** Description d'un programme personnalisé : c'est tout ce que l'assistant ou l'utilisatrice fournit. Le calendrier en est déduit par BYYND. */
+export interface ProgramSpec {
+  /** Jour de la semaine (0 = lundi) → contenu type. */
+  days: Slot[];
+  focus: RunFocus;
+  /** Semaine allégée toutes les n semaines (0 : aucune). */
+  deloadEvery: number;
+  /** Compétition objectif (identifiant d'événement), pour l'affûtage. */
+  goalEventId?: string | null;
+  /** Contraintes libres, affichées et gardées en mémoire (jamais interprétées comme des ordres). */
+  constraints?: string;
+  /** Tests chronométrés prévus. */
+  tests?: boolean;
+}
+export interface ProgramSummary { planned: number; done: number; rate: number; km: number; runs: number; records: number; weightDelta: number | null; pace: { first: number | null; last: number | null }; at: number }
+export interface ProgramDef {
+  id: string; name: string; start: ISODate; weeks: number;
+  status?: ProgramStatus;
+  /** cycle1 : le calendrier d'origine (octobre à février). custom : généré depuis `spec`. */
+  template?: 'cycle1' | 'custom';
+  spec?: ProgramSpec;
+  phases?: ProgramPhase[];
+  /** Fin anticipée (un nouveau programme a démarré avant la fin prévue). */
+  end?: ISODate;
+  goal?: string;
+  summary?: ProgramSummary;
+  basedOn?: string;
+  createdAt?: number; updatedAt?: number; activatedAt?: number;
+}
