@@ -8,6 +8,7 @@ import { Alert, Linking, Pressable, View } from 'react-native';
 import { APP_VERSION, CHANGELOG } from '@/changelog';
 import { manualUpdateCheck } from '@/components/update-banner';
 import { Bullets } from '@/components/guide';
+import { AccountSection } from '@/components/account-section';
 import { BackLink, Button, Card, Field, Gap, Input, ListGroup, ListRow, Row, Screen, Segmented, T, Toggle, Chip } from '@/components/ui';
 import { PHASES, phaseOf, weekOf } from '@/engine/coach';
 import { addDays, DAYS_SHORT, fmtShort, num, today } from '@/engine/dates';
@@ -16,7 +17,7 @@ import { askPermission, nextScheduled, permission, syncReminders, testNotificati
 import { connectStrava, disconnectStrava, getState, pull, replaceState, setServer, stravaStatus, stravaSyncNow, testServer, update, useApp, useServer, useStrava, useSync } from '@/store/store';
 import { space, useTheme } from '@/theme/tokens';
 
-const TITLES: Record<string, string> = { feedback: 'Retours et animations', goals: 'Objectifs', reminders: 'Rappels', connections: 'Serveur et Strava', program: 'Programme', data: 'Mes données', news: 'Quoi de neuf' };
+const TITLES: Record<string, string> = { feedback: 'Retours et animations', goals: 'Objectifs', reminders: 'Rappels', connections: 'Compte et synchronisation', program: 'Programme', data: 'Mes données', news: 'Quoi de neuf' };
 
 export default function Section() {
   const { section } = useLocalSearchParams<{ section: string }>();
@@ -80,32 +81,24 @@ function Reminders() {
 }
 
 function Connections() {
-  const sv = useServer(); const sync = useSync(); const st = useStrava(); const { c } = useTheme();
-  const [msg, setMsg] = useState(''); const [smsg, setSmsg] = useState(''); const [busy, setBusy] = useState(false);
-  useEffect(() => { stravaStatus(); }, [sv.url, sv.key]);
-  const syncText = { local: 'Sur ce téléphone uniquement', sync: 'Synchronisation…', ok: 'Synchronisé', err: `Erreur : ${sync.msg}`, off: sync.msg }[sync.status];
+  const sv = useServer(); const st = useStrava();
+  const [smsg, setSmsg] = useState(''); const [busy, setBusy] = useState(false);
+  useEffect(() => { stravaStatus(); }, [sv.url, sv.key, sv.session]);
   return (
     <>
-      <Card>
-        <T v="h3">Serveur BYYND</T>
-        <T v="xs" color={sync.status === 'err' ? c.stop : c.ink2} style={{ marginVertical: 6 }}>{syncText}</T>
-        <Field label="Adresse"><Input autoCapitalize="none" autoCorrect={false} keyboardType="url" defaultValue={sv.url} placeholder="https://byynd.emilyguindi.workers.dev" onChangeText={t => setServer({ url: t.trim() })} /></Field>
-        <Field label="Clé d'accès"><Input secureTextEntry autoCapitalize="none" autoCorrect={false} defaultValue={sv.key} placeholder="ta phrase APP_KEY" onChangeText={t => setServer({ key: t.trim() })} /></Field>
-        <Row><Button label="Synchroniser" style={{ flex: 1 }} onPress={() => pull()} /><Button label="Tester" onPress={async () => setMsg(await testServer())} /></Row>
-        {msg ? <T v="small" style={{ marginTop: 8 }}>{msg}</T> : null}
-      </Card>
+      <AccountSection />
       <Card>
         <T v="h3">Strava</T>
-        <T v="small" muted style={{ marginVertical: 6 }}>{!sv.url ? 'Configure d\'abord le serveur ci-dessus.' : !st ? 'Statut inconnu.' : !st.configured ? 'Le serveur attend les identifiants Strava.' : st.connected ? `Connecté${st.athlete ? ` en tant que ${st.athlete}` : ''}${st.lastSync ? `, synchro ${new Date(st.lastSync).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}` : st.error ? 'Accès expiré : reconnecte Strava.' : 'Non connecté.'}</T>
+        <T v="small" muted style={{ marginVertical: 6 }}>{!(sv.key || sv.session) ? 'Connecte-toi d\'abord avec Google ci-dessus.' : !st ? 'Statut inconnu.' : !st.configured ? 'Le serveur attend les identifiants Strava.' : st.connected ? `Connecté${st.athlete ? ` en tant que ${st.athlete}` : ''}${st.lastSync ? `, synchro ${new Date(st.lastSync).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}` : st.error ? 'Accès expiré : reconnecte Strava.' : 'Non connecté.'}</T>
         {st?.connected ? (
           <Row><Button label={busy ? 'Synchronisation…' : 'Synchroniser'} style={{ flex: 1 }} disabled={busy} onPress={async () => { setBusy(true); const n = await stravaSyncNow(14); setBusy(false); setSmsg(n ? `${n} activité${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.` : 'Tout est à jour.'); }} />
             <Button kind="danger" label="Déconnecter" onPress={() => Alert.alert('Déconnecter Strava ?', 'BYYND n\'aura plus accès à tes activités. Celles déjà importées restent.', [{ text: 'Annuler', style: 'cancel' }, { text: 'Déconnecter', style: 'destructive', onPress: () => disconnectStrava() }])} /></Row>
         ) : (
           <Button kind="primary" label={busy ? 'Connexion…' : 'Connecter Strava'} disabled={busy} onPress={async () => {
             setBusy(true); setSmsg('');
-            if (!sv.url || !sv.key) { setSmsg('Renseigne d\'abord l\'adresse du serveur et ta clé, puis appuie sur Tester.'); setBusy(false); return; }
+            if (!sv.url || !(sv.key || sv.session)) { setSmsg('Connecte-toi d\'abord avec Google ci-dessus.'); setBusy(false); return; }
             const cur = await stravaStatus();
-            if (!cur) setSmsg('Serveur injoignable ou clé refusée : vérifie avec le bouton Tester.');
+            if (!cur) setSmsg('Serveur injoignable, ou Strava réservé au compte propriétaire.');
             else if (!cur.configured) setSmsg('Le serveur ne voit pas encore les identifiants Strava.');
             else setSmsg(await connectStrava());
             setBusy(false);
@@ -167,7 +160,7 @@ function Data() {
     <>
       <ListGroup title="Où sont tes données">
         <ListRow chevron={false} title="Sur ce téléphone" sub={`${s.activities.length} activités, ${s.measurements.length} pesées, ${Object.keys(s.checkins).length} check-ins`} />
-        <ListRow last chevron={false} title="Sur ton serveur" sub={sv.url ? 'Copie synchronisée automatiquement' : 'Non configuré : voir Serveur et Strava'} />
+        <ListRow last chevron={false} title="Sur ton serveur" sub={sv.session ? `Compte ${sv.account?.email || 'Google'}, synchronisé automatiquement` : sv.key ? 'Synchronisé avec la clé historique' : 'Non connecté : voir Compte et synchronisation'} />
       </ListGroup>
       <ListGroup title="Préférences">
         <ListRow last chevron={false} title="Cycle menstruel dans le check-in" sub="Facultatif. Aide à lire les variations de poids." right={<Toggle label="Cycle menstruel" value={pr.cycleOptIn} onChange={v => update(st => { st.user.prefs.cycleOptIn = v; })} />} />

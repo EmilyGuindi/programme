@@ -5,15 +5,20 @@ import { fillEventResults, mergeStrava } from '@/engine/strava';
 import { mergeStates } from '@/engine/merge';
 import { DEFAULT_STATE, migrate, seed } from '@/engine/state';
 import type { AppState } from '@/engine/types';
+import { secureDel, secureGet, secureSet } from '@/secure';
 
 const KEY = 'byynd-v2';
 const SERVER_KEY = 'byynd-server';
+/** Serveur BYYND par défaut (adresse publique, sans secret) : un nouvel appareil n'a qu'à se connecter avec Google. */
+export const DEFAULT_URL = 'https://byynd.emilyguindi.workers.dev';
 
-export type SyncStatus = { status: 'local' | 'sync' | 'ok' | 'err' | 'off'; at: number; msg: string };
-type Server = { url: string; key: string; version?: number };
+/** pending : des modifications locales attendent d'être envoyées (hors ligne, erreur) — elles sont en sécurité sur le téléphone. */
+export type SyncStatus = { status: 'local' | 'sync' | 'ok' | 'err' | 'off' | 'pending'; at: number; msg: string; lastOk?: number };
+/** Les secrets (key, session) ne sont jamais écrits dans AsyncStorage : ils vivent dans le stockage sécurisé. */
+type Server = { url: string; key: string; session?: string; version?: number; account?: { email: string; name?: string | null; owner?: boolean } | null };
 
 let state: AppState = seed(structuredClone(DEFAULT_STATE));
-let server: Server = { url: '', key: '' };
+let server: Server = { url: DEFAULT_URL, key: '' };
 let sync: SyncStatus = { status: 'local', at: 0, msg: '' };
 let ready = false;
 const listeners = new Set<() => void>();
@@ -25,7 +30,12 @@ export async function loadStore() {
     const raw = await AsyncStorage.getItem(KEY);
     if (raw) { const before = JSON.parse(raw); state = migrate(before); if (before.v !== state.v) persist(); }
     const sv = await AsyncStorage.getItem(SERVER_KEY);
-    if (sv) server = JSON.parse(sv);
+    if (sv) server = { ...server, ...JSON.parse(sv) };
+    // Migration : l'ancienne version gardait la clé en clair ; elle passe dans le stockage sécurisé.
+    if (server.key) { await secureSet('byynd-key', server.key); saveServerMeta(); }
+    server.key = (await secureGet('byynd-key')) || server.key || '';
+    server.session = (await secureGet('byynd-session')) || undefined;
+    if (!server.url) server.url = DEFAULT_URL;
   } catch {}
   ready = true; emit();
   if (fillEventResults(structuredClone(state))) update(st => { fillEventResults(st); });
@@ -61,14 +71,29 @@ export const useSync = () => useSyncExternalStore(cb => { listeners.add(cb); ret
 export const useServer = () => useSyncExternalStore(cb => { listeners.add(cb); return () => listeners.delete(cb); }, () => server);
 
 /* ---------- synchronisation avec le Worker (lot 2) ---------- */
-export function setServer(next: Partial<Server>) { server = { ...server, ...next }; emit(); AsyncStorage.setItem(SERVER_KEY, JSON.stringify(server)).catch(() => {}); }
-const base = () => server.url.replace(/\/$/, '');
-const configured = () => !!server.url && !!server.key;
-const setSync = (s: SyncStatus) => { sync = s; emit(); };
-async function api(path: string, init: RequestInit = {}) {
-  return fetch(base() + path, { ...init, headers: { Authorization: `Bearer ${server.key}`, 'Content-Type': 'application/json', ...(init.headers || {}) } });
+function saveServerMeta() { const { key: _k, session: _s, ...meta } = server; AsyncStorage.setItem(SERVER_KEY, JSON.stringify(meta)).catch(() => {}); }
+export function setServer(next: Partial<Server>) {
+  server = { ...server, ...next }; emit();
+  if ('key' in next) { if (next.key) secureSet('byynd-key', next.key); else secureDel('byynd-key'); }
+  if ('session' in next) { if (next.session) secureSet('byynd-session', next.session); else secureDel('byynd-session'); }
+  saveServerMeta();
 }
-function schedulePush() { if (!configured()) return; if (pushTimer) clearTimeout(pushTimer); pushTimer = setTimeout(push, 1500); }
+const base = () => server.url.replace(/\/$/, '');
+const configured = () => !!server.url && !!(server.session || server.key);
+export const hasAccount = () => !!server.session;
+const setSync = (s: SyncStatus) => { sync = { lastOk: sync.lastOk, ...s, ...(s.status === 'ok' ? { lastOk: s.at } : {}) }; emit(); };
+/** Appel authentifié : session du compte en priorité, clé historique sinon. Une session refusée est oubliée (reconnexion demandée). */
+export async function api(path: string, init: RequestInit = {}) {
+  const tok = server.session || server.key;
+  const r = await fetch(base() + path, { ...init, headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json', ...(init.headers || {}) } });
+  if (r.status === 401 && server.session && tok === server.session) { setServer({ session: undefined, account: null }); setSync({ status: 'err', at: Date.now(), msg: 'Session expirée : reconnecte-toi avec Google' }); }
+  return r;
+}
+export const apiBase = () => base();
+/** Réessais hors ligne : 30 s, 1 min, 2 min… jusqu'à 10 min, tant que des modifications attendent. */
+let retryDelay = 30_000, retryTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleRetry() { if (retryTimer) return; retryTimer = setTimeout(() => { retryTimer = null; push(); }, retryDelay); retryDelay = Math.min(retryDelay * 2, 600_000); }
+function schedulePush() { if (!configured()) return; if (pushTimer) clearTimeout(pushTimer); pushTimer = setTimeout(push, 1500); if (sync.status === 'ok' || sync.status === 'local') setSync({ status: 'pending', at: Date.now(), msg: 'Modifications enregistrées sur le téléphone' }); }
 let pushing = false;
 export async function push(retry = true): Promise<void> {
   if (!configured() || pushing) return;
@@ -81,25 +106,36 @@ export async function push(retry = true): Promise<void> {
       const d = await r.json(); absorb(d);
       pushing = false; if (retry) return push(false); return;
     }
-    if (r.status === 401) setSync({ status: 'err', at: Date.now(), msg: 'Clé refusée' });
-    else if (r.ok) { setServer({ version: state.updatedAt }); setSync({ status: 'ok', at: Date.now(), msg: '' }); }
-    else setSync({ status: 'err', at: Date.now(), msg: `Erreur ${r.status}` });
-  } catch { setSync({ status: 'off', at: Date.now(), msg: 'Hors ligne : synchro différée' }); }
+    if (r.status === 401) setSync({ status: 'err', at: Date.now(), msg: server.session ? 'Session refusée' : 'Accès refusé : connecte-toi avec Google' });
+    else if (r.ok) { setServer({ version: state.updatedAt }); setSync({ status: 'ok', at: Date.now(), msg: '' }); retryDelay = 30_000; }
+    else { setSync({ status: 'err', at: Date.now(), msg: `Erreur ${r.status} : nouvel essai bientôt` }); scheduleRetry(); }
+  } catch { setSync({ status: 'off', at: Date.now(), msg: 'Hors ligne : tes modifications sont gardées et partiront à la reconnexion' }); scheduleRetry(); }
   finally { pushing = false; }
 }
 /** Intègre la version du serveur sans rien perdre de ce qui a été fait sur ce téléphone. */
 function absorb(d: { json: string | null; updatedAt: number }) {
   if (!d.json) return;
   const remote = migrate(JSON.parse(d.json));
-  state = mergeStates(state, remote); state.updatedAt = Date.now(); emit();
+  // Téléphone neuf (état de départ jamais modifié) : la version du serveur est reprise telle quelle, sans y mêler les valeurs par défaut.
+  state = state.updatedAt === 0 ? remote : mergeStates(state, remote); state.updatedAt = Date.now(); emit();
   persist();
   setServer({ version: d.updatedAt });
 }
+/** Résumé lisible d'un état, pour comparer téléphone et serveur avant un rattachement. */
+export type Counts = { activities: number; measurements: number; checkins: number; sessions: number; updatedAt: number };
+export const countsOf = (x: AppState): Counts => ({ activities: x.activities.length, measurements: x.measurements.length, checkins: Object.keys(x.checkins || {}).length,
+  sessions: Object.keys(x.strength || {}).length + Object.keys(x.runs || {}).length, updatedAt: x.updatedAt || 0 });
+export const parseRemote = (json: string) => migrate(JSON.parse(json));
+/** Fusion explicite avec la version du serveur (rien n'est perdu), puis envoi. */
+export async function mergeRemote(d: { json: string | null; updatedAt: number }) { if (d.json) absorb(d); else setServer({ version: d.updatedAt || 0 }); await push(); }
+/** Remplace l'état du téléphone par une version du serveur (restauration, choix explicite). */
+export function adoptRemote(d: { json: string; updatedAt: number }) { state = migrate(JSON.parse(d.json)); emit(); persist(); setServer({ version: d.updatedAt }); setSync({ status: 'ok', at: Date.now(), msg: '' }); }
+
 export async function pull(): Promise<SyncStatus> {
   if (!configured()) return sync;
   try {
     const r = await api('/api/state');
-    if (r.status === 401) { setSync({ status: 'err', at: Date.now(), msg: 'Clé refusée' }); return sync; }
+    if (r.status === 401) { setSync({ status: 'err', at: Date.now(), msg: 'Accès refusé : connecte-toi avec Google' }); return sync; }
     if (!r.ok) throw new Error();
     const d = await r.json();
     if (d.json && d.updatedAt !== (server.version ?? 0)) { absorb(d); await push(); }

@@ -30,6 +30,8 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
   out.recapsSeen = maxMap(local.recapsSeen, remote.recapsSeen);
   out.celebrated = maxMap(local.celebrated, remote.celebrated);
   out.proposals = { ...(remote.proposals || {}), ...(local.proposals || {}) };
+  // Profil et programme : pas d'horodatage par champ, la version modifiée le plus récemment l'emporte (jamais un état de départ).
+  if ((remote.updatedAt || 0) > (local.updatedAt || 0) && remote.user) { out.user = structuredClone(remote.user); if (remote.program) out.program = structuredClone(remote.program); }
   out.user.ref = { k10: min(local.user.ref.k10, remote.user?.ref?.k10), k5: min(local.user.ref.k5, remote.user?.ref?.k5) };
   out.strava = { since: Math.max(local.strava?.since || 0, remote.strava?.since || 0), fillAt: Math.max(local.strava?.fillAt || 0, remote.strava?.fillAt || 0) || undefined };
   out.updatedAt = Math.max(local.updatedAt || 0, remote.updatedAt || 0);

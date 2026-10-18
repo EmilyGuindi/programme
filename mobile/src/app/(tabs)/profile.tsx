@@ -16,10 +16,10 @@ const h = (t: string) => { const [a, b] = t.split(':'); return `${+a} h${b !== '
 
 export default function Profile() {
   const s = useApp(); const sv = useServer(); const sync = useSync(); const st = useStrava(); const { c } = useTheme();
-  useEffect(() => { stravaStatus(); }, [sv.url, sv.key]);
+  useEffect(() => { stravaStatus(); }, [sv.url, sv.key, sv.session]);
   const w = Math.min(s.program.weeks, Math.max(1, weekOf(s, sportDay()))); const ph = phaseOf(w); const pr = s.user.prefs;
   const rem = [pr.notifCheckin ? `check-in ${h(pr.checkinTime)}` : '', pr.notifWeigh ? `pesée ${DAYS_SHORT[pr.weighDay].toLowerCase()}. ${h(pr.weighTime)}` : '', pr.notifRecap !== false ? 'bilan dim.' : ''].filter(Boolean);
-  const conn = !sv.url ? 'Données sur ce téléphone uniquement' : `${sync.status === 'ok' ? 'Serveur synchronisé' : sync.status === 'err' ? 'Erreur de synchronisation' : 'Serveur configuré'}, ${st?.connected ? 'Strava connecté' : 'Strava non connecté'}`;
+  const conn = !(sv.session || sv.key) ? 'Non connecté : données sur ce téléphone uniquement' : `${sv.account?.email || 'Clé historique'}, ${sync.status === 'ok' ? 'synchronisé' : sync.status === 'err' ? 'erreur de synchronisation' : sync.status === 'pending' || sync.status === 'off' ? 'envoi en attente' : 'connecté'}, ${st?.connected ? 'Strava connecté' : 'Strava non connecté'}`;
   return (
     <Screen>
       <Row gap={space.s4} style={{ paddingTop: space.s5, marginBottom: space.s5 }}>
@@ -36,7 +36,7 @@ export default function Profile() {
         <ListRow last title="Rappels" sub={rem.length ? rem.join(', ').replace(/^./, x => x.toUpperCase()) : 'Désactivés'} left={<Icon name="bell" />} onPress={() => open('reminders')} />
       </ListGroup>
       <ListGroup title="Connexions">
-        <ListRow last title="Serveur et Strava" sub={conn} left={<Icon name="link" />} onPress={() => open('connections')} />
+        <ListRow last title="Compte, synchronisation et Strava" sub={conn} left={<Icon name="link" />} onPress={() => open('connections')} />
       </ListGroup>
       <ListGroup title="Application">
         <ListRow title="Retours et animations" sub={[pr.haptics !== false ? 'haptique' : 'sans haptique', pr.motion === 'reduced' ? 'animations réduites' : 'animations', pr.celebrate !== false ? 'accomplissements mis en scène' : ''].filter(Boolean).join(', ').replace(/^./, x => x.toUpperCase())} left={<Icon name="spark" />} onPress={() => open('feedback')} />
