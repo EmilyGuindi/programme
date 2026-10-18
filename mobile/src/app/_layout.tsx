@@ -45,6 +45,7 @@ export default function RootLayout() {
         <Stack.Screen name="race/[id]" options={sheet} />
         <Stack.Screen name="run-live/[date]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="coach" options={sheet} />
+        <Stack.Screen name="move/[date]" options={sheet} />
         <Stack.Screen name="done/[id]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="recap/[week]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
       </Stack>

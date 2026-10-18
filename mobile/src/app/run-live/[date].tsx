@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassSurface } from '@/components/glass';
 import { Icon } from '@/components/icons';
 import { Button, Row, T } from '@/components/ui';
-import { adapted, ZONE_NAME, zoneText } from '@/engine/coach';
+import { adapted, sessionKey, ZONE_NAME, zoneText } from '@/engine/coach';
 import { segments, totalSec } from '@/engine/segments';
 import { setCheck } from '@/engine/session';
 import { update, useApp } from '@/store/store';
@@ -52,7 +52,7 @@ export default function RunLive() {
   function finish() {
     if (phase === 'run') bank();
     const min = Math.round(acc.current.total / 60);
-    update(st => { st.runs[date] = { ...(st.runs[date] || {}), min: String(min) }; run.steps.forEach((_, i) => { if (i <= seg.step) setCheck(st, date, `step:${run.kind}:${i + 1}`, true); }); });
+    update(st => { const k = sessionKey(st, date); st.runs[k] = { ...(st.runs[k] || {}), min: String(min) }; run.steps.forEach((_, i) => { if (i <= seg.step) setCheck(st, date, `step:${run.kind}:${i + 1}`, true); }); });
     router.replace({ pathname: '/run/[date]', params: { date, finished: '1' } });
   }
   function confirmEnd() { Alert.alert('Terminer la séance ?', `${mmss(elapsed())} enregistrées. Ta montre transmettra la distance et l'allure via Strava.`, [{ text: 'Continuer', style: 'cancel' }, { text: 'Terminer', style: 'destructive', onPress: finish }]); }

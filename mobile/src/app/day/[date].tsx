@@ -5,7 +5,8 @@ import { ActivityRow, markDone, TYPE_LABEL } from '@/components/plan-row';
 import { Sheet } from '@/components/sheet';
 import { Button, Card, Coach, Gap, Row, T, Tag } from '@/components/ui';
 import { activitiesOn, adapted, doneOn, phaseOf } from '@/engine/coach';
-import { fmtLong } from '@/engine/dates';
+import { fmtDay, fmtLong, sportDay } from '@/engine/dates';
+import { movable } from '@/engine/reschedule';
 import { BOX_GUIDE, MOBILITY, REST_GUIDE } from '@/engine/guides';
 import { RECUP } from '@/engine/library';
 import { SessionProgressLine, useSession } from '@/components/session-progress';
@@ -25,6 +26,7 @@ export default function DayScreen() {
       <Gap />
       {shown.goal ? <T><T v="label">Objectif : </T>{shown.goal}</T> : null}
       {a.note ? <T style={{ marginTop: 6 }}><T v="label">À savoir : </T>{a.note}</T> : null}
+      {a.movedFrom ? <T v="small" color={c.accent} style={{ marginTop: 6 }}>{`Séance déplacée, prévue à l'origine ${fmtDay(a.movedFrom)}.`}</T> : null}
       {a.reason ? <><Gap /><Coach>{a.reason}</Coach></> : <Gap />}
 
       {shown.type === 'run' ? <Button kind="primary" block label="Ouvrir la séance guidée" onPress={() => router.push({ pathname: '/run/[date]', params: { date } })} /> : null}
@@ -48,6 +50,8 @@ export default function DayScreen() {
 
       {shown.type === 'rest' && a.type !== 'event' ? <Card><Bullets items={REST_GUIDE} /></Card> : null}
 
+      {movable(s, date, sportDay()).ok ? <Button block label={a.movedFrom ? 'Déplacer ou annuler le déplacement' : 'Déplacer la séance'} style={{ marginTop: space.s3 }} onPress={() => router.push({ pathname: '/move/[date]', params: { date } })} /> : null}
+      {a.movedTo ? <Button block label="Voir la séance déplacée" style={{ marginTop: space.s3 }} onPress={() => router.push({ pathname: '/day/[date]', params: { date: a.movedTo! } })} /> : null}
       <T v="h3" style={{ marginTop: space.s4, marginBottom: space.s2 }}>Activités enregistrées</T>
       {acts.length ? acts.map(x => <ActivityRow key={x.id} x={x} />) : <T v="small" muted>Aucune pour ce jour.</T>}
       <View style={{ height: space.s2 }} />

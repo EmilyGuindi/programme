@@ -84,8 +84,16 @@ export interface AppState {
   checks?: Record<ISODate, Record<string, Mark>>;
   /** Activités supprimées dans l'app (id → date) : une synchro ne les fait pas réapparaître. */
   deleted?: Record<string, number>;
+  /** Séances déplacées. moves : date d'origine → nouvelle date (to = origine : déplacement annulé, gardé pour la synchro).
+   *  habits : changement du jour habituel d'un type de séance à partir d'une date. */
+  reschedule?: Reschedule;
   /** Accomplissements déjà mis en scène (id → date) : l'animation de déverrouillage n'est jouée qu'une fois. */
   celebrated?: Record<string, number>;
+}
+
+export interface Reschedule {
+  moves: Record<ISODate, { to: ISODate; at: number }>;
+  habits: { type: 'run' | 'renfo'; fromDow: number; toDow: number; since: ISODate }[]; habitsAt: number;
 }
 
 export type PlanType = 'box' | 'run' | 'renfo' | 'rest' | 'recup' | 'event';
@@ -93,5 +101,6 @@ export interface Plan {
   date: ISODate; type: PlanType; title: string; dur?: string; goal?: string; note?: string;
   run?: RunSession; event?: SportEvent; hyrox?: boolean; alt?: boolean; short?: boolean;
   optional: boolean; mandatory: boolean; skipped?: boolean; week: number;
+  /** Séance déplacée : date d'origine (identifiant de la séance) ou nouvelle date pour le jour quitté. */ movedFrom?: ISODate; movedTo?: ISODate;
 }
 export interface AdaptedPlan extends Plan { level: Level; reason: string | null; replaced?: { type: 'recup'; title: string; goal: string; dur?: string } }

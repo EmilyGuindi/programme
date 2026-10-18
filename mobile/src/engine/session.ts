@@ -1,4 +1,4 @@
-import { adapted, doneOn, strengthBlocks } from './coach';
+import { adapted, doneOn, sessionKey, strengthBlocks } from './coach';
 import { MOBILITY, RUN_COOLDOWN, RUN_WARMUP } from './guides';
 import { WARMUP } from './library';
 import type { AdaptedPlan, AppState, ISODate, Mark } from './types';
@@ -22,10 +22,14 @@ export interface SessionProgress {
   current: SessionItem | null; next: SessionItem | null; state: SessionState; adapted: boolean; allChecked: boolean;
 }
 
-export const isOn = (s: AppState, d: ISODate, id: string) => !!s.checks?.[d]?.[id]?.on;
+/** `d` : date d'affichage OU identifiant de séance ; les coches sont rangées sous l'identifiant (date d'origine si la séance a été déplacée). */
+/** Accès direct par identifiant de séance (date de rangement), sans passer par le calendrier. */
+export const isOnKey = (s: AppState, key: ISODate, id: string) => !!s.checks?.[key]?.[id]?.on;
+export const isOn = (s: AppState, d: ISODate, id: string) => !!s.checks?.[sessionKey(s, d)]?.[id]?.on;
 
 /** Coche ou décoche (à appeler dans update()). Horodatée pour la fusion entre appareils. */
-export function setCheck(st: AppState, d: ISODate, id: string, on: boolean, at = Date.now()) {
+export function setCheck(st: AppState, date: ISODate, id: string, on: boolean, at = Date.now()) {
+  const d = sessionKey(st, date);
   st.checks = st.checks || {};
   const day = (st.checks[d] = st.checks[d] || {});
   day[id] = { on, at: Math.max(at, (day[id]?.at || 0) + 1) };

@@ -24,6 +24,7 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
   for (const k of Object.keys(remote.strength || {})) out.strength[k] = mergeStrength(local.strength[k], remote.strength[k]);
   for (const k of Object.keys(remote.runs || {})) { const l = local.runs[k], r = remote.runs[k]; out.runs[k] = !l ? r : { ...r, ...l, steps: { ...(r.steps || {}), ...(l.steps || {}) } }; }
   out.checks = mergeChecks(local.checks, remote.checks);
+  out.reschedule = mergeReschedule(local.reschedule, remote.reschedule);
   for (const k of Object.keys(remote.overrides || {})) out.overrides[k] = { ...remote.overrides[k], ...(local.overrides[k] || {}) };
   out.closures = maxMap(local.closures, remote.closures);
   out.recapsSeen = maxMap(local.recapsSeen, remote.recapsSeen);
@@ -33,6 +34,14 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
   out.strava = { since: Math.max(local.strava?.since || 0, remote.strava?.since || 0), fillAt: Math.max(local.strava?.fillAt || 0, remote.strava?.fillAt || 0) || undefined };
   out.updatedAt = Math.max(local.updatedAt || 0, remote.updatedAt || 0);
   return out;
+}
+
+/** Déplacements : séance par séance, le plus récent gagne (une annulation est un déplacement vers la date d'origine, donc elle se synchronise aussi). */
+export function mergeReschedule(a?: AppState['reschedule'], b?: AppState['reschedule']): AppState['reschedule'] {
+  if (!a || !b) return structuredClone(a || b);
+  const moves = { ...b.moves }; for (const [k, m] of Object.entries(a.moves)) if (!moves[k] || m.at >= moves[k].at) moves[k] = m;
+  const h = (a.habitsAt || 0) >= (b.habitsAt || 0) ? a : b;
+  return { moves, habits: structuredClone(h.habits), habitsAt: h.habitsAt };
 }
 
 /** Coches : élément par élément, la plus récente gagne (un décochage récent l'emporte sur une coche ancienne). */

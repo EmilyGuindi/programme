@@ -5,7 +5,7 @@ import { Bullets, Disclosure } from '@/components/guide';
 import { Sheet } from '@/components/sheet';
 import { EX_GUIDE } from '@/engine/guides';
 import { Button, Card, Coach, Gap, Input, Row, Segmented, T, Tick } from '@/components/ui';
-import { adapted, bestKg, doneOn, recovery, strengthBlocks, suggestKg } from '@/engine/coach';
+import { adapted, bestKg, doneOn, recovery, sessionKey, strengthBlocks, suggestKg } from '@/engine/coach';
 import { fmtDay, uid } from '@/engine/dates';
 import { isOn, strengthMode, toggleCheck } from '@/engine/session';
 import { SessionFooter } from '@/components/session-progress';
@@ -18,13 +18,13 @@ import { Pressable } from 'react-native';
 
 export default function RenfoScreen() {
   const { date } = useLocalSearchParams<{ date: string }>(); const s = useApp(); const { c } = useTheme();
-  const a = adapted(s, date); const log = s.strength[date] || { ex: {} };
+  const a = adapted(s, date); const key = sessionKey(s, date); const log = s.strength[key] || { ex: {} };
   const mode = strengthMode(s, date, a); const finished = doneOn(s, date);
   const check = (id: string) => update(st => toggleCheck(st, date, id));
   const blocks = strengthBlocks(s, date, mode === 'r'); const shoulder = recovery(s, date).shoulder;
   const [open, setOpen] = useState<string | null>(null);
   const ex = (id: string): ExerciseLog => log.ex?.[id] || { kg: [], reps: [], done: [] };
-  const setEx = (id: string, fn: (e: ExerciseLog) => void) => update(st => { const l = (st.strength[date] = st.strength[date] || { ex: {} }); const e = (l.ex[id] = l.ex[id] || { kg: [], reps: [], done: [] }); fn(e); });
+  const setEx = (id: string, fn: (e: ExerciseLog) => void) => update(st => { const l = (st.strength[key] = st.strength[key] || { ex: {} }); const e = (l.ex[id] = l.ex[id] || { kg: [], reps: [], done: [] }); fn(e); });
   return (
     <Sheet title={a.title} sub={`${fmtDay(date)} · optionnel · ${a.dur}`} footer={mode === 'x' ? undefined : <SessionFooter date={date}><Button kind="primary" block label={finished ? 'Séance terminée · revoir le bilan' : 'Terminer la séance'} onPress={finish} /></SessionFooter>}>
       {a.reason ? <Coach>{a.reason}</Coach> : null}
@@ -46,7 +46,7 @@ export default function RenfoScreen() {
         {blocks.map((b, bi) => (
           <View key={b.title}>
             <T v="small" muted style={{ marginTop: space.s3, marginBottom: 6, fontWeight: '600' }}>{b.title}</T>
-            {b.leg ? <View style={{ marginBottom: 8 }}><Segmented options={LEGS} value={b.legSel!} onChange={v => update(st => { st.strength[date] = { ...(st.strength[date] || { ex: {} }), leg: v }; })} /></View> : null}
+            {b.leg ? <View style={{ marginBottom: 8 }}><Segmented options={LEGS} value={b.legSel!} onChange={v => update(st => { st.strength[key] = { ...(st.strength[key] || { ex: {} }), leg: v }; })} /></View> : null}
             {b.items.map((e, ii) => {
               const x = ex(e.id); const setOn = (j: number) => isOn(s, date, `set:${e.id}:${j + 1}`); const nDone = Array.from({ length: e.nSets }, (_, j) => setOn(j)).filter(Boolean).length; const full = nDone >= e.nSets; const sug = suggestKg(s, e, date); const last = bestKg(s, e.id, date);
               return (

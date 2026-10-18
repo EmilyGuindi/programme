@@ -8,6 +8,7 @@ import { markDone, openDay, TYPE_LABEL } from '@/components/plan-row';
 import { Button, Chevron, Divider, ListGroup, ListRow, Meter, Row, Screen, T } from '@/components/ui';
 import { activitiesOn, adapted, doneOn, phaseOf, weekOf, weekStart } from '@/engine/coach';
 import { eventState, weekSummary } from '@/engine/status';
+import { movable } from '@/engine/reschedule';
 import { sessionProgress, SESSION_LABEL } from '@/engine/session';
 import { addDays, clock, daysBetween, dow, fmtShort, parseISO, sportDay } from '@/engine/dates';
 import type { AdaptedPlan } from '@/engine/types';
@@ -120,6 +121,8 @@ function DayPanel({ a, today }: { a: AdaptedPlan; today: string }) {
           : null}
         <Row>
           {!isEvent && (shown.type !== 'rest' || done) ? <Button small kind="ghost" label="Détail du jour" style={{ paddingHorizontal: 0 }} onPress={() => openDay(a.date)} /> : null}
+          {movable(s, a.date, today).ok ? <Button small kind="ghost" label="Déplacer la séance" style={{ paddingHorizontal: 0, marginLeft: space.s4 }} onPress={() => router.push({ pathname: '/move/[date]', params: { date: a.date } })} /> : null}
+          {a.movedTo ? <Button small kind="ghost" label="Voir la séance déplacée" style={{ paddingHorizontal: 0 }} onPress={() => openDay(a.movedTo!)} /> : null}
           {a.hyrox && a.date >= today ? <Button small kind="ghost" label="Pas de HYROX cette semaine" style={{ paddingHorizontal: 0, marginLeft: 'auto' }} onPress={() => update(st => { st.overrides[a.date] = { ...(st.overrides[a.date] || {}), noHyrox: true }; })} /> : null}
           {a.alt && a.date >= today ? <Button small kind="ghost" label="Finalement, HYROX" style={{ paddingHorizontal: 0, marginLeft: 'auto' }} onPress={() => update(st => { delete st.overrides[a.date].noHyrox; })} /> : null}
         </Row>

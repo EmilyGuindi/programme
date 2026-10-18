@@ -31,7 +31,37 @@ function satRun(s: AppState, w: number, wed: RunSession): RunSession {
   return RUN.tempo();
 }
 
+/* ---------- replanification ---------- */
+type MoveMap = { to: Map<ISODate, ISODate>; from: Map<ISODate, ISODate> };
+const moveCache = new WeakMap<object, { events: unknown; start: ISODate; m: MoveMap }>();
+/** Correspondance origine ↔ nouvelle date : déplacements ponctuels, puis jours habituels changés (sans écraser un déplacement ponctuel). */
+export function moveMap(s: AppState): MoveMap {
+  const r = s.reschedule; const m: MoveMap = { to: new Map(), from: new Map() };
+  if (!r) return m;
+  const c = moveCache.get(r); if (c && c.events === s.events && c.start === s.program.start) return c.m;
+  for (const [o, x] of Object.entries(r.moves || {})) if (x.to !== o && !m.from.has(x.to)) { m.to.set(o, x.to); m.from.set(x.to, o); }
+  for (const h of r.habits || []) for (let w = 1; w <= s.program.weeks; w++) {
+    const o = addDays(weekStart(s, w), h.fromDow), t = addDays(weekStart(s, w), h.toDow);
+    if (o < h.since || m.to.has(o) || m.from.has(t) || m.to.has(t) || r.moves?.[o]) continue;
+    const b = basePlan(s, o), bt = basePlan(s, t);
+    if (b.type !== h.type || bt.type === 'event' || (bt.type !== 'rest' && bt.type !== h.type)) continue;
+    m.to.set(o, t); m.from.set(t, o);
+  }
+  moveCache.set(r, { events: s.events, start: s.program.start, m }); return m;
+}
+/** Identifiant de la séance affichée un jour donné : sa date d'origine (les coches, charges et notes y restent attachées). */
+export const sessionKey = (s: AppState, d: ISODate) => moveMap(s).from.get(d) ?? d;
+
 export function planFor(s: AppState, d: ISODate): Plan {
+  const m = moveMap(s);
+  const src = m.from.get(d);
+  if (src) return { ...basePlan(s, src), date: d, week: weekOf(s, d), movedFrom: src };
+  const to = m.to.get(d);
+  if (to) { const b = basePlan(s, d); return { type: 'rest', title: 'Séance déplacée', note: `${b.title} déplacée au ${DAYS_LONG[dow(to)]} ${+to.slice(8)}.`, date: d, week: weekOf(s, d), optional: false, mandatory: false, movedTo: to }; }
+  return basePlan(s, d);
+}
+const DAYS_LONG = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+export function basePlan(s: AppState, d: ISODate): Plan {
   const w = weekOf(s, d), i = dow(d), ov = s.overrides[d] || {}, ev = eventOn(s, d);
   let p: Omit<Plan, 'optional' | 'mandatory' | 'date' | 'week'> & Partial<Plan>;
   const fx = FIXED[d];
@@ -151,7 +181,7 @@ export const strPhase = (w: number) => (w <= 5 ? 0 : w <= 12 ? 1 : w <= 16 ? 2 :
 export interface SetPlan extends Exercise { id: string; nSets: number; repsTxt: string; rirTxt: string }
 export interface Block { title: string; leg?: boolean; legSel?: string; items: SetPlan[] }
 export function strengthBlocks(s: AppState, d: ISODate, reduced: boolean): Block[] {
-  const p = planFor(s, d), w = weekOf(s, d), pi = strPhase(w), log = s.strength[d], short = !!p.short, deload = DELOAD.includes(w);
+  const p = planFor(s, d), w = weekOf(s, p.movedFrom || d), pi = strPhase(w), log = s.strength[sessionKey(s, d)], short = !!p.short, deload = DELOAD.includes(w);
   const xr = (deload ? 1 : 0) + (reduced ? 1 : 0);
   const addRir = (r: string, k: number) => (!k ? r : r.split('–').map(x => +x + k).join('–'));
   const mk = (id: string): SetPlan => {

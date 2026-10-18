@@ -10,7 +10,7 @@ import { segments, totalSec } from '@/engine/segments';
 import { radius } from '@/theme/tokens';
 import { RPE_SCALE, RUN_COOLDOWN, RUN_TERMS, RUN_WARMUP, ZONE_GUIDE } from '@/engine/guides';
 import { Button, Card, Choices, Coach, Field, Gap, Input, KV, Row, T, Tick } from '@/components/ui';
-import { adapted, ZONE_NAME, zones, zoneText } from '@/engine/coach';
+import { adapted, sessionKey, ZONE_NAME, zones, zoneText } from '@/engine/coach';
 import { fmtDay, num, parseTime, uid } from '@/engine/dates';
 import { isOn, toggleCheck } from '@/engine/session';
 import { SessionFooter } from '@/components/session-progress';
@@ -22,9 +22,9 @@ import { space, useTheme } from '@/theme/tokens';
 
 export default function RunScreen() {
   const { date, finished } = useLocalSearchParams<{ date: string; finished?: string }>(); const s = useApp(); const { c } = useTheme();
-  const a = adapted(s, date); const run = a.replaced ? undefined : a.run; const R: RunLog = s.runs[date] || {};
+  const a = adapted(s, date); const run = a.replaced ? undefined : a.run; const key = sessionKey(s, date); const R: RunLog = s.runs[key] || {};
   const [live, setLive] = useState<number | null>(null);
-  const set = (patch: Partial<RunLog>) => update(st => { st.runs[date] = { ...(st.runs[date] || {}), ...patch }; });
+  const set = (patch: Partial<RunLog>) => update(st => { st.runs[key] = { ...(st.runs[key] || {}), ...patch }; });
   if (!run) return <Sheet title={(a.replaced || a).title} sub={fmtDay(date)}><T>{(a.replaced || a).goal}</T></Sheet>;
   const zs = [...new Set(run.steps.map(x => x.zone).filter(Boolean))] as Zone[];
   function save() {

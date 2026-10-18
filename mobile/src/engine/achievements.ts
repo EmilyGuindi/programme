@@ -2,7 +2,7 @@ import { adapted, comparable, countsFor, DELOAD, doneOn, PHASES, recovery, weekO
 import { addDays, fmtShort, mmss, num } from './dates';
 import { EX } from './library';
 import { weekSuccess } from './journey';
-import { isOn } from './session';
+import { isOnKey } from './session';
 import { eventState } from './status';
 import type { Activity, AppState, ISODate } from './types';
 
@@ -86,7 +86,7 @@ export function achievementsFor(s: AppState, today: ISODate): Achievement[] {
 
   /* ---------- Force ---------- */
   const days = Object.keys(s.strength).filter(d => d <= today).sort();
-  const setsOf = (d: string, id: string) => { const e = s.strength[d]?.ex?.[id]; if (!e) return []; return e.kg.map((k, i) => ({ kg: num(k), reps: num(e.reps[i]), ok: e.done[i] || isOn(s, d, `set:${id}:${i + 1}`) || num(e.reps[i]) != null })).filter(x => x.kg && x.kg > 0 && x.kg < 400 && x.ok) as { kg: number; reps: number | null }[]; };
+  const setsOf = (d: string, id: string) => { const e = s.strength[d]?.ex?.[id]; if (!e) return []; return e.kg.map((k, i) => ({ kg: num(k), reps: num(e.reps[i]), ok: e.done[i] || isOnKey(s, d, `set:${id}:${i + 1}`) || num(e.reps[i]) != null })).filter(x => x.kg && x.kg > 0 && x.kg < 400 && x.ok) as { kg: number; reps: number | null }[]; };
   const MAIN = ['f1', 'f2', 'f3', 'm1', 'm2', 'm3', 'm4'];
   let loadPr: { date: ISODate; txt: string } | null = null, repPr: { date: ISODate; txt: string } | null = null;
   for (const id of MAIN) {

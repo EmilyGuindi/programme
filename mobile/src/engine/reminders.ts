@@ -1,6 +1,6 @@
 import { addDays, dow, iso } from './dates';
 import type { AppState } from './types';
-import { weekOf } from './coach';
+import { planFor, weekOf } from './coach';
 
 export interface Reminder { id: string; at: Date; title: string; body: string; url: string; kind: 'checkin' | 'weigh' | 'both' | 'recap' }
 
@@ -18,15 +18,17 @@ export function planReminders(s: AppState, now = new Date(), days = 14): Reminde
     const wg = p.notifWeigh && dow(d) === p.weighDay && !weighedThisWeek(s, d) ? at(d, p.weighTime) : null;
     const valid = (x: Date | null) => x && x.getTime() > now.getTime() + 30_000;
     const c = valid(ci) ? ci : null, w = valid(wg) ? wg : null;
+    const pd = planFor(s, d); const what = pd.type === 'rest' ? '' : ` Au programme : ${pd.title.charAt(0).toLowerCase()}${pd.title.slice(1)}${pd.movedFrom ? ' (séance déplacée)' : ''}.`;
     if (c && w && Math.abs(c.getTime() - w.getTime()) <= 60 * 60_000) {
-      out.push({ id: `both-${d}`, at: c < w ? c : w, kind: 'both', title: 'Check-in et pesée du jour', body: 'Comment tu te sens ? Ensuite, ton bilan hebdo en 20 secondes.', url: '/checkin?then=measure' });
+      out.push({ id: `both-${d}`, at: c < w ? c : w, kind: 'both', title: 'Check-in et pesée du jour', body: `Comment tu te sens ? Ensuite, ton bilan hebdo en 20 secondes.${what}`, url: '/checkin?then=measure' });
       continue;
     }
     if (p.notifRecap !== false && dow(d) === 6) {
       const w = weekOf(s, d); const r = at(d, '19:00');
       if (w >= 1 && w <= s.program.weeks && !s.recapsSeen?.[String(w)] && valid(r)) out.push({ id: `recap-${d}`, at: r!, kind: 'recap', title: 'Ton bilan de la semaine est prêt', body: 'Ce que tu as accompli, en quelques cartes.', url: `/recap/${w}` });
     }
-    if (c) out.push({ id: `checkin-${d}`, at: c, kind: 'checkin', title: 'Comment tu te sens ce matin ?', body: 'Ton coach adapte ta journée. 30 secondes.', url: '/checkin' });
+    if (c) {
+      out.push({ id: `checkin-${d}`, at: c, kind: 'checkin', title: 'Comment tu te sens ce matin ?', body: `Ton coach adapte ta journée. 30 secondes.${what}`, url: '/checkin' }); }
     if (w) out.push({ id: `weigh-${d}`, at: w, kind: 'weigh', title: "C'est l'heure de ton bilan hebdo", body: 'On fait le point sur ta progression ?', url: '/measure' });
   }
   return out.sort((a, b) => a.at.getTime() - b.at.getTime());
