@@ -46,6 +46,7 @@ export default function RootLayout() {
         <Stack.Screen name="run-live/[date]" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="coach" options={sheet} />
         <Stack.Screen name="coach-settings" options={sheet} />
+        <Stack.Screen name="import-profile" options={sheet} />
         <Stack.Screen name="move/[date]" options={sheet} />
         <Stack.Screen name="programs/index" options={sheet} />
         <Stack.Screen name="programs/new" options={sheet} />

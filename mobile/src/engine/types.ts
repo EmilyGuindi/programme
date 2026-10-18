@@ -68,6 +68,7 @@ export interface AppState {
     prefs: { checkinTime: string; weighDay: number; weighTime: string; notifCheckin: boolean; notifWeigh: boolean; cycleOptIn: boolean; notifRecap?: boolean;
       /** Retours haptiques (défaut : activés). */ haptics?: boolean; /** Animations : celles du système, ou réduites dans BYYND. */ motion?: 'system' | 'reduced'; /** Mettre en scène les accomplissements débloqués (défaut : oui). */ celebrate?: boolean };
     ref: { k10: number | null; k5: number | null };
+    /** Contraintes durables (import du profil), reprises à la création d'un programme. */ constraints?: string;
   };
   /** Programme en cours (ou le dernier, ou le prochain si aucun n'est en cours). Les autres sont dans `programs`. */
   program: ProgramDef;

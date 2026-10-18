@@ -88,7 +88,7 @@ export default function NewProgram() {
         </Field>
         <Field label="Semaine allégée"><Segmented options={[['0', 'Aucune'], ['3', 'Toutes les 3'], ['4', 'Toutes les 4'], ['5', 'Toutes les 5']]} value={String(spec.deloadEvery)} onChange={v => set({ deloadEvery: +v })} /></Field>
         <Field label="Tests chronométrés"><Row between><T v="small" muted style={{ flex: 1 }}>Un 5 km de repère au début, un test en fin de programme.</T><Toggle label="Tests chronométrés" value={spec.tests !== false} onChange={v => set({ tests: v })} /></Row></Field>
-        <Field label="Contraintes" hint="Gardées comme note : voyages, gêne, horaires…"><Input multiline style={{ minHeight: 72, paddingTop: 12, textAlignVertical: 'top' }} defaultValue={spec.constraints || ''} onChangeText={t => set({ constraints: t.slice(0, 400) })} /></Field>
+        <Field label="Contraintes" hint="Gardées comme note : voyages, gêne, horaires…"><Input multiline style={{ minHeight: 72, paddingTop: 12, textAlignVertical: 'top' }} defaultValue={spec.constraints || s.user.constraints || ''} onChangeText={t => set({ constraints: t.slice(0, 400) })} /></Field>
         <Field label="Nom"><Input defaultValue={name} placeholder={`Programme du ${fmtShort(start)}`} onChangeText={setName} /></Field>
       </> : null}
 

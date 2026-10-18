@@ -167,6 +167,7 @@ function Data() {
         <ListRow last chevron={false} title="Cycle menstruel dans le check-in" sub="Facultatif. Aide à lire les variations de poids." right={<Toggle label="Cycle menstruel" value={pr.cycleOptIn} onChange={v => update(st => { st.user.prefs.cycleOptIn = v; })} />} />
       </ListGroup>
       <ListGroup title="Sauvegarde">
+        <ListRow title="Importer mon profil sportif" sub="Objectifs, records, compétitions : tu valides chaque différence" onPress={() => router.push('/import-profile')} />
         <ListRow title="Exporter une copie" sub="Un fichier à garder où tu veux" onPress={exportData} />
         <ListRow last title="Importer une sauvegarde" sub="Remplace les données de ce téléphone" onPress={importData} />
       </ListGroup>
