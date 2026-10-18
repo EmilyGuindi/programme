@@ -13,3 +13,4 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE TABLE IF NOT EXISTS user_state (user_id TEXT PRIMARY KEY, json TEXT NOT NULL, updated_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS state_backups (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, json TEXT NOT NULL, updated_at INTEGER NOT NULL, created_at INTEGER NOT NULL, reason TEXT);
 CREATE INDEX IF NOT EXISTS idx_backups_user ON state_backups(user_id, id);
+CREATE TABLE IF NOT EXISTS coach_usage (user_id TEXT NOT NULL, day TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (user_id, day));

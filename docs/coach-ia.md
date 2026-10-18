@@ -1,4 +1,27 @@
-# Coach IA de BYYND : faisabilité ChatGPT et architecture
+# Coach IA de BYYND
+
+## Claude (actif dès que la clé est configurée)
+
+- **Modèle** : Claude Haiku (`claude-haiku-5-5`), appelé par le Worker (`worker/coach.js`) avec le SDK officiel `@anthropic-ai/sdk`. Effort « low » pour des réponses rapides.
+- **Clé** : secret GitHub `ANTHROPIC_API_KEY`, poussé vers le Worker au déploiement. Elle n'est jamais sur le téléphone ni dans le dépôt.
+- **Accès** : réservé à une personne authentifiée (session Google ou clé historique). Quota de 60 messages par jour et par personne, réglable avec le secret `COACH_DAILY_LIMIT`.
+- **Données envoyées** : `coachContext()` (`mobile/src/engine/tools.ts`), filtré par les permissions du coach.
+  - Contenu : programme, séances de J-7 à J+14, compétitions, activités chiffrées des 4 dernières semaines, records, allures, récupération, check-ins.
+  - Exclus : titres d'activités, notes libres, e-mail, jetons.
+  - Taille : environ 1 500 jetons.
+- **Actions** :
+  - Claude ne dispose que de trois outils de **proposition** : `apply_workout_reschedule`, `adapt_today`, `create_program_draft`.
+  - Le téléphone revalide chaque proposition avec les règles BYYND (`checkCall` / `prepare`) et l'affiche en carte.
+  - Rien n'est appliqué sans « Accepter » ; à l'exécution, les contrôles sont refaits.
+- **Secours** : si Claude est hors ligne, sans crédit, au-delà du quota ou non configuré, le coach à règles répond et le dit.
+- **Coût** : environ 0,07 centime par message, sur un crédit prépayé sans rechargement automatique.
+
+## Mise en place
+1. Sur console.anthropic.com, créer un compte, acheter quelques dollars de crédit et **désactiver le rechargement automatique**.
+2. Créer une clé API, puis l'ajouter dans GitHub → Settings → Secrets and variables → Actions → `ANTHROPIC_API_KEY`.
+3. Relancer le déploiement (workflow « Déployer BYYND sur Cloudflare » → Run workflow), ou attendre le prochain merge.
+
+## ChatGPT : faisabilité (historique)
 
 _Vérifié le 18 octobre 2026._
 

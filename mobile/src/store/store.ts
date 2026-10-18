@@ -86,6 +86,7 @@ export function setServer(next: Partial<Server>) {
 const base = () => server.url.replace(/\/$/, '');
 const configured = () => !!server.url && !!(server.session || server.key);
 export const hasAccount = () => !!server.session;
+export const canSync = () => configured();
 const setSync = (s: SyncStatus) => { sync = { lastOk: sync.lastOk, ...s, ...(s.status === 'ok' ? { lastOk: s.at } : {}) }; emit(); };
 /** Appel authentifié : session du compte en priorité, clé historique sinon. Une session refusée est oubliée (reconnexion demandée). */
 export async function api(path: string, init: RequestInit = {}) {

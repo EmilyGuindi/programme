@@ -1,7 +1,8 @@
 /* BYYND — backend (lot 2). Cloudflare Worker + D1. Zéro dépendance. */
 import { handleStrava, hourly, stravaApi } from "./strava.js";
 import { authenticate, backup, getMeta, readState, safeEqual, signInWithGoogle, writeState } from "./auth.js";
-const VERSION = "5.0.0";
+import { coachChat } from "./coach.js";
+const VERSION = "5.1.0";
 const ALLOWED_ORIGINS = ["https://emilyguindi.github.io"];
 
 function cors(req) {
@@ -30,7 +31,7 @@ export default {
 
 async function api(req, env, url, c) {
   const p = url.pathname;
-  if (p === "/api/health") return json({ ok: true, version: VERSION, time: new Date().toISOString(), db: !!env.DB, authConfigured: !!env.APP_KEY, google: { clientId: String(env.GOOGLE_WEB_CLIENT_ID || "").split(",")[0].trim() || null } }, 200, c);
+  if (p === "/api/health") return json({ ok: true, version: VERSION, time: new Date().toISOString(), db: !!env.DB, authConfigured: !!env.APP_KEY, google: { clientId: String(env.GOOGLE_WEB_CLIENT_ID || "").split(",")[0].trim() || null }, coach: { claude: !!env.ANTHROPIC_API_KEY } }, 200, c);
   if (!env.DB) return json({ error: "no_db" }, 500, c);
 
   // Connexion Google : seule route accessible sans session. La clé historique, si fournie, prouve la propriété des données existantes.
@@ -46,6 +47,11 @@ async function api(req, env, url, c) {
   const owner = await getMeta(env, "owner_user_id");
   const isOwner = who.legacy || (!!owner && who.userId === owner);
 
+  // Coach conversationnel : réservé à une personne identifiée (session ou clé historique rattachée au propriétaire).
+  if (p === "/api/coach/chat" && req.method === "POST") {
+    const r = await coachChat(env, who, await req.json().catch(() => ({})));
+    return json(r.body, r.status, c);
+  }
   if (p === "/api/auth/me") {
     if (!who.userId) return json({ user: null, legacy: true }, 200, c);
     const u = await env.DB.prepare("SELECT email, name, created_at FROM users WHERE id=?").bind(who.userId).first();

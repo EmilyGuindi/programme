@@ -1,4 +1,4 @@
-import { adapted, committed, planFor, recovery, runsList } from './coach';
+import { adapted, committed, doneOn, phaseOf, planFor, recovery, runsList, weekOf, ZONE_NAME, zoneText } from './coach';
 import { addDays, dow, fmtDay, fmtShort, mmss } from './dates';
 import { FOCUS_LABEL, phasesFor, programEnd } from './generator';
 import { activate, activationConsequences, blocking, findProgram, makeDraft, nameOf, parseSpec, previousProgram, saveDraft, specOf, suggestedStart, suggestWeeks, validateProgram, weekPreview } from './programs';
@@ -147,3 +147,37 @@ export function minimalContext(s: AppState, today: ISODate): Record<string, unkn
   return out;
 }
 export const _t = { dow, mmss, committed, phasesFor, weekPreview };
+
+const DOW = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+/** Contexte du coach conversationnel : ce que Claude « voit » de l'app. Uniquement les catégories autorisées, des faits structurés,
+ *  jamais de notes libres, de titres d'activités importés, d'identifiants de compte ni de jetons. */
+export function coachContext(s: AppState, today: ISODate): Record<string, unknown> {
+  const p = permsOf(s); const out: Record<string, unknown> = { aujourdhui: `${DOW[dow(today)]} ${today}` };
+  const strava = p.strava;
+  if (p.programs) {
+    const P = s.program; const w = Math.min(P.weeks, Math.max(1, weekOf(s, today))); const ph = phaseOf(w, P);
+    out.programme = { nom: nameOf(P), debut: P.start, fin: programEnd(P), semaine: `${w} sur ${P.weeks}`, phase: `${ph.name} : ${ph.goal}`, objectif: P.template === 'custom' ? FOCUS_LABEL[specOf(P).focus] : s.user.goals.run,
+      semaineType: specOf(P).days.map((d, i) => `${DOW[i]} ${d}`).join(', '), contraintes: s.user.constraints || specOf(P).constraints || null };
+    out.objectifs = { course: s.user.goals.run, poidsSouhaite: p.body ? s.user.goals.weightTarget : undefined };
+    const day = (d: ISODate) => { const a = adapted(s, d); const sh = a.replaced || a;
+      return { date: d, jour: DOW[dow(d)], seance: sh.title, type: a.type, duree: sh.dur || null, obligatoire: a.mandatory, faite: d < today || d === today ? doneOn(s, d) : undefined,
+        deplaceeDepuis: a.movedFrom || undefined, adaptation: a.reason || undefined, etapes: a.run && !a.replaced ? a.run.steps.map(x => x.zone ? `${x.text} (${zoneText(s, x.zone)})` : x.text) : undefined }; };
+    out.planning = Array.from({ length: 22 }, (_, i) => addDays(today, i - 7)).map(day);
+    out.competitions = s.events.filter(e => e.status !== 'annulé' && e.date >= addDays(today, -30)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 8)
+      .map(e => ({ id: e.id, nom: e.name, date: e.date, km: e.distanceKm ?? null, priorite: e.priority, statut: e.status, resultat: e.result ? mmss(e.result.time / (e.distanceKm || 1)) + ' /km' : undefined }));
+    out.autresProgrammes = (s.programs || []).filter(x => x.status !== 'archived').map(x => ({ id: x.id, nom: nameOf(x), statut: x.status, debut: x.start, semaines: x.weeks }));
+  }
+  if (p.history) {
+    const from = addDays(today, -28);
+    out.activitesRecentes = s.activities.filter(a => a.date >= from && a.date <= today && (strava || a.source !== 'strava')).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30)
+      .map(a => ({ date: a.date, type: a.type, km: a.distanceKm ?? undefined, min: a.durationMin ?? undefined, allure: a.distanceKm && a.durationMin ? mmss(pace(a)) + ' /km' : undefined, fc: a.avgHr ?? undefined, denivele: a.elevM ?? undefined, effort: a.effort ?? undefined, nature: a.kind || undefined, complementaire: a.complementary || undefined }));
+    out.records = recordsUntil(s, today).map(r => `${r.label} : ${r.value} (${r.date})`);
+    out.allures = (Object.keys(ZONE_NAME) as (keyof typeof ZONE_NAME)[]).map(z => `${ZONE_NAME[z]} : ${zoneText(s, z)}`);
+  }
+  if (p.recovery) {
+    out.recuperation = [today, addDays(today, -1)].map(d => { const r = recovery(s, d); return { date: d, niveau: r.level, raisons: r.reasons }; });
+    out.checkins = Object.keys(s.checkins).filter(k => k >= addDays(today, -7) && k <= today).sort().map(k => { const c = s.checkins[k]; return { date: k, sommeil: c.sleep, energie: c.energy, courbatures: c.soreness, douleur: c.pain === 'oui' ? 'oui' : 'non', motivation: c.motivation }; });
+  }
+  if (p.body) out.poids = s.measurements.filter(m => m.weight).sort((a, b) => a.date.localeCompare(b.date)).slice(-6).map(m => ({ date: m.date, kg: m.weight }));
+  return JSON.parse(JSON.stringify(out)); // retire les champs vides
+}

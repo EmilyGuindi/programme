@@ -161,4 +161,4 @@ export type CoachCard =
 export interface CoachMsg { id: string; role: 'user' | 'coach'; at: number; text: string; cards?: CoachCard[]; scopes?: DataScope[]; tools?: string[]; decisions?: Record<string, 'accepted' | 'refused'> }
 export interface CoachThread { id: string; title: string; at: number; messages: CoachMsg[] }
 export interface CoachDecision { id: string; at: number; text: string; outcome: 'accepted' | 'refused' }
-export interface CoachMemory { perms: Partial<Record<DataScope, boolean>>; threads: CoachThread[]; decisions: CoachDecision[]; provider?: 'local' | 'chatgpt'; /** « Tout oublier » : rien d'antérieur ne revient par la synchro. */ clearedAt?: number }
+export interface CoachMemory { perms: Partial<Record<DataScope, boolean>>; threads: CoachThread[]; decisions: CoachDecision[]; provider?: 'local' | 'chatgpt' | 'claude'; /** « Tout oublier » : rien d'antérieur ne revient par la synchro. */ clearedAt?: number }

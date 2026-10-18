@@ -1,5 +1,5 @@
-import { adapted, planFor } from '@/engine/coach';
-import { addDays, dow, fmtDay, fmtShort, mmss } from '@/engine/dates';
+import { adapted, planFor, ZONE_NAME, zones, zoneText } from '@/engine/coach';
+import { addDays, daysBetween, dow, fmtDay, fmtShort, mmss } from '@/engine/dates';
 import { CYCLE1_SPEC } from '@/engine/generator';
 import { previousProgram, specOf } from '@/engine/programs';
 import type { CoachCard, ISODate, ProgramSpec, RunFocus, Slot } from '@/engine/types';
@@ -62,6 +62,7 @@ function fatigue(t: string, ctx: CoachContext): CoachReply | null {
 
 function paceWhy(t: string, ctx: CoachContext): CoachReply | null {
   if (!/(progress|allure|vitesse|lent|stagn)/.test(t) || /prepare|programme|10 ?km pour|garder/.test(t)) return null;
+  if (!/pourquoi|progress|stagn|lent|plateau|evolu/.test(t) || targetDay(t, ctx.today)) return null; // « quelle allure demain » : c'est une question de séance
   const r = ctx.read({ name: 'get_running_progress', args: {} }); if (r.error) return { text: r.error, cards: [] };
   const d = r.data; const items: string[] = [];
   if (d.easyRuns < 4) return { text: `Je n'ai que ${d.easyRuns} footing${d.easyRuns > 1 ? 's' : ''} facile${d.easyRuns > 1 ? 's' : ''} exploitable${d.easyRuns > 1 ? 's' : ''} (distance et durée). Il en faut au moins 4 pour parler de tendance.`, cards: [] };
@@ -137,12 +138,85 @@ function records(t: string, ctx: CoachContext): CoachReply | null {
   return { text: r.data.length ? 'Tes records actuels.' : 'Pas encore de record mesuré.', cards: r.data.length ? [{ kind: 'facts', id: id(), title: 'Records', items: r.data.map((x: any) => `${x.label} : ${x.value}, le ${fmtShort(x.date)}`) }] : [] };
 }
 
+/** Jour visé par une question : aujourd'hui, demain, après-demain, un jour de la semaine, le week-end. Null si aucun. */
+export function targetDay(t: string, today: ISODate): ISODate | null {
+  if (/apres[ -]demain/.test(t)) return addDays(today, 2);
+  if (/\bdemain\b/.test(t)) return addDays(today, 1);
+  if (/aujourd ?hui|ce matin|ce soir|ce midi|\bce jour\b/.test(t)) return today;
+  if (/week-?end/.test(t)) { const sat = addDays(today, (5 - dow(today) + 7) % 7); return /semaine prochaine/.test(t) ? addDays(sat, 7) : sat; }
+  const ds = daysIn(t); if (!ds.length) return null;
+  let d = addDays(today, (ds[0].dow - dow(today) + 7) % 7);
+  if (/semaine prochaine|prochain\b/.test(t) && d <= addDays(today, 6 - dow(today))) d = addDays(d, 7);
+  return d;
+}
+/** Minuscule initiale, sauf pour un nom propre de compétition. */
+const lcPlan = (p: { type: string; title: string }) => (p.type === 'event' ? p.title : p.title.charAt(0).toLowerCase() + p.title.slice(1));
+const zonesMid = (s: any, z: 'easy') => { const [a, b] = zones(s).z[z]; return (a + b) / 2; };
+const dayLabel = (d: ISODate, today: ISODate) => { const n = daysBetween(today, d); return n === 0 ? "aujourd'hui" : n === 1 ? 'demain' : n === 2 ? 'après-demain' : `${fmtDay(d)}`; };
+
+/** « Je dois courir combien de temps demain ? », « C'est quoi ma séance samedi ? », « À quelle allure mercredi ? » */
+function sessionInfo(t: string, ctx: CoachContext): CoachReply | null {
+  const asks = /combien|quoi|quel|quelle|c est|ma seance|mon entrainement|je fais|je cours|courir|prevu|programme|duree|temps|allure|km|kilometre|distance|footing|run|renfo|crossfit|hyrox|repos/.test(t);
+  let d = targetDay(t, ctx.today);
+  const nextRun = !d && /prochaine? (sortie|seance de course|run|footing|course a pied)/.test(t);
+  if (nextRun) d = Array.from({ length: 14 }, (_, i) => addDays(ctx.today, i)).find(x => planFor(ctx.state as any, x).type === 'run') || null;
+  if (!d || (!asks && !nextRun)) return null;
+  if (/week-?end/.test(t) && dow(d) === 5) { // samedi et dimanche
+    const both = [d, addDays(d, 1)].map(x => { const a = adapted(ctx.state as any, x); const sh = a.replaced || a; return `${fmtDay(x)} : ${lcPlan(sh)}${sh.dur && !sh.title.includes(sh.dur) ? `, ${sh.dur}` : ''}`; });
+    return { text: `Ce week-end : ${both.join(' ; ')}.`, cards: [] };
+  }
+  if (/(mets|deplace|bouge|decale|plutot que|au lieu)/.test(t)) return null; // c'est un déplacement
+  const ok = ctx.read({ name: 'get_active_program', args: {} }); if (ok.error) return { text: ok.error, cards: [] };
+  const s = ctx.state as any; const a = adapted(s, d); const shown = a.replaced || a; const when = dayLabel(d, ctx.today); const When = when.charAt(0).toUpperCase() + when.slice(1);
+  if (a.type === 'rest' || (a.replaced && a.replaced.type === 'recup' && !a.run)) {
+    const nx = Array.from({ length: 10 }, (_, i) => addDays(d!, i + 1)).find(x => adapted(s, x).type === 'run');
+    const runAsked = /courir|cours|run|footing|allure|km/.test(t);
+    return { text: `${When} : ${shown.title.toLowerCase()}${shown.dur ? `, ${shown.dur}` : ''}.${shown.goal ? ` ${shown.goal}` : ''}${runAsked ? ` Pas de course prévue ce jour-là${nx ? ` : prochaine sortie ${dayLabel(nx, ctx.today)}, ${adapted(s, nx).title.toLowerCase()}` : ''}.` : ''}`, cards: [] };
+  }
+  if (a.type === 'run' && a.run && !a.replaced) {
+    const r = a.run; const zonesUsed = [...new Set(r.steps.map(x => x.zone).filter(Boolean))] as any[];
+    const items = [...r.steps.map(x => `${x.text}${x.zone ? ` (${zoneText(s, x.zone)})` : ''}`)];
+    const head = /allure|vite|rythme/.test(t) && zonesUsed.length ? `${When}, ${r.title.toLowerCase()} : ${zonesUsed.map(z => `${ZONE_NAME[z as keyof typeof ZONE_NAME].toLowerCase()} ${zoneText(s, z)}`).join(', ')}.`
+      : `${When} : ${r.title}${r.title.includes(r.dur) ? '' : `, ${r.dur}`}.`;
+    const kmAsked = /\bkm\b|kilometre|distance|combien de (km|kilo)/.test(t);
+    const mins = r.steps.reduce((m, x) => m + (x.zone ? parseInt(x.text, 10) || 0 : 0), 0);
+    const kmTxt = kmAsked && mins ? ` Environ ${String(Math.round(mins * 60 / zonesMid(s, 'easy') * 2) / 2).replace('.', ',')} km de course, selon ton allure facile : la séance se règle au temps, pas à la distance.` : '';
+    return { text: `${head}${kmTxt} ${r.goal}${a.reason ? ` ${a.reason}` : ''}${a.note ? ` ${a.note}` : ''}`, cards: [{ kind: 'facts', id: id(), title: `${r.title}, ${fmtDay(d)}`, items }], suggestions: ['Je suis fatiguée aujourd\'hui, adapte ma séance'] };
+  }
+  const extra = /courir|cours\b|run|footing|allure|km/.test(t) && a.type !== 'run' ? ` Pas de course ${when} : c'est ${shown.title.toLowerCase()}.` : '';
+  return { text: `${When} : ${shown.title}${shown.dur && !shown.title.includes(shown.dur) ? `, ${shown.dur}` : ''}.${shown.goal ? ` ${shown.goal}` : ''}${a.note ? ` ${a.note}` : ''}${a.reason ? ` ${a.reason}` : ''}${extra}`.replace(/\.\./g, '.'), cards: [] };
+}
+
+/** « Mes allures ? », « À quelle allure je dois faire mon footing ? » (sans jour précis) */
+function zonesInfo(t: string, ctx: CoachContext): CoachReply | null {
+  if (!/(mes allures|quelle allure|quelles allures|allure (facile|seuil|10|5)|zones?)/.test(t) || /pourquoi|progress/.test(t)) return null;
+  const s = ctx.state as any;
+  return { text: 'Tes allures d\'entraînement, calculées à partir de tes chronos de référence.', cards: [{ kind: 'facts', id: id(), title: 'Allures', items: (Object.keys(ZONE_NAME) as (keyof typeof ZONE_NAME)[]).map(z => `${ZONE_NAME[z]} : ${zoneText(s, z)}`) }] };
+}
+
+/** « Ma prochaine course ? », « Dans combien de temps Lausanne ? » */
+function eventsInfo(t: string, ctx: CoachContext): CoachReply | null {
+  if (!/(prochaine (course|competition)|mes (courses|competitions)|dans combien|j-\d|lausanne|athenes|competition)/.test(t) || /prepare|programme/.test(t)) return null;
+  const r = ctx.read({ name: 'get_upcoming_events', args: { days: 365 } }); if (r.error) return { text: r.error, cards: [] };
+  const evs: any[] = r.data; if (!evs.length) return { text: 'Aucune compétition prévue. Ajoute-en une depuis Programme.', cards: [] };
+  const e = evs[0];
+  return { text: `Prochaine compétition : ${e.name}, ${fmtDay(e.date)} (J-${daysBetween(ctx.today, e.date)}).`, cards: [{ kind: 'facts', id: id(), title: 'Compétitions à venir', items: evs.slice(0, 6).map(x => `${x.name} : ${fmtShort(x.date)}${x.km ? `, ${String(x.km).replace('.', ',')} km` : ''}, J-${daysBetween(ctx.today, x.date)}`) }] };
+}
+
+/** Rien de reconnu : on ne répète pas une phrase vide, on dit ce qui est prévu et ce que le coach sait faire. */
+function fallback(t: string, ctx: CoachContext): CoachReply {
+  const s = ctx.state as any; const a = adapted(s, ctx.today); const tm = adapted(s, addDays(ctx.today, 1));
+  if (/^(bonjour|salut|hello|coucou|hey|bonsoir|yo)\b/.test(t)) return { text: `Bonjour ! Aujourd'hui : ${lcPlan(a.replaced || a)}. Demain : ${lcPlan(tm.replaced || tm)}. Pose-moi une question sur une séance, tes allures, tes courses ou ton programme.`, cards: [] };
+  return { text: `Je n'ai pas compris cette demande : je suis un coach à règles, pas une IA conversationnelle. Pour info, aujourd'hui : ${lcPlan(a.replaced || a)} ; demain : ${lcPlan(tm.replaced || tm)}.`,
+    cards: [{ kind: 'facts', id: id(), title: 'Exemples de questions', items: ['« Je cours combien de temps demain ? »', '« C\'est quoi ma séance samedi ? »', '« Mes allures »', '« Ma prochaine course »', '« Je suis fatiguée, adapte ma séance »', '« Mets mon running de mercredi à lundi »', '« Regarde mes trois dernières sorties »', '« Prépare-moi pour mon prochain 10 km »'] }] };
+}
+
 export const localProvider: CoachProvider = {
   id: 'local', name: 'Coach BYYND',
   status: () => ({ available: true, label: 'Actif', detail: 'Règles BYYND appliquées sur ton téléphone. Aucune donnée envoyée à un service d\'IA.' }),
   async respond(input, ctx) {
     const t = norm(input).slice(0, 500);
-    for (const f of [reschedule, fatigue, lastRuns, program, paceWhy, records, week]) { const r = f(t, ctx); if (r) return r; }
-    return { text: 'Je comprends les demandes sur ta séance du jour, tes déplacements de séances, ta progression en course, tes dernières sorties, tes records et ton prochain programme. Essaie une des suggestions.', cards: [], suggestions: SUGGESTIONS.slice(0, 4) };
+    for (const f of [reschedule, fatigue, lastRuns, program, paceWhy, eventsInfo, sessionInfo, zonesInfo, records, week]) { const r = f(t, ctx); if (r) return r; }
+    return fallback(t, ctx);
   },
 };

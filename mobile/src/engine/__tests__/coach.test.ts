@@ -84,3 +84,17 @@ test('mémoire : suppression durable, même après synchro avec un appareil qui 
   const c2 = structuredClone(b); forgetAll(c2); c2.updatedAt = 40;
   assert.equal(mergeStates(b, c2).coach!.decisions.length + mergeStates(b, c2).coach!.threads.length, 0);
 });
+
+test('questions sur une séance : durée, contenu, allure, distance, jours relatifs', async () => {
+  const s = fresh(); const q = async (t: string) => (await ask(s, t, TODAY)).text;
+  assert.match(await q('Je dois courir combien de temps demain'), /^Demain : repos.*prochaine sortie mercredi 21/);
+  assert.match(await q("C'est quoi ma séance mercredi ?"), /Footing facile 35 min/);
+  assert.match(await q('À quelle allure je cours mercredi ?'), /\d'\d\d–\d'\d\d \/km/);
+  assert.match(await q('Combien de km mercredi'), /Environ \d/);
+  assert.match(await q('Ma prochaine sortie'), /^Mercredi 21/);
+  assert.match(await q('Je fais quoi ce week-end'), /10 km de Lausanne/);
+  assert.match(await q('Ma prochaine course'), /Lausanne.*J-7/);
+  assert.match(await q('bonjour'), /^Bonjour/);
+  assert.match(await q('Pourquoi je ne progresse plus en allure ?'), /footing/);
+  const fb = await ask(s, 'blablabla', TODAY); assert.match(fb.text, /pas compris/); assert.ok(fb.cards!.length);
+});
