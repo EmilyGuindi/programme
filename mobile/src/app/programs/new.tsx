@@ -6,7 +6,7 @@ import { Sheet } from '@/components/sheet';
 import { Button, Choices, Field, Input, Row, Segmented, T, Toggle } from '@/components/ui';
 import { addDays, DAYS_SHORT, fmtShort, sportDay } from '@/engine/dates';
 import { FOCUS_LABEL } from '@/engine/generator';
-import { nameOf, activate, activationConsequences, analyzeCycle, blocking, compare, findProgram, makeDraft, parseSpec, previousProgram, saveDraft, specOf, suggestedStart, suggestWeeks, validateProgram } from '@/engine/programs';
+import { nameOf, nextMonday, activate, activationConsequences, analyzeCycle, blocking, compare, findProgram, makeDraft, parseSpec, previousProgram, saveDraft, specOf, suggestedStart, suggestWeeks, validateProgram } from '@/engine/programs';
 import type { ProgramSpec, RunFocus, Slot } from '@/engine/types';
 import { haptic } from '@/feedback';
 import { update, useApp } from '@/store/store';
@@ -17,7 +17,7 @@ const STEPS = ['Bilan', 'Ce qui change', 'Brouillon', 'Vérification', 'Aperçu'
 /** Créer le programme suivant en 5 étapes. Rien n'est enregistré avant « Enregistrer le brouillon », rien n'est activé sans confirmation.
  *  `id` : reprendre un brouillon. `spec` : proposition du coach (JSON), toujours revalidée champ par champ. */
 export default function NewProgram() {
-  const { id, spec: specParam, weeks: weeksParam } = useLocalSearchParams<{ id?: string; spec?: string; weeks?: string }>();
+  const { id, spec: specParam, weeks: weeksParam, start: startParam } = useLocalSearchParams<{ id?: string; spec?: string; weeks?: string; start?: string }>();
   const s = useApp(); const { c } = useTheme(); const today = sportDay();
   const existing = id ? findProgram(s, id) : null; const prev = previousProgram(s, today);
   const analysis = useMemo(() => analyzeCycle(s, prev, today), [prev.id]);
@@ -25,8 +25,9 @@ export default function NewProgram() {
   const init: ProgramSpec = existing ? specOf(existing) : (() => { try { return parseSpec(specParam ? JSON.parse(specParam) : null, { ...specOf(prev), deloadEvery: specOf(prev).deloadEvery || 4 }); } catch { return { ...specOf(prev), deloadEvery: 4 }; } })();
   const [spec, setSpec] = useState<ProgramSpec>(init);
   const futureEvents = s.events.filter(e => e.status !== 'annulé' && e.date > today && e.date >= start).sort((a, b) => a.date.localeCompare(b.date));
-  const [start, setStart] = useState(existing?.start || suggestedStart(s, today));
-  const startOpts = useMemo(() => { const a = suggestedStart(s, today); return [a, addDays(a, 7), addDays(a, 14)]; }, [today]);
+  // Début : dès lundi prochain (changement de plan en cours de cycle : l'actuel s'arrête la veille, son historique est gardé) ou après le programme en cours.
+  const startOpts = useMemo(() => { const a = suggestedStart(s, today), n = nextMonday(today); return [...new Set([n, addDays(n, 7), a, addDays(a, 7)])].sort().slice(0, 4); }, [today]);
+  const [start, setStart] = useState(existing?.start || (startParam && /^\d{4}-\d{2}-\d{2}$/.test(startParam) ? startParam : suggestedStart(s, today)));
   const goal = futureEvents.find(e => e.id === spec.goalEventId);
   const [weeks, setWeeks] = useState(existing?.weeks || (weeksParam ? Math.max(4, Math.min(30, +weeksParam || 12)) : suggestWeeks(start, goal?.date)));
   const [name, setName] = useState(existing?.name || ''); const [editDays, setEditDays] = useState(!!existing);

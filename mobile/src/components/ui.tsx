@@ -270,14 +270,16 @@ export function Ambient() {
 
 /** Hauteur dont il faut remonter le contenu quand le clavier est ouvert.
  *  Android affiche l'app bord à bord : la fenêtre ne rétrécit plus, le clavier recouvre le bas de l'écran.
- *  On décale donc la barre d'action d'autant, moins la zone système déjà réservée en bas par SafeAreaView. iOS : géré par KeyboardAvoidingView. */
+ *  React Native donne la hauteur du clavier SANS la barre de navigation, qui est justement la zone réservée en bas par SafeAreaView :
+ *  on remonte donc de cette hauteur exacte (constaté sur appareil : soustraire la barre une seconde fois laissait la saisie sous le clavier).
+ *  iOS : géré par KeyboardAvoidingView. */
 export function useKeyboardLift() {
-  const insets = useSafeAreaInsets(); const [h, setH] = useState(0);
+  const [h, setH] = useState(0);
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const a = Keyboard.addListener('keyboardDidShow', e => setH(e.endCoordinates.height));
     const b = Keyboard.addListener('keyboardDidHide', () => setH(0));
     return () => { a.remove(); b.remove(); };
   }, []);
-  return Math.max(0, h - insets.bottom);
+  return Math.max(0, h);
 }

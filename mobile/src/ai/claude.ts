@@ -27,6 +27,7 @@ export function historyText(history: readonly CoachMsg[]) {
 
 let available: boolean | null = null; let detail = '';
 export function setClaudeAvailability(ok: boolean | null, why = '') { available = ok; detail = why; }
+export const remoteDetail = () => available === false ? detail || 'Raison inconnue.' : available === null ? 'Vérification en cours…' : '';
 
 export function makeClaudeProvider(send: Transport): CoachProvider {
   return {

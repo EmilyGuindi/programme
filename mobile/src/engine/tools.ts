@@ -1,7 +1,7 @@
 import { adapted, committed, doneOn, phaseOf, planFor, recovery, runsList, weekOf, ZONE_NAME, zoneText } from './coach';
 import { addDays, dow, fmtDay, fmtShort, mmss } from './dates';
 import { FOCUS_LABEL, phasesFor, programEnd } from './generator';
-import { activate, activationConsequences, blocking, findProgram, makeDraft, nameOf, parseSpec, previousProgram, saveDraft, specOf, suggestedStart, suggestWeeks, validateProgram, weekPreview } from './programs';
+import { activate, activationConsequences, blocking, compare, findProgram, makeDraft, nameOf, nextMonday, parseSpec, previousProgram, saveDraft, specOf, suggestedStart, suggestWeeks, validateProgram, weekPreview } from './programs';
 import { recordsUntil } from './records';
 import { applyMove, checkMove, movable } from './reschedule';
 import type { AppState, DataScope, ISODate, ProgramDef } from './types';
@@ -32,6 +32,8 @@ export const TOOLS: ToolDef[] = [
   { name: 'apply_workout_reschedule', description: 'Déplace une séance (après confirmation).', scopes: ['programs'], write: true, params: { from: { type: 'date', required: true }, to: { type: 'date', required: true }, swap: { type: 'enum', values: ['yes', 'no'] } } },
   { name: 'adapt_today', description: 'Allège la séance d\'un jour (après confirmation).', scopes: ['programs', 'recovery'], write: true, params: { date: { type: 'date', required: true }, kind: { type: 'enum', values: ['easy', 'reduced', 'rest'], required: true }, reason: { type: 'string', max_len: 160 } } },
   { name: 'create_program_draft', description: 'Crée un brouillon de programme (jamais activé).', scopes: ['programs'], write: true, params: { spec: { type: 'object', required: true }, start: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
+  { name: 'update_program_draft', description: 'Modifie un brouillon existant (semaine type, objectif, dates, nom). Reste un brouillon.', scopes: ['programs'], write: true, params: { id: { type: 'string', required: true, max_len: 40 }, spec: { type: 'object' }, start: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
+  { name: 'change_current_program', description: 'Change le programme en cours à partir d\'un lundi à venir : l\'historique est gardé, la suite suit la nouvelle semaine type (après confirmation).', scopes: ['programs'], write: true, params: { spec: { type: 'object', required: true }, from: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
   { name: 'preview_program', description: 'Aperçu et vérification d\'un programme.', scopes: ['programs'], write: false, params: { id: { type: 'string', required: true, max_len: 40 } } },
   { name: 'confirm_program_activation', description: 'Active un brouillon (après confirmation explicite).', scopes: ['programs'], write: true, params: { id: { type: 'string', required: true, max_len: 40 } } },
 ];
@@ -113,6 +115,24 @@ export function prepare(s: AppState, name: string, a: Record<string, unknown>, t
       return { title: nameOf(draft), summary: `${FOCUS_LABEL[spec.focus]}, ${weeks} semaines à partir du ${fmtShort(start)}.`, consequences: ['Enregistré comme brouillon : ton planning ne change pas.', 'Tu pourras le modifier, le comparer, puis l\'activer.'],
         issues: issues.map(i => ({ severity: i.severity, text: i.text })), executable: !blocking(issues), draft };
     }
+    case 'update_program_draft': {
+      const cur = findProgram(s, a.id as string);
+      if (!cur || cur.status !== 'draft') return { title: 'Brouillon introuvable', summary: '', consequences: [], issues: [{ severity: 'block', text: 'Seul un brouillon se modifie ainsi. Pour le programme en cours, propose un changement à partir d\'un lundi à venir.' }], executable: false };
+      const spec = parseSpec({ ...specOf(cur), ...(a.spec as object || {}) }, specOf(cur)); const start = (a.start as ISODate) || cur.start; const weeks = (a.weeks as number) || cur.weeks;
+      const draft = { ...makeDraft({ start, weeks, spec, name: (a.name as string) || cur.name, basedOn: cur.basedOn }), id: cur.id, createdAt: cur.createdAt };
+      const issues = validateProgram(s, draft, today); const diff = compare(cur, draft).filter(r => r.a !== r.b).map(r => `${r.label} : ${r.a} → ${r.b}`);
+      return { title: `Modifier « ${nameOf(cur)} »`, summary: diff.length ? diff.join(' ; ') : 'Aucun changement de structure.', consequences: [...(diff.length ? diff : ['Aucun changement de structure.']), 'Reste un brouillon : ton planning ne change pas.'], issues: issues.map(i => ({ severity: i.severity, text: i.text })), executable: !blocking(issues), draft };
+    }
+    case 'change_current_program': {
+      const cur = s.program; const from = (a.from as ISODate) || nextMonday(today);
+      const left = Math.ceil((Date.parse(programEnd(cur)) - Date.parse(from)) / 6048e5 + 1 / 7);
+      const weeks = (a.weeks as number) || Math.max(4, Math.min(30, left));
+      const spec = parseSpec({ ...specOf(cur), deloadEvery: specOf(cur).deloadEvery || 4, ...(a.spec as object || {}) }, { ...specOf(cur), deloadEvery: specOf(cur).deloadEvery || 4 });
+      const draft = makeDraft({ start: from, weeks, spec, name: (a.name as string) || `${nameOf(cur).replace(/ \(ajusté.*\)$/, '')} (ajusté le ${fmtShort(from)})`, basedOn: cur.id });
+      const issues = validateProgram(s, draft, today); const diff = compare(cur, draft).filter(r => r.a !== r.b && r.label !== 'Durée' && r.label !== 'Phases').map(r => `${r.label} : ${r.a} → ${r.b}`);
+      return { title: `Changer de plan à partir du ${fmtShort(from)}`, summary: `${FOCUS_LABEL[spec.focus]}, ${weeks} semaines.`,
+        consequences: [...diff, ...activationConsequences(s, draft, today)], issues: issues.map(i => ({ severity: i.severity, text: i.text })), executable: !blocking(issues), draft };
+    }
     case 'confirm_program_activation': {
       const p = findProgram(s, a.id as string); if (!p || p.status !== 'draft') return { title: 'Programme introuvable', summary: '', consequences: [], issues: [{ severity: 'block', text: 'Seul un brouillon peut être activé.' }], executable: false };
       const issues = validateProgram(s, p, today);
@@ -131,6 +151,8 @@ export function execute(st: AppState, name: string, args: unknown, today: ISODat
     case 'apply_workout_reschedule': { const chk = checkMove(st, a.from as ISODate, a.to as ISODate, today, false); applyMove(st, a.from as ISODate, a.to as ISODate, !!chk.swapWith && a.swap !== 'no'); return { ok: true, message: pr.summary }; }
     case 'adapt_today': { const d = a.date as ISODate; st.overrides[d] = { ...(st.overrides[d] || {}), adj: { kind: a.kind as 'easy' | 'reduced' | 'rest', reason: String(a.reason || 'Adapté avec le coach').slice(0, 160), proposalId: `coach-${d}` } }; return { ok: true, message: pr.summary }; }
     case 'create_program_draft': { const d = draft && draft.status === 'draft' ? { ...pr.draft!, id: draft.id } : pr.draft!; saveDraft(st, d); return { ok: true, message: `Brouillon « ${nameOf(d)} » enregistré.` }; }
+    case 'update_program_draft': { saveDraft(st, pr.draft!); return { ok: true, message: `Brouillon « ${nameOf(pr.draft!)} » mis à jour.` }; }
+    case 'change_current_program': { saveDraft(st, pr.draft!); const r = activate(st, pr.draft!.id, today); return { ok: r.ok, message: r.ok ? `Nouveau plan à partir du ${fmtShort(pr.draft!.start)}. L'historique est gardé.` : r.issues[0]?.text || 'Changement refusé.' }; }
     case 'confirm_program_activation': { const r = activate(st, a.id as string, today); return { ok: r.ok, message: r.ok ? 'Programme activé.' : r.issues[0]?.text || 'Activation refusée.' }; }
   }
   return { ok: false, message: 'Action inconnue.' };
@@ -165,7 +187,8 @@ export function coachContext(s: AppState, today: ISODate): Record<string, unknow
     out.planning = Array.from({ length: 22 }, (_, i) => addDays(today, i - 7)).map(day);
     out.competitions = s.events.filter(e => e.status !== 'annulé' && e.date >= addDays(today, -30)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 8)
       .map(e => ({ id: e.id, nom: e.name, date: e.date, km: e.distanceKm ?? null, priorite: e.priority, statut: e.status, resultat: e.result ? mmss(e.result.time / (e.distanceKm || 1)) + ' /km' : undefined }));
-    out.autresProgrammes = (s.programs || []).filter(x => x.status !== 'archived').map(x => ({ id: x.id, nom: nameOf(x), statut: x.status, debut: x.start, semaines: x.weeks }));
+    out.autresProgrammes = (s.programs || []).filter(x => x.status !== 'archived').map(x => ({ id: x.id, nom: nameOf(x), statut: x.status, debut: x.start, semaines: x.weeks, objectif: x.template === 'custom' ? specOf(x).focus : undefined, semaineType: x.template === 'custom' ? specOf(x).days.join(',') : undefined, allegement: x.spec?.deloadEvery }));
+    out.programme = { ...(out.programme as object), id: P.id, allegementToutesLes: specOf(P).deloadEvery || null, prochainLundi: nextMonday(today) };
   }
   if (p.history) {
     const from = addDays(today, -28);
