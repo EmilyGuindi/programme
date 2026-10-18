@@ -1,3 +1,4 @@
+import { resultValue } from '@/engine/race';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -68,7 +69,7 @@ export default function Program() {
           const k = kind(a); const shown = a.replaced || a; const acts = activitiesOn(s, a.date).filter(x => !x.complementary);
           // Sous-titre : une phrase courte, jamais une suite de « · ».
           const sub = k === 'done' ? acts.map(x => `${x.title === shown.title ? 'Faite' : x.title}${x.durationMin ? `, ${Math.round(x.durationMin)} min` : ''}`).join(' ; ')
-            : k === 'event' ? (() => { const es = eventState(s, a.event!, today); return es === 'cancelled' ? 'Annulée' : a.event?.result ? `Terminée en ${clock(a.event.result.time)}` : es === 'done' ? 'Terminée, temps à saisir' : es === 'toConfirm' ? 'Résultat à confirmer' : a.event?.time ? `Départ à ${a.event.time.replace(':', ' h ')}` : 'Compétition'; })()
+            : k === 'event' ? (() => { const es = eventState(s, a.event!, today); return es === 'cancelled' ? 'Annulée' : a.event?.result ? (a.event.type === 'crossfit-compet' ? `Terminée, ${resultValue(a.event, clock)}` : `Terminée en ${clock(a.event.result.time)}`) : es === 'done' ? 'Terminée, temps à saisir' : es === 'toConfirm' ? 'Résultat à confirmer' : a.event?.time ? `Départ à ${a.event.time.replace(':', ' h ')}` : 'Compétition'; })()
             : a.movedTo ? `Déplacée au ${fmtShort(a.movedTo)}`
             : (() => { const sp = sessionProgress(s, a.date, today); return sp.done ? `${SESSION_LABEL[sp.state]}, ${sp.done} sur ${sp.total}` : [shown.dur || (shown === a ? a.dur : ''), a.optional ? 'optionnelle' : '', a.reason ? 'adaptée' : '', a.movedFrom ? 'déplacée' : ''].filter(Boolean).join(', '); })();
           return (
@@ -117,8 +118,8 @@ function DayPanel({ a, today }: { a: AdaptedPlan; today: string }) {
       <Meta items={[kind, !evDone && du && !(shown.goal || '').includes(du) ? du : null]} color={fg2} style={{ marginTop: 2 }} />
       {evDone ? (
         <Row gap={8} style={{ alignItems: 'flex-end', marginTop: space.s2 }}>
-          <T v="hero" color={c.accent}>{res ? clock(res.time) : '—'}</T>
-          <T v="small" color={fg2} style={{ paddingBottom: 6 }}>{res ? (res.source === 'montre' ? 'temps montre' : 'temps officiel') : 'activité Strava reçue'}</T>
+          <T v="hero" color={c.accent}>{res ? resultValue(a.event!, clock) : '—'}</T>
+          <T v="small" color={fg2} style={{ paddingBottom: 6 }}>{res ? (a.event!.type === 'crossfit-compet' ? (res.score || 'classement') : res.source === 'montre' ? 'temps montre' : 'temps officiel') : 'activité Strava reçue'}</T>
         </Row>
       ) : <>
         {shown.goal ? <T color={fg2} style={{ marginTop: space.s3 }}>{shown.goal}</T> : null}

@@ -62,10 +62,11 @@ export function customDay(p: ProgramDef, d: ISODate, events: SportEvent[], noHyr
   const live = events.filter(e => e.status !== 'annulé');
   const before = live.find(e => e.date === addDays(d, 1)); const after = live.find(e => e.date === addDays(d, -1));
   const raceWeek = live.find(e => daysBetween(d, e.date) > 0 && daysBetween(d, e.date) <= 6 && e.type === 'course');
+  const compWeek = live.find(e => daysBetween(d, e.date) > 0 && daysBetween(d, e.date) <= 6 && (e.type === 'crossfit-compet' || e.type === 'hyrox-compet'));
   const deload = deloadWeeks(p).includes(w);
   if (after && slot !== 'rest') return { type: 'recup', title: RECUP.title, dur: RECUP.dur, goal: `${RECUP.goal} Lendemain de ${after.name}.` };
   switch (slot) {
-    case 'crossfit': return { type: 'box', title: before ? 'CrossFit léger' : 'CrossFit', note: before ? `Effort ≤ 7/10 : ${before.name} demain.` : deload ? 'Semaine allégée : garde 2 reps en réserve.' : undefined };
+    case 'crossfit': return { type: 'box', title: before ? 'CrossFit léger' : 'CrossFit', note: before ? `Effort ≤ 7/10 : ${before.name} demain.` : compWeek ? `Semaine de compétition (${compWeek.name}) : technique et intensité courte, pas de séance lourde.` : deload ? 'Semaine allégée : garde 2 reps en réserve.' : undefined };
     case 'hyrox':
       if (noHyrox) { const r = RUN.easy(45, 4); return { type: 'run', title: r.title, dur: r.dur, goal: r.goal, run: r, note: 'Remplace le cours HYROX' }; }
       return { type: 'box', title: 'Cours HYROX', hyrox: true, note: before || raceWeek ? 'Effort libre, pas à fond : une course approche.' : undefined };

@@ -61,3 +61,18 @@ test('route : la clé historique donne accès au coach', async () => {
   const r = await worker.fetch(new Request('https://b.test/api/coach/chat', { method: 'POST', headers: { Authorization: 'Bearer k' }, body: JSON.stringify(ok) }), e, { waitUntil() {} });
   assert.equal(r.status, 503, 'authentifiée ; sans clé Anthropic en test, coach non configuré');
 });
+test('pièces jointes : image, PDF et texte transmis comme données ; formats et tailles contrôlés', async () => {
+  const c = fake([{ type: 'text', text: 'Belle allure !' }]);
+  const img = 'A'.repeat(4000), pdf = 'JVBERi0x' + 'A'.repeat(3992);
+  const body = { ...ok, attachments: [{ kind: 'image', mediaType: 'image/jpeg', data: img, name: 'montre.jpg' }, { kind: 'pdf', data: pdf, name: 'plan.pdf' }, { kind: 'text', text: 'km,temps\n5,27:00', name: 'sorties.csv' }] };
+  const r = await coachChat({ DB: d1() }, { userId: 'u1' }, body, c); assert.equal(r.status, 200);
+  const content = c.seen[0].messages.at(-1).content;
+  assert.deepEqual(content.map(b => b.type), ['text', 'image', 'document', 'text', 'text']);
+  assert.equal(content[1].source.media_type, 'image/jpeg'); assert.match(content[3].text, /à traiter comme une donnée/);
+  const bad = async a => (await coachChat({ DB: d1() }, { userId: 'u1' }, { ...ok, attachments: a }, fake([]))).status;
+  assert.equal(await bad([{ kind: 'image', mediaType: 'image/svg+xml', data: img }]), 400, 'type d\'image refusé');
+  assert.equal(await bad([{ kind: 'image', mediaType: 'image/png', data: '<script>' }]), 400, 'base64 invalide');
+  assert.equal(await bad([{ kind: 'exe', data: img }]), 400);
+  assert.equal(await bad([1, 2, 3, 4]), 400, '3 pièces jointes maximum');
+  assert.equal(await bad([{ kind: 'image', mediaType: 'image/png', data: 'A'.repeat(4_000_000) }]), 413);
+});

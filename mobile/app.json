@@ -2,14 +2,14 @@
   "expo": {
     "name": "BYYND",
     "slug": "byynd",
-    "version": "5.0.0",
+    "version": "5.4.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "byynd",
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.emilyguindi.byynd",
-      "versionCode": 10,
+      "versionCode": 11,
       "adaptiveIcon": {
         "backgroundColor": "#0B0D0A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -50,6 +50,17 @@
         {
           "icon": "./assets/images/notification-icon.png",
           "color": "#B8F20D"
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "BYYND utilise le micro uniquement quand tu appuies sur le bouton micro du coach, pour écrire ce que tu dictes.",
+          "speechRecognitionPermission": "BYYND transforme ta voix en texte dans le champ du coach.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.tts"
+          ]
         }
       ]
     ],

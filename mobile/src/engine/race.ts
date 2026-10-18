@@ -31,6 +31,10 @@ export function readiness(s: AppState, ev: SportEvent, d: ISODate): Readiness {
 
 export function taperTips(ev: SportEvent, d: ISODate): string[] {
   const n = daysBetween(d, ev.date);
+  if (ev.type === 'crossfit-compet') return n > 7 ? ['Révise les standards des mouvements annoncés et entraîne les plus techniques à intensité modérée.', 'Dors bien : c\'est ce qui compte le plus.', 'Garde tes séances habituelles, sans chercher de record la dernière semaine.']
+    : n > 2 ? ['Semaine de compét : volume réduit, intensité courte et légère.', 'Pas de séance lourde ni de nouveau mouvement.', 'Repère les épreuves, les standards et les poids imposés.']
+    : n >= 1 ? ['Veille : repos ou mobilité 20 min.', 'Prépare tes affaires ce soir (chaussures, protections, collations).', 'Hydrate-toi normalement.']
+    : ['Arrive tôt, échauffe-toi 20 min avant chaque épreuve.', 'Mange et bois entre les épreuves.', 'Une épreuve ratée n\'efface pas les suivantes : reste dans la tienne.'];
   if (ev.type === 'ocr') return ['La veille : repos ou marche, rien d\'intense.', 'Prévois des vêtements de rechange et un sac pour les affaires mouillées.', 'Le lendemain : récupération active, pas de séance dure.'];
   if (n > 7) return ['Garde tes séances habituelles, sans chercher de record en box.', 'Dors bien les dix prochains jours : c\'est ce qui compte le plus.', 'Fais au moins une sortie à l\'heure de la course pour t\'habituer.'];
   if (n > 2) return ['Semaine de course : volume réduit, intensité légère.', 'Pas de nouvelles chaussures ni de nouvelle tenue.', 'CrossFit à 7/10 maximum, sans jambes lourdes.'];
@@ -42,6 +46,7 @@ const CHECK: Record<string, string[]> = {
   course: ['Dossard et épingles (ou ceinture)', 'Chaussures déjà portées en sortie', 'Tenue adaptée à la météo prévue', 'Montre et téléphone chargés', 'Trajet et heure d\'arrivée prévus (45 min avant)', 'Vêtement chaud pour l\'attente', 'Rien de nouveau le jour J'],
   ocr: ['Inscription et pièce d\'identité', 'Chaussures avec accroche, prêtes à être salies', 'Tenue de rechange complète et serviette', 'Sac plastique pour les affaires mouillées', 'Gants si tu en utilises', 'Trajet et heure d\'arrivée prévus'],
   'hyrox-compet': ['Billet et heure de vague', 'Chaussures de course et tenue testées', 'Gants pour le sled si tu en utilises', 'Montre chargée', 'Arriver 60 min avant la vague'],
+  'crossfit-compet': ['Inscription, catégorie et horaires des épreuves', 'Standards et poids des épreuves relus', 'Chaussures de box, protections, élastiques, magnésie', 'Gourde et collations pour la journée', 'Tenue de rechange', 'Arriver 45 min avant la première épreuve'],
   autre: ['Inscription confirmée', 'Tenue et chaussures testées', 'Trajet prévu'],
 };
 export const checklistFor = (ev: SportEvent) => CHECK[ev.type] || CHECK.autre;
@@ -100,3 +105,11 @@ export function raceAnalysis(s: AppState, ev: SportEvent): string[] {
   if (r.pacing === 'trop-vite') out.push('Tu as senti un départ trop rapide : à la prochaine course, vise 5 s/km plus lent sur le premier kilomètre.');
   return out;
 }
+
+/** Résultat principal d'une compétition : chrono, ou classement et score pour une compétition CrossFit. */
+export function resultValue(ev: SportEvent, clk: (sec: number) => string): string {
+  const r = ev.result; if (!r) return '—';
+  if (ev.type === 'crossfit-compet' || !r.time) return r.rank ? (/^\d+$/.test(r.rank.trim()) ? `${r.rank.trim()}e` : r.rank) : r.score || 'Terminée';
+  return clk(r.time);
+}
+export const scoreBased = (ev: SportEvent) => ev.type === 'crossfit-compet';

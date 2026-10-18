@@ -29,7 +29,7 @@ export const PROMPT_CHATGPT = `Résume mon profil sportif pour l'application BYY
 N'invente rien : laisse de côté ce que tu ne sais pas. Types possibles : running, course, crossfit, hyrox, renfo, marche, autre.`;
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const TYPES: ActivityType[] = ['crossfit', 'hyrox', 'hyrox-simu', 'hyrox-compet', 'running', 'course', 'renfo', 'marche', 'autre'];
+const TYPES: ActivityType[] = ['crossfit', 'crossfit-compet', 'hyrox', 'hyrox-simu', 'hyrox-compet', 'running', 'course', 'renfo', 'marche', 'autre'];
 const str = (v: unknown, max = 200) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max) : undefined);
 const numIn = (v: unknown, lo: number, hi: number) => { const n = typeof v === 'number' ? v : typeof v === 'string' ? +v.replace(',', '.') : NaN; return Number.isFinite(n) && n >= lo && n <= hi ? n : undefined; };
 const dateOk = (v: unknown) => (typeof v === 'string' && DATE.test(v) && !isNaN(Date.parse(v)) ? v : undefined);
@@ -49,7 +49,7 @@ export function parseProfile(text: string): { profile: ImportedProfile; warnings
   const arr = (v: unknown, name: string) => { if (v == null) return []; if (!Array.isArray(v)) { warnings.push(`« ${name} » doit être une liste : ignoré.`); return []; } return v.slice(0, 500); };
   p.records = arr(raw.records, 'records').flatMap((r: any) => { const km = numIn(r?.distanceKm, 0.4, 100); const time = str(r?.time, 12); if (!km || !time || parseTime(time) == null) { warnings.push('Un record sans distance ou temps valide a été ignoré.'); return []; } return [{ distanceKm: km, time, date: dateOk(r.date) }]; });
   p.events = arr(raw.events, 'events').flatMap((e: any) => { const name = str(e?.name, 80); const date = dateOk(e?.date); if (!name || !date) { warnings.push('Une compétition sans nom ou date valide a été ignorée.'); return []; }
-    return [{ name, date, distanceKm: numIn(e.distanceKm, 0.1, 250), type: ['course', 'ocr', 'hyrox-compet', 'autre'].includes(e.type) ? e.type : 'course', priority: ['participation', 'repère', 'objectif'].includes(e.priority) ? e.priority : 'participation', goal: str(e.goal, 120) }]; });
+    return [{ name, date, distanceKm: numIn(e.distanceKm, 0.1, 250), type: ['course', 'ocr', 'hyrox-compet', 'crossfit-compet', 'autre'].includes(e.type) ? e.type : 'course', priority: ['participation', 'repère', 'objectif'].includes(e.priority) ? e.priority : 'participation', goal: str(e.goal, 120) }]; });
   p.history = arr(raw.history, 'history').flatMap((h: any) => { const date = dateOk(h?.date); const type = TYPES.includes(h?.type) ? h.type : null; if (!date || !type) { warnings.push('Une séance sans date ou type reconnu a été ignorée.'); return []; }
     return [{ date, type, km: numIn(h.km, 0, 300), min: numIn(h.min, 1, 1000), hr: numIn(h.hr, 40, 230), effort: numIn(h.effort, 1, 10) }]; });
   p.constraints = str(raw.constraints, 600);

@@ -277,6 +277,12 @@ export function runInsight(s: AppState): string {
 }
 export function recordEventResult(s: AppState, e: SportEvent) {
   if (!e.result) return;
+  if (e.type === 'crossfit-compet') { // la compétition apparaît dans tes séances et valide la journée
+    let act = s.activities.find(a => a.eventId === e.id);
+    if (!act) { act = { id: 'ev-' + e.id, eventId: e.id, source: 'manuel', date: e.date, type: 'crossfit-compet', title: e.name, complementary: false }; s.activities.push(act); }
+    Object.assign(act, { date: e.date, type: 'crossfit-compet', title: e.name, durationMin: e.result.time ? e.result.time / 60 : act.durationMin ?? null, avgHr: e.result.avgHr, effort: e.result.effort, matched: e.date, complementary: false });
+    return;
+  }
   if (e.type === 'course' && e.distanceKm) {
     let act = s.activities.find(a => a.eventId === e.id);
     if (!act) { act = { id: 'ev-' + e.id, eventId: e.id, source: 'manuel', date: e.date, type: 'course', title: e.name, complementary: false }; s.activities.push(act); }

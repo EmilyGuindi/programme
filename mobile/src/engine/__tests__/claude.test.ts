@@ -92,3 +92,21 @@ test('modifier un brouillon depuis le chat', async () => {
   assert.equal(s.program.id, 'c1', 'un brouillon modifié ne change pas le planning');
   registerRemoteProvider(null);
 });
+
+test('pièces jointes : envoyées à Claude pour ce message seulement, jamais conservées', async () => {
+  const s = fresh(); const sent: any[] = [];
+  registerRemoteProvider(makeClaudeProvider(async body => { sent.push(body); return { status: 200, data: { text: 'Vu ta montre : 5 km en 27 min.', calls: [] } }; }));
+  const files = [{ kind: 'image' as const, name: 'montre.jpg', mediaType: 'image/jpeg' as const, data: 'AAAA', uri: 'file:///x.jpg' }];
+  const reply = await ask(s, '', TODAY, [], undefined, files);
+  assert.equal(sent[0].attachments.length, 1); assert.equal(sent[0].attachments[0].data, 'AAAA');
+  assert.ok(!('uri' in sent[0].attachments[0]), 'le chemin local du fichier n\'est pas envoyé');
+  assert.equal(sent[0].messages.at(-1).text, 'Regarde la pièce jointe.');
+  const tid = appendMessages(s, null, [{ id: 'u', role: 'user', at: 1, text: '', files: [{ name: 'montre.jpg', kind: 'image' }] }, reply]);
+  assert.ok(!JSON.stringify(s).includes('AAAA'), 'le contenu n\'est pas stocké dans les données');
+  await ask(s, 'et donc ?', TODAY, s.coach!.threads.find(t => t.id === tid)!.messages);
+  assert.equal(sent[1].attachments.length, 0, 'pas renvoyée au message suivant');
+  assert.match(sent[1].messages[0].text, /Pièce jointe déjà vue : montre\.jpg/);
+  registerRemoteProvider(makeClaudeProvider(async () => { throw new Error('offline'); }));
+  assert.match((await ask(s, '', TODAY, [], undefined, files)).text, /ne lit pas les pièces jointes/);
+  registerRemoteProvider(null);
+});

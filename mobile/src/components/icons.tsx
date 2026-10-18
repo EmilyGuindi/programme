@@ -3,7 +3,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useTheme } from '@/theme/tokens';
 
 /** Icônes linéaires 22 px, trait 1,8 : un seul jeu pour les accès secondaires et les réglages. */
-export type IconName = 'calendar' | 'run' | 'body' | 'dumbbell' | 'path' | 'peak' | 'story' | 'target' | 'bell' | 'link' | 'cycle' | 'data' | 'spark' | 'shoe' | 'kettlebell' | 'sled' | 'walk' | 'moon' | 'flag' | 'flame' | 'check' | 'today' | 'chevrons' | 'person' | 'coach' | 'play' | 'pause' | 'stop' | 'swap' | 'plus' | 'next' | 'clock' | 'home' | 'plan' | 'stats' | 'profile';
+export type IconName = 'calendar' | 'run' | 'body' | 'dumbbell' | 'path' | 'peak' | 'story' | 'target' | 'bell' | 'link' | 'cycle' | 'data' | 'spark' | 'shoe' | 'kettlebell' | 'sled' | 'walk' | 'moon' | 'flag' | 'flame' | 'check' | 'today' | 'chevrons' | 'person' | 'coach' | 'play' | 'pause' | 'stop' | 'swap' | 'plus' | 'mic' | 'next' | 'clock' | 'home' | 'plan' | 'stats' | 'profile';
 type N = IconName;
 export function Icon({ name, size = 22, color, filled, cut }: { name: N; size?: number; color?: string; filled?: boolean; /** Couleur des découpes intérieures d'une icône pleine (= fond sous l'icône). */ cut?: string }) {
   const { c } = useTheme(); const s = color || c.ink; const p = { stroke: s, strokeWidth: 1.8, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }; const f = filled ? s : 'none';
@@ -41,6 +41,7 @@ export function Icon({ name, size = 22, color, filled, cut }: { name: N; size?: 
     next: <><Path d="M5.5 5.8v12.4c0 .8.9 1.2 1.5.7l8-6.2a.9.9 0 0 0 0-1.4l-8-6.2c-.6-.5-1.5-.1-1.5.7z" fill={s} /><Rect x={16.5} y={5} width={2.5} height={14} rx={1.2} fill={s} /></>,
     clock: <><Circle cx={12} cy={12} r={8.5} {...p} /><Path d="M12 7.5V12l3 2" {...p} /></>,
     plus: <Path d="M12 5v14M5 12h14" {...p} />,
+    mic: <><Rect x={9} y={3.5} width={6} height={11} rx={3} {...p} /><Path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5" {...p} /></>,
     swap: <><Path d="M7 7h11l-3-3M17 17H6l3 3" {...p} /></>,
     home: <Path d="M4.5 10.2 12 4.25l7.5 5.95v8.3a2 2 0 0 1-2 2h-3v-5.25a.75.75 0 0 0-.75-.75h-3.5a.75.75 0 0 0-.75.75v5.25h-3a2 2 0 0 1-2-2z" {...n} />,
     plan: <><Rect x={3.75} y={5} width={16.5} height={15.25} rx={3} {...n} /><Path d={filled ? 'M5.5 9.75h13' : 'M3.75 9.75h16.5'} {...n} stroke={filled ? k : s} /><Path d="M8.25 3.25v3.5M15.75 3.25v3.5" {...n} fill="none" /><Rect x={13.25} y={13.25} width={3.5} height={3.5} rx={0.9} fill={filled ? k : s} /></>,

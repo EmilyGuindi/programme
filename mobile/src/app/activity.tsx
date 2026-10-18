@@ -10,8 +10,8 @@ import { update, useApp } from '@/store/store';
 import { fmtDay, mmss } from '@/engine/dates';
 import { radius, space, useTheme } from '@/theme/tokens';
 
-const TYPES: [ActivityType, string][] = [['crossfit', 'CrossFit'], ['hyrox', 'Cours HYROX'], ['hyrox-simu', 'Simu HYROX'], ['hyrox-compet', 'Compét. HYROX'], ['running', 'Running'], ['renfo', 'Renfo'], ['marche', 'Marche'], ['autre', 'Autre']];
-const TITLE: Record<ActivityType, string> = { crossfit: 'CrossFit', hyrox: 'Cours HYROX', 'hyrox-simu': 'Simulation HYROX', 'hyrox-compet': 'Compétition HYROX', running: 'Running', course: 'Course', renfo: 'Renforcement', marche: 'Marche', autre: 'Activité' };
+const TYPES: [ActivityType, string][] = [['crossfit', 'CrossFit'], ['hyrox', 'Cours HYROX'], ['hyrox-simu', 'Simu HYROX'], ['hyrox-compet', 'Compét. HYROX'], ['crossfit-compet', 'Compét. CrossFit'], ['running', 'Running'], ['renfo', 'Renfo'], ['marche', 'Marche'], ['autre', 'Autre']];
+const TITLE: Record<ActivityType, string> = { crossfit: 'CrossFit', hyrox: 'Cours HYROX', 'hyrox-simu': 'Simulation HYROX', 'hyrox-compet': 'Compétition HYROX', 'crossfit-compet': 'Compétition CrossFit', running: 'Running', course: 'Course', renfo: 'Renforcement', marche: 'Marche', autre: 'Activité' };
 
 export default function ActivityScreen() {
   const p = useLocalSearchParams<{ id?: string; date?: string; preset?: ActivityType; plan?: 'recup' }>(); const s = useApp();

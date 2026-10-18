@@ -152,3 +152,18 @@ test('optionnelle non faite et repos : aucune pénalité', () => {
   assert.equal(w.optionalDone, 0); assert.ok(w.rests >= 1);
   assert.equal(w.missed, w.planned - w.done, 'seules les séances prévues manquées comptent');
 });
+
+test('compétition CrossFit : classement et score sans chrono, journée validée', async () => {
+  const { recordEventResult } = await import('../coach');
+  const { resultValue, checklistFor } = await import('../race');
+  const s = fresh();
+  const ev: any = { id: 'cf1', name: 'Open de Lyon', type: 'crossfit-compet', date: '2026-11-21', priority: 'objectif', status: 'fait', result: { time: 0, rank: '12', score: 'WOD 1 : 8:42' } };
+  s.events.push(ev); recordEventResult(s, ev);
+  const act = s.activities.find(a => a.eventId === 'cf1')!;
+  assert.equal(act.type, 'crossfit-compet'); assert.equal(act.complementary, false); assert.equal(act.durationMin ?? null, null);
+  assert.ok(doneOn(s, '2026-11-21'));
+  assert.equal(resultValue(ev, () => 'x'), '12e');
+  assert.equal(resultValue({ ...ev, result: { time: 0, score: '145 reps' } }, () => 'x'), '145 reps');
+  assert.ok(checklistFor(ev).some(x => /Standards/.test(x)));
+  assert.equal(planFor(s, '2026-11-21').type, 'event');
+});

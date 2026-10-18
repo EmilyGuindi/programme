@@ -186,7 +186,7 @@ export function coachContext(s: AppState, today: ISODate): Record<string, unknow
         deplaceeDepuis: a.movedFrom || undefined, adaptation: a.reason || undefined, etapes: a.run && !a.replaced ? a.run.steps.map(x => x.zone ? `${x.text} (${zoneText(s, x.zone)})` : x.text) : undefined }; };
     out.planning = Array.from({ length: 22 }, (_, i) => addDays(today, i - 7)).map(day);
     out.competitions = s.events.filter(e => e.status !== 'annulé' && e.date >= addDays(today, -30)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 8)
-      .map(e => ({ id: e.id, nom: e.name, date: e.date, km: e.distanceKm ?? null, priorite: e.priority, statut: e.status, resultat: e.result ? mmss(e.result.time / (e.distanceKm || 1)) + ' /km' : undefined }));
+      .map(e => ({ id: e.id, nom: e.name, date: e.date, km: e.distanceKm ?? null, priorite: e.priority, statut: e.status, resultat: e.result ? (e.type === 'crossfit-compet' ? [e.result.rank && `classement ${e.result.rank}`, e.result.score].filter(Boolean).join(', ') || 'terminée' : e.distanceKm ? mmss(e.result.time / e.distanceKm) + ' /km' : `${Math.round(e.result.time / 60)} min`) : undefined, type: e.type }));
     out.autresProgrammes = (s.programs || []).filter(x => x.status !== 'archived').map(x => ({ id: x.id, nom: nameOf(x), statut: x.status, debut: x.start, semaines: x.weeks, objectif: x.template === 'custom' ? specOf(x).focus : undefined, semaineType: x.template === 'custom' ? specOf(x).days.join(',') : undefined, allegement: x.spec?.deloadEvery }));
     out.programme = { ...(out.programme as object), id: P.id, allegementToutesLes: specOf(P).deloadEvery || null, prochainLundi: nextMonday(today) };
   }

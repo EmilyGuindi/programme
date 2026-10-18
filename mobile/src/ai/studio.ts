@@ -5,6 +5,7 @@ import { weekPreview } from '@/engine/programs';
 import type { AppState, CoachCard, CoachMemory, CoachMsg, CoachThread, DataScope, ISODate, ToolCall } from '@/engine/types';
 import { chatgptProvider } from './chatgpt';
 import { localProvider } from './local';
+import type { Attachment } from './attachments';
 import type { CoachContext, CoachProvider } from './provider';
 
 /* ============================================================
@@ -25,10 +26,10 @@ export const providerFor = (s: AppState): CoachProvider => {
 export const memory = (s: AppState): CoachMemory => s.coach || { perms: {}, threads: [], decisions: [] };
 
 /** Une demande → une réponse. Toutes les lectures et propositions passent par les contrôles de tools.ts. */
-export async function ask(s: AppState, input: string, today: ISODate, history: CoachMsg[] = [], provider = providerFor(s)): Promise<CoachMsg> {
+export async function ask(s: AppState, input: string, today: ISODate, history: CoachMsg[] = [], provider = providerFor(s), attachments: Attachment[] = []): Promise<CoachMsg> {
   const scopes = new Set<DataScope>(); const tools: string[] = []; const drafts: Record<string, unknown> = {};
   const ctx: CoachContext = {
-    today, state: s, history,
+    today, state: s, history, attachments,
     read(call: ToolCall) {
       const c = checkCall(s, call.name, call.args); if (!c.ok) return { error: c.error };
       if (c.tool.write) return { error: 'Une écriture ne passe pas par la lecture.' };

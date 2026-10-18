@@ -1,6 +1,6 @@
 export type ISODate = string; // YYYY-MM-DD
 
-export type ActivityType = 'crossfit' | 'hyrox' | 'hyrox-simu' | 'hyrox-compet' | 'running' | 'course' | 'renfo' | 'marche' | 'autre';
+export type ActivityType = 'crossfit' | 'crossfit-compet' | 'hyrox' | 'hyrox-simu' | 'hyrox-compet' | 'running' | 'course' | 'renfo' | 'marche' | 'autre';
 export type RunKind = 'facile' | 'recup' | 'affutage' | 'rappel' | 'qualite' | 'test';
 export type Zone = 'easy' | 'seuil' | '10k' | '5k';
 export type Level = 'vert' | 'orange' | 'rouge' | 'inconnu';
@@ -28,10 +28,11 @@ export interface StravaItem {
 }
 
 export interface SportEvent {
-  id: string; name: string; type: 'course' | 'ocr' | 'hyrox-compet' | 'autre'; date: ISODate; time?: string;
+  id: string; name: string; type: 'course' | 'ocr' | 'hyrox-compet' | 'crossfit-compet' | 'autre'; date: ISODate; time?: string;
   distanceKm?: number | null; place?: string; priority: 'participation' | 'repère' | 'objectif'; goal?: string;
   status: 'prévu' | 'fait' | 'annulé';
-  result?: { time: number; elevM?: number | null; avgHr?: number | null; effort?: number | null; notes?: string;
+  /** time : secondes (0 = pas de chrono, compétition CrossFit notée au classement). */
+  result?: { time: number; rank?: string; score?: string; elevM?: number | null; avgHr?: number | null; effort?: number | null; notes?: string;
     feeling?: number | null; pacing?: 'trop-vite' | 'regulier' | 'fini-fort' | null; conditions?: string[];
     /** D'où vient le temps : saisi, description Strava, ou chrono de la montre. */
     source?: 'saisi' | 'description' | 'montre'; movingSec?: number; distanceKm?: number | null; maxHr?: number | null; calories?: number | null };
@@ -158,7 +159,7 @@ export type CoachCard =
   | { kind: 'compare'; id: string; title: string; head: string[]; rows: string[][] }
   | { kind: 'action'; id: string; title: string; summary: string; consequences: string[]; issues: { severity: 'block' | 'warn' | 'info' | 'ok'; text: string }[]; call: ToolCall; modify?: { pathname: string; params: Record<string, string> } }
   | { kind: 'program'; id: string; title: string; /** Libellé du bouton d'acceptation. */ accept?: string; summary: string; phases: string[]; week: { label: string; detail: string }[]; issues: { severity: 'block' | 'warn' | 'info' | 'ok'; text: string }[]; call: ToolCall; modify?: { pathname: string; params: Record<string, string> } };
-export interface CoachMsg { id: string; role: 'user' | 'coach'; at: number; text: string; cards?: CoachCard[]; scopes?: DataScope[]; tools?: string[]; decisions?: Record<string, 'accepted' | 'refused'> }
+export interface CoachMsg { id: string; role: 'user' | 'coach'; at: number; text: string; /** Pièces jointes envoyées (nom et type seulement : le contenu n'est pas conservé). */ files?: { name: string; kind: 'image' | 'pdf' | 'text' }[]; cards?: CoachCard[]; scopes?: DataScope[]; tools?: string[]; decisions?: Record<string, 'accepted' | 'refused'> }
 export interface CoachThread { id: string; title: string; at: number; messages: CoachMsg[] }
 export interface CoachDecision { id: string; at: number; text: string; outcome: 'accepted' | 'refused' }
 export interface CoachMemory { perms: Partial<Record<DataScope, boolean>>; threads: CoachThread[]; decisions: CoachDecision[]; provider?: 'local' | 'chatgpt' | 'claude'; /** « Tout oublier » : rien d'antérieur ne revient par la synchro. */ clearedAt?: number }

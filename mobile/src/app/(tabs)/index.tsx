@@ -1,3 +1,4 @@
+import { resultValue } from '@/engine/race';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { AppState, Pressable, View } from 'react-native';
@@ -85,8 +86,8 @@ export default function Today() {
           <Row between><Kicker onStage>Compétition</Kicker><Chip tone="stage" label="Terminée" /></Row>
           <T v="title" color={c.stageInk} style={{ marginTop: space.s2 }}>{a.event!.name}</T>
           <Row gap={8} style={{ alignItems: 'flex-end', marginTop: space.s3 }}>
-            <T v="display" color={c.accent}>{a.event!.result ? clock(a.event!.result.time) : '—'}</T>
-            <T v="small" color={c.stageInk2} style={{ paddingBottom: 8 }}>{a.event!.result?.source === 'montre' ? 'temps montre' : a.event!.distanceKm && a.event!.result ? `${mmss(a.event!.result.time / a.event!.distanceKm)} /km` : 'temps officiel'}</T>
+            <T v="display" color={c.accent}>{a.event!.result ? resultValue(a.event!, clock) : '—'}</T>
+            <T v="small" color={c.stageInk2} style={{ paddingBottom: 8 }}>{a.event!.type === 'crossfit-compet' ? (a.event!.result?.score || 'classement') : a.event!.result?.source === 'montre' ? 'temps montre' : a.event!.distanceKm && a.event!.result ? `${mmss(a.event!.result.time / a.event!.distanceKm)} /km` : 'temps officiel'}</T>
           </Row>
           <Button kind="primary" block style={{ marginTop: space.s4 }} label={a.event!.result?.feeling ? 'Voir mon analyse' : 'Faire mon débrief'} onPress={() => router.push({ pathname: '/race/[id]', params: { id: a.event!.id } })} />
         </Stage>
