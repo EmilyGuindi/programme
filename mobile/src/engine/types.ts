@@ -158,7 +158,7 @@ export type CoachCard =
   | { kind: 'compare'; id: string; title: string; head: string[]; rows: string[][] }
   | { kind: 'action'; id: string; title: string; summary: string; consequences: string[]; issues: { severity: 'block' | 'warn' | 'info' | 'ok'; text: string }[]; call: ToolCall; modify?: { pathname: string; params: Record<string, string> } }
   | { kind: 'program'; id: string; title: string; /** Libellé du bouton d'acceptation. */ accept?: string; summary: string; phases: string[]; week: { label: string; detail: string }[]; issues: { severity: 'block' | 'warn' | 'info' | 'ok'; text: string }[]; call: ToolCall; modify?: { pathname: string; params: Record<string, string> } };
-export interface CoachMsg { id: string; role: 'user' | 'coach'; at: number; text: string; cards?: CoachCard[]; scopes?: DataScope[]; tools?: string[]; decisions?: Record<string, 'accepted' | 'refused'> }
+export interface CoachMsg { id: string; role: 'user' | 'coach'; at: number; text: string; /** Pièces jointes envoyées (nom et type seulement : le contenu n'est pas conservé). */ files?: { name: string; kind: 'image' | 'pdf' | 'text' }[]; cards?: CoachCard[]; scopes?: DataScope[]; tools?: string[]; decisions?: Record<string, 'accepted' | 'refused'> }
 export interface CoachThread { id: string; title: string; at: number; messages: CoachMsg[] }
 export interface CoachDecision { id: string; at: number; text: string; outcome: 'accepted' | 'refused' }
 export interface CoachMemory { perms: Partial<Record<DataScope, boolean>>; threads: CoachThread[]; decisions: CoachDecision[]; provider?: 'local' | 'chatgpt' | 'claude'; /** « Tout oublier » : rien d'antérieur ne revient par la synchro. */ clearedAt?: number }

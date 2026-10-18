@@ -13,6 +13,10 @@
   - Claude ne dispose que d'outils de **proposition** : `apply_workout_reschedule`, `adapt_today`, `create_program_draft`, `update_program_draft`, `change_current_program` (nouveau plan à partir d'un lundi à venir, l'actuel s'arrête la veille avec son historique), `confirm_program_activation`.
   - Le téléphone revalide chaque proposition avec les règles BYYND (`checkCall` / `prepare`) et l'affiche en carte.
   - Rien n'est appliqué sans « Accepter » ; à l'exécution, les contrôles sont refaits.
+- **Pièces jointes** : photo (galerie, compressée en JPEG), PDF ou fichier texte (txt, md, csv, json, gpx, tcx), 3 au maximum par message.
+  - Le Worker contrôle les types, la taille (image ≤ 3,9 Mo et PDF ≤ 4,1 Mo en base64, 8 Mo au total) et la forme du base64.
+  - Les fichiers sont transmis comme données : images et PDF en blocs natifs, texte encadré.
+  - Ils ne sont ni stockés ni synchronisés, et ne sont pas renvoyés aux messages suivants.
 - **Secours** : si Claude est hors ligne, sans crédit, au-delà du quota ou non configuré, le coach à règles répond et le dit.
 - **Coût** : environ 0,07 centime par message, sur un crédit prépayé sans rechargement automatique.
 

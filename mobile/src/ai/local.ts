@@ -216,6 +216,7 @@ export const localProvider: CoachProvider = {
   status: () => ({ available: true, label: 'Actif', detail: 'Règles BYYND appliquées sur ton téléphone. Aucune donnée envoyée à un service d\'IA.' }),
   async respond(input, ctx) {
     const t = norm(input).slice(0, 500);
+    if (ctx.attachments?.length && !t) return { text: 'Le coach à règles ne sait pas lire les photos ni les fichiers : il faut Claude pour ça (Coach → Historique et données).', cards: [] };
     for (const f of [reschedule, fatigue, lastRuns, program, paceWhy, eventsInfo, sessionInfo, zonesInfo, records, week]) { const r = f(t, ctx); if (r) return r; }
     return fallback(t, ctx);
   },

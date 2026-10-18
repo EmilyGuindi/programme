@@ -10,6 +10,8 @@ export interface CoachContext {
   /** État en lecture seule, pour les fournisseurs locaux uniquement (un fournisseur externe ne reçoit que minimalContext). */
   state: Readonly<AppState>;
   history: readonly CoachMsg[];
+  /** Pièces jointes du message en cours (photo, PDF, texte). */
+  attachments?: readonly import('./attachments').Attachment[];
 }
 export interface CoachReply { text: string; cards: CoachCard[]; suggestions?: string[] }
 export interface ProviderStatus { available: boolean; label: string; detail: string; blockers?: string[] }
