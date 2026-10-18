@@ -5,7 +5,7 @@ import type React from 'react';
 import { Stage, StatusMark } from '@/components/brand';
 import { DayMini, dayStatus, StatusLegend, WeekTracker } from '@/components/week-tracker';
 import { openDay, presetFor, TYPE_LABEL } from '@/components/plan-row';
-import { Button, Divider, ListGroup, ListRow, Meter, Row, Screen, T } from '@/components/ui';
+import { Button, Chevron, Divider, ListGroup, ListRow, Meter, Row, Screen, T } from '@/components/ui';
 import { activitiesOn, adapted, doneOn, phaseOf, weekOf, weekStart } from '@/engine/coach';
 import { addDays, clock, daysBetween, dow, fmtShort, parseISO, sportDay } from '@/engine/dates';
 import type { AdaptedPlan } from '@/engine/types';
@@ -36,7 +36,7 @@ export default function Program() {
   return (
     <Screen>
       <View style={{ paddingTop: space.s4 }}>
-        <T v="overline" muted>{`Semaine ${w} sur ${s.program.weeks} · Phase ${ph.n} · ${ph.name}`}</T>
+        <T v="small" muted>{`Semaine ${w} sur ${s.program.weeks} · phase ${ph.n}, ${ph.name.toLowerCase()}`}</T>
         <Row between style={{ marginTop: 4 }}>
           <T v="title">{range}</T>
           <Row gap={6}>
@@ -51,7 +51,6 @@ export default function Program() {
       </View>
       <View style={{ marginBottom: space.s4, paddingHorizontal: 4, gap: 6 }}>
         {planned.length ? <T v="small" muted>{`${done} sur ${planned.length} séance${planned.length > 1 ? 's' : ''} prévue${planned.length > 1 ? 's' : ''} réalisée${done > 1 ? 's' : ''}`}</T> : null}
-        <StatusLegend statuses={days.map(a => dayStatus(s, a, today))} />
       </View>
 
       <DayPanel a={selDay} today={today} />
@@ -60,7 +59,7 @@ export default function Program() {
         {pre.length ? <ListRow title="Avant le début du programme" sub={`${pre.length} jour${pre.length > 1 ? 's' : ''} · démarrage le 14 octobre`} chevron={false} left={<View style={{ width: 36 }} />} /> : null}
         {days.filter(a => kind(a) !== 'pre').map((a, i, arr) => {
           const k = kind(a); const shown = a.replaced || a; const acts = activitiesOn(s, a.date).filter(x => !x.complementary);
-          const sub = k === 'done' ? acts.map(x => `${x.title === shown.title ? 'Fait' : x.title}${x.durationMin ? ` · ${Math.round(x.durationMin)} min` : ''}`).join(', ') : k === 'event' ? (a.event?.time ? `Départ ${a.event.time}` : 'Compétition') : [shown === a ? a.dur : '', a.optional ? 'optionnel' : '', a.reason ? 'adaptée' : ''].filter(Boolean).join(' · ');
+          const sub = k === 'done' ? acts.map(x => `${x.title === shown.title ? 'Fait' : x.title}${x.durationMin ? ` · ${Math.round(x.durationMin)} min` : ''}`).join(', ') : k === 'event' ? (a.event?.status === 'annulé' ? 'Annulée' : a.event?.result ? `Terminée · ${clock(a.event.result.time)}` : a.event?.time ? `Départ ${a.event.time}` : 'Compétition') : [shown === a ? a.dur : '', a.optional ? 'optionnel' : '', a.reason ? 'adaptée' : ''].filter(Boolean).join(' · ');
           return (
             <ListRow key={a.date} last={i === arr.length - 1} title={shown.title} sub={sub || undefined}
               left={<View style={{ width: 36 }}><T v="overline" color={a.date === today ? c.accent : c.ink3}>{DAY_NAMES[dow(a.date)].slice(0, 3)}</T><T v="num" style={{ fontSize: 18, lineHeight: 20 }} color={k === 'rest' ? c.ink3 : c.ink}>{parseISO(a.date).getDate()}</T></View>}
@@ -79,7 +78,7 @@ export default function Program() {
 
 function NavBtn({ glyph, onPress, disabled, label }: { glyph: string; onPress: () => void; disabled?: boolean; label: string }) {
   const { c } = useTheme();
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress} hitSlop={6} style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? c.surface2 : c.surface, opacity: disabled ? 0.35 : 1 })}><T v="h2" style={{ lineHeight: 26 }}>{glyph}</T></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => ({ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? c.surface2 : c.surface, opacity: disabled ? 0.35 : 1 })}><View style={{ transform: [{ rotate: glyph === '‹' ? '180deg' : '0deg' }] }}><Chevron color={c.ink} size={16} /></View></Pressable>;
 }
 
 /** Panneau du jour sélectionné : le moment expressif de l'écran. */
@@ -89,27 +88,37 @@ function DayPanel({ a, today }: { a: AdaptedPlan; today: string }) {
   const acts = activitiesOn(s, a.date).filter(x => !x.complementary); const rel = a.date === today ? "Aujourd'hui" : a.date === addDays(today, 1) ? 'Demain' : DAY_NAMES[dow(a.date)];
   const bg = isEvent ? c.stage : c.surface; const fg = isEvent ? c.stageInk : c.ink; const fg2 = isEvent ? c.stageInk2 : c.ink2;
   const n = isEvent ? daysBetween(today, a.date) : 0;
-  const Wrap = ({ children }: { children: React.ReactNode }) => isEvent ? <Stage glow mark style={{ marginBottom: space.s5 }}>{children}</Stage> : <View style={{ backgroundColor: bg, borderRadius: radius.r2, padding: space.s5, marginBottom: space.s5 }}>{children}</View>;
+  const evDone = !!isEvent && !!(a.event!.result || s.activities.some(x => x.eventId === a.event!.id));
+  const res = isEvent ? a.event!.result : undefined;
+  const Wrap = ({ children }: { children: React.ReactNode }) => isEvent ? <Stage mark glow={!evDone} style={{ marginBottom: space.s5 }}>{children}</Stage> : <View style={{ backgroundColor: bg, borderRadius: radius.r3, padding: space.s5, marginBottom: space.s5 }}>{children}</View>;
+  // Un seul statut, une seule action utile.
+  const status = isEvent ? (evDone ? 'Terminée' : n === 0 ? 'Jour J' : n > 0 ? `J-${n}` : '') : done ? 'Fait' : a.reason ? 'Adaptée' : a.optional ? 'Optionnel' : '';
+  const statusCol = isEvent ? (evDone ? c.stageInk : c.accent) : done ? c.ok : a.reason ? c.warn : c.ink2;
   return (
     <Wrap>
       <Row between>
-        <T v="overline" color={isEvent ? c.stageInk2 : c.accent}>{`${rel} · ${isEvent ? 'Compétition' : TYPE_LABEL[shown.type]}${a.optional ? ' · optionnel' : ''}`}</T>
-        {isEvent && n >= 0 ? <T v="overline" color={c.stageInk}>{n === 0 ? 'Jour J' : `J-${n}`}</T> : done ? <T v="overline" color={c.ok}>Fait</T> : a.reason ? <T v="overline" color={c.warn}>Adaptée</T> : null}
+        {isEvent ? <T v="eyebrow" color={c.stageInk2}>{`${rel} · compétition`}</T> : <T v="small" muted style={{ fontWeight: '600' }}>{`${rel} · ${TYPE_LABEL[shown.type].toLowerCase()}`}</T>}
+        {status ? <T v="small" color={statusCol} style={{ fontWeight: '700' }}>{status}</T> : null}
       </Row>
-      <T v="h2" color={fg} style={{ fontSize: 26, lineHeight: 31, marginTop: space.s2 }}>{shown.title}</T>
-      {(shown === a ? a.dur : '') || shown.goal ? <T color={fg2} style={{ marginTop: 4 }} numberOfLines={3}>{[shown === a ? a.dur : '', shown.goal].filter(Boolean).join(' · ')}</T> : null}
-      {a.note && !a.reason ? <T v="small" color={fg2} style={{ marginTop: space.s2 }}>{a.note}</T> : null}
-      {a.reason ? <T v="small" color={fg2} style={{ marginTop: space.s2 }}>{a.reason}</T> : null}
-      {shown.type === 'rest' && !a.note && !shown.goal ? <T color={fg2} style={{ marginTop: 4 }}>Récupération. Une marche est bienvenue.</T> : null}
-      {done && acts.length ? <T v="small" color={c.accent} style={{ marginTop: space.s2 }}>{`Réalisé : ${acts.map(x => [x.title, x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.calories ? `${Math.round(x.calories)} kcal estimées` : ''].filter(Boolean).join(' · ')).join(', ')}`}</T> : null}
-      {isEvent && a.event!.result ? <T v="small" color={c.stageInk} style={{ marginTop: space.s2 }}>{`Résultat : ${clock(a.event!.result.time)}`}</T> : null}
-      <View style={{ marginTop: space.s4, gap: space.s2 }}>
-        {isEvent ? <Button kind="primary" block label={a.event!.result ? 'Voir le débrief' : s.activities.some(x => x.eventId === a.event!.id) ? 'Saisir mon temps' : 'Préparer la course'} onPress={() => (!a.event!.result && s.activities.some(x => x.eventId === a.event!.id) ? router.push({ pathname: '/result/[id]', params: { id: a.event!.id } }) : router.push({ pathname: '/race/[id]', params: { id: a.event!.id } }))} />
-          : shown.type === 'run' || shown.type === 'renfo' ? <Button kind="primary" block label={done && shown.type === 'renfo' ? 'Revoir la séance' : 'Voir la séance'} onPress={() => router.push({ pathname: shown.type === 'run' ? '/run/[date]' : '/renfo/[date]', params: { date: a.date } })} />
+      <T v="h2" color={fg} style={{ fontSize: 24, lineHeight: 30, marginTop: space.s2 }}>{shown.title}</T>
+      {evDone ? (
+        <Row gap={8} style={{ alignItems: 'flex-end', marginTop: space.s2 }}>
+          <T v="hero" color={c.accent}>{res ? clock(res.time) : '—'}</T>
+          <T v="small" color={fg2} style={{ paddingBottom: 6 }}>{res ? (res.source === 'montre' ? 'temps montre' : 'temps officiel') : 'activité Strava reçue'}</T>
+        </Row>
+      ) : <>
+        {(shown === a ? a.dur : '') || shown.goal ? <T color={fg2} style={{ marginTop: 4 }} numberOfLines={3}>{[shown === a ? a.dur : '', shown.goal].filter(Boolean).join(' · ')}</T> : null}
+        {a.reason ? <T v="small" color={fg2} style={{ marginTop: space.s2 }}>{a.reason}</T> : a.note ? <T v="small" color={fg2} style={{ marginTop: space.s2 }}>{a.note}</T> : null}
+        {shown.type === 'rest' && !a.note && !shown.goal ? <T color={fg2} style={{ marginTop: 4 }}>Récupération. Une marche est bienvenue.</T> : null}
+        {done && acts.length ? <T v="small" color={fg2} style={{ marginTop: space.s2 }}>{acts.map(x => [x.title, x.durationMin ? `${Math.round(x.durationMin)} min` : '', x.calories ? `${Math.round(x.calories)} kcal estimées` : ''].filter(Boolean).join(' · ')).join(', ')}</T> : null}
+      </>}
+      <View style={{ marginTop: space.s4, gap: space.s1 }}>
+        {isEvent ? <Button kind="primary" block label={evDone ? (res?.feeling ? 'Voir mon analyse' : res ? 'Faire mon débrief' : 'Saisir mon temps') : 'Préparer la course'} onPress={() => (evDone && !res ? router.push({ pathname: '/result/[id]', params: { id: a.event!.id } }) : router.push({ pathname: '/race/[id]', params: { id: a.event!.id } }))} />
+          : shown.type === 'run' || shown.type === 'renfo' ? <Button kind="primary" block label={done ? 'Revoir la séance' : 'Voir la séance'} onPress={() => router.push({ pathname: shown.type === 'run' ? '/run/[date]' : '/renfo/[date]', params: { date: a.date } })} />
           : !done && (shown.type === 'box' || shown.type === 'recup') && a.date <= today ? <Button kind="primary" block label="Marquer comme fait" onPress={() => router.push({ pathname: '/activity', params: { date: a.date, preset: a.replaced ? 'marche' : presetFor(a) } })} />
           : null}
         <Row>
-          {shown.type !== 'rest' || done ? <Button small kind="ghost" label="Détail du jour" style={{ paddingHorizontal: 0 }} onPress={() => openDay(a.date)} /> : null}
+          {!isEvent && (shown.type !== 'rest' || done) ? <Button small kind="ghost" label="Détail du jour" style={{ paddingHorizontal: 0 }} onPress={() => openDay(a.date)} /> : null}
           {a.hyrox && a.date >= today ? <Button small kind="ghost" label="Pas de HYROX cette semaine" style={{ paddingHorizontal: 0, marginLeft: 'auto' }} onPress={() => update(st => { st.overrides[a.date] = { ...(st.overrides[a.date] || {}), noHyrox: true }; })} /> : null}
           {a.alt && a.date >= today ? <Button small kind="ghost" label="Finalement, HYROX" style={{ paddingHorizontal: 0, marginLeft: 'auto' }} onPress={() => update(st => { delete st.overrides[a.date].noHyrox; })} /> : null}
         </Row>

@@ -2,7 +2,8 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useRef, type ReactNode } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+export const NAV_H = 64; export const NAV_SPACE = NAV_H + 12 + 32;
 import type { Level } from '@/engine/types';
 import { font, radius, size, space, touch, useTheme } from '@/theme/tokens';
 import Svg, { Defs, Path as SvgPath, RadialGradient, Rect as SvgRect, Stop } from 'react-native-svg';
@@ -10,14 +11,17 @@ import Svg, { Defs, Path as SvgPath, RadialGradient, Rect as SvgRect, Stop } fro
 const tap = () => Haptics.selectionAsync().catch(() => {});
 
 /* ---------- Typographie ---------- */
-type TV = 'mega' | 'hero' | 'display' | 'title' | 'h2' | 'h3' | 'body' | 'small' | 'xs' | 'label' | 'overline' | 'num';
-export function T({ v = 'body', muted, color, style, children, numberOfLines }: { v?: TV; muted?: boolean; color?: string; style?: StyleProp<TextStyle>; children: ReactNode; numberOfLines?: number }) {
+type TV = 'mega' | 'hero' | 'display' | 'title' | 'h2' | 'h3' | 'body' | 'small' | 'xs' | 'label' | 'overline' | 'eyebrow' | 'num';
+export function T({ v = 'body', muted, color, style, children, numberOfLines, maxFontSizeMultiplier }: { v?: TV; muted?: boolean; color?: string; style?: StyleProp<TextStyle>; children: ReactNode; numberOfLines?: number; maxFontSizeMultiplier?: number }) {
   const { c } = useTheme();
   const base: Record<TV, TextStyle> = {
     mega: { fontFamily: font.display, fontSize: size.mega, lineHeight: 58, letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
     hero: { fontFamily: font.display, fontSize: size.hero, lineHeight: 44, letterSpacing: -1, fontVariant: ['tabular-nums'] },
     display: { fontFamily: font.display, fontSize: 52, lineHeight: 54, letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
-    overline: { fontFamily: font.semibold, fontSize: size.xxs, lineHeight: 14, letterSpacing: 0.8, textTransform: 'uppercase' },
+    /** Micro-label : casse normale, lisible. */
+    overline: { fontFamily: font.semibold, fontSize: size.xs, lineHeight: 16, letterSpacing: 0.1 },
+    /** Capitales espacées : uniquement sur les cartes signature. */
+    eyebrow: { fontFamily: font.semibold, fontSize: size.xxs, lineHeight: 14, letterSpacing: 0.9, textTransform: 'uppercase' },
     num: { fontFamily: font.display, fontSize: size.xl, lineHeight: 26, letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
     title: { fontFamily: font.display, fontSize: size.xxl, lineHeight: 33, letterSpacing: -0.6 },
     h2: { fontFamily: font.displayMedium, fontSize: size.xl, lineHeight: 28, letterSpacing: -0.3 },
@@ -27,7 +31,7 @@ export function T({ v = 'body', muted, color, style, children, numberOfLines }: 
     xs: { fontFamily: font.regular, fontSize: size.xs, lineHeight: 16 },
     label: { fontFamily: font.semibold, fontSize: 15, lineHeight: 21 },
   };
-  return <Text numberOfLines={numberOfLines} style={[base[v], { color: color || (muted ? c.ink2 : c.ink) }, style]}>{children}</Text>;
+  return <Text numberOfLines={numberOfLines} maxFontSizeMultiplier={maxFontSizeMultiplier ?? (['mega', 'hero', 'display'].includes(v) ? 1.3 : 1.6)} style={[base[v], { color: color || (muted ? c.ink2 : c.ink) }, style]}>{children}</Text>;
 }
 
 /* ---------- Mise en page ---------- */
@@ -35,7 +39,9 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
   const { c } = useTheme(); const ref = useRef<ScrollView>(null);
   // Chaque fois qu'on revient sur un écran (onglet ou retour), il repart en haut.
   useFocusEffect(useCallback(() => { ref.current?.scrollTo({ y: 0, animated: false }); }, []));
-  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: space.s5 - 4, paddingBottom: 132 }}>{children}</View>;
+  const insets = useSafeAreaInsets();
+  // Espace sous le contenu = hauteur de la barre (64) + marge (12) + zone système + respiration (32).
+  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: space.s5 - 4, paddingBottom: NAV_SPACE + insets.bottom }}>{children}</View>;
   return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}><Ambient />{scroll ? <ScrollView ref={ref} keyboardShouldPersistTaps="handled">{inner}</ScrollView> : inner}</SafeAreaView>;
 }
 export function Row({ children, gap = space.s3, between, style }: { children: ReactNode; gap?: number; between?: boolean; style?: StyleProp<ViewStyle> }) {
@@ -58,8 +64,8 @@ export function Button({ label, onPress, kind = 'secondary', small, disabled, bl
   const border = kind === 'primary' ? c.accent : kind === 'ghost' || kind === 'inverse' ? 'transparent' : c.surface2;
   const tall = kind === 'primary' && !small;
   return (
-    <Pressable accessibilityRole="button" disabled={disabled} onPress={() => { tap(); onPress(); }}
-      style={({ pressed }) => [{ minHeight: small ? 40 : tall ? 56 : touch, paddingHorizontal: small ? space.s4 : space.s5, borderRadius: kind === 'ghost' ? radius.r1 : radius.pill, borderWidth: 1, borderColor: border, backgroundColor: kind === 'secondary' ? c.surface2 : bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, opacity: disabled ? 0.4 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }, block && { alignSelf: 'stretch' }, style]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }} hitSlop={small ? 6 : 0} disabled={disabled} onPress={() => { tap(); onPress(); }}
+      style={({ pressed }) => [{ minHeight: small ? 44 : tall ? 56 : touch, paddingHorizontal: small ? space.s4 : space.s5, borderRadius: kind === 'ghost' ? radius.r1 : radius.pill, borderWidth: 1, borderColor: border, backgroundColor: kind === 'secondary' ? c.surface2 : bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, opacity: disabled ? 0.4 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }, block && { alignSelf: 'stretch' }, style]}>
       {icon}<Text style={{ fontFamily: font.semibold, fontSize: small ? size.sm : tall ? 17 : size.md, color: fg }}>{label}</Text>
     </Pressable>
   );
@@ -105,8 +111,9 @@ export function Choices<V extends string | number>({ options, value, onChange, c
         const on = value === v;
         return (
           <Pressable key={String(v)} accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={() => { tap(); onChange(on ? null : v); }}
-            style={{ flexGrow: 1, flexBasis: cols ? `${100 / cols - 2}%` : 64, minHeight: cols && cols > 6 ? 44 : touch, borderRadius: radius.r1, borderWidth: 1, borderColor: on ? c.ink : c.line2, backgroundColor: on ? c.ink : c.surface, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-            <Text style={{ fontFamily: font.semibold, fontSize: size.md, color: on ? c.paper : c.ink }}>{l}</Text>
+            accessibilityLabel={l}
+            style={{ flexGrow: 1, flexBasis: cols ? `${100 / cols - 2}%` : 'auto', minWidth: cols ? undefined : 56, minHeight: cols && cols > 6 ? 44 : touch, borderRadius: radius.r1, borderWidth: on ? 0 : 1, borderColor: c.stroke, backgroundColor: on ? c.ink : c.surface, alignItems: 'center', justifyContent: 'center', paddingHorizontal: cols && cols > 6 ? 2 : 14 }}>
+            <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={{ fontFamily: font.semibold, fontSize: cols && cols > 6 ? size.sm : 15, color: on ? c.paper : c.ink }}>{l}</Text>
           </Pressable>
         );
       })}
@@ -174,7 +181,7 @@ export function ListRow({ title, sub, left, right, onPress, last, chevron = true
 export function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
   const { c } = useTheme();
   return (
-    <Pressable accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: value }} hitSlop={10} onPress={() => { tap(); onChange(!value); }}
+    <Pressable accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: value }} hitSlop={12} onPress={() => { tap(); onChange(!value); }}
       style={{ width: 50, height: 30, borderRadius: 15, padding: 3, backgroundColor: value ? c.accent : c.line2, justifyContent: 'center' }}>
       <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: value ? c.accentInk : c.ink, transform: [{ translateX: value ? 20 : 0 }] }} />
     </Pressable>
@@ -193,7 +200,7 @@ export function Divider({ inset = 0 }: { inset?: number }) {
 /** Retour discret, cohérent sur tous les écrans de détail. */
 export function BackLink({ label, onPress }: { label: string; onPress: () => void }) {
   const { c } = useTheme();
-  return <Pressable accessibilityRole="button" accessibilityLabel={`Retour : ${label}`} hitSlop={12} onPress={() => { tap(); onPress(); }} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 8, opacity: pressed ? 0.6 : 1 })}><T v="h3" color={c.accent} style={{ lineHeight: 22 }}>‹</T><T v="label" color={c.accent}>{label}</T></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={`Retour : ${label}`} hitSlop={12} onPress={() => { tap(); onPress(); }} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 44, opacity: pressed ? 0.6 : 1 })}><View style={{ transform: [{ rotate: '180deg' }] }}><Chevron color={c.accent} size={16} /></View><T v="label" color={c.accent}>{label}</T></Pressable>;
 }
 
 /** Chevron de navigation BYYND : fin, à l'angle du logo. */

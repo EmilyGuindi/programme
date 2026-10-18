@@ -4,15 +4,18 @@
    Thème unique sombre : l'identité ne dépend plus du réglage système.
    ============================================================ */
 
-/** Couleurs de marque. Le cobalt reste dans le kit d'origine ; l'app passe au lime. */
+/** Couleurs de marque. Le cobalt reste dans le kit d'origine ; l'app passe au lime.
+ *  Usages du lime, et seulement ceux-là : action principale · élément sélectionné · progression importante ·
+ *  moment de marque (compétition, cycle) · accomplissement. Jamais pour « fait » ou « récupération OK » :
+ *  ces états ont leurs couleurs sémantiques (ok, warn, stop) et une forme qui les distingue sans couleur. */
 export const brand = { lime: '#B8F20D', limeMuted: '#91C51A', limeSoft: '#DFFF83', ink: '#0B0D0A', white: '#F5F7F2', cobalt: '#0047FF', stone: '#EAE8E4', blue: '#0047FF' };
 
-export type Palette = { [K in 'paper' | 'paper2' | 'surface' | 'surface2' | 'ink' | 'ink2' | 'ink3' | 'line' | 'line2' | 'accent' | 'accentInk' | 'accentSoft' | 'ok' | 'warn' | 'stop' | 'info' | 'okSoft' | 'warnSoft' | 'stopSoft' | 'stage' | 'stageInk' | 'stageInk2' | 'glass' | 'glassBorder' | 'disabled' | 'series1' | 'series2' | 'series3' | 'series4']: string };
+export type Palette = { [K in 'paper' | 'paper2' | 'surface' | 'surface2' | 'ink' | 'ink2' | 'ink3' | 'line' | 'line2' | 'accent' | 'accentInk' | 'accentSoft' | 'ok' | 'warn' | 'stop' | 'info' | 'okSoft' | 'warnSoft' | 'stopSoft' | 'stage' | 'stageInk' | 'stageInk2' | 'glass' | 'glassBorder' | 'disabled' | 'stroke' | 'nav' | 'series1' | 'series2' | 'series3' | 'series4']: string };
 
 const dark: Palette = {
   paper: '#0B0D0A', paper2: '#11150F',
   surface: '#171B15', surface2: '#20261D',
-  ink: '#F5F7F2', ink2: '#A3AD9D', ink3: '#737D70',
+  ink: '#F5F7F2', ink2: '#A3AD9D', ink3: '#8C9688', // ink3 ≥ 5:1 sur toutes les surfaces
   line: 'rgba(245,247,242,0.07)', line2: 'rgba(245,247,242,0.14)',
   accent: brand.lime, accentInk: '#0B0D0A', accentSoft: 'rgba(184,242,13,0.12)',
   ok: '#4FD1A1', warn: '#F2B33D', stop: '#FF7A6B', info: '#7AB7FF',
@@ -20,6 +23,8 @@ const dark: Palette = {
   stage: '#11150F', stageInk: '#F5F7F2', stageInk2: '#A3AD9D',
   glass: 'rgba(23,27,21,0.72)', glassBorder: 'rgba(245,247,242,0.12)',
   disabled: '#3A4136',
+  /** Contours porteurs de sens (jour prévu, champs) : ≥ 3:1 sur les surfaces. */ stroke: '#737D70',
+  /** Barre de navigation : opaque, légèrement au-dessus du fond. */ nav: '#161A14',
   series1: brand.lime, series2: '#7AB7FF', series3: '#F2B33D', series4: '#A3AD9D',
 };
 

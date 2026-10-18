@@ -16,7 +16,7 @@ import { BrandMark } from '@/components/logo';
 import { sportDay } from '@/engine/dates';
 import { Pressable } from 'react-native';
 import { ActivityRow } from '@/components/plan-row';
-import { BackLink, Button, Card, Gap, KV, ListGroup, ListRow, Meter, Row, Screen, Segmented, Stat, T } from '@/components/ui';
+import { BackLink, Button, Chevron, Card, Gap, KV, ListGroup, ListRow, Meter, Row, Screen, Segmented, Stat, T } from '@/components/ui';
 import { adapted, doneOn, mandatoryStats, runInsight, trend, weekOf, weekStart, weightInsight, weightSeries, ZONE_NAME, zones, zoneText } from '@/engine/coach';
 import { addDays, clock, fmtShort, mmss, num, today } from '@/engine/dates';
 import { EX } from '@/engine/library';
@@ -158,7 +158,7 @@ function Track({ title, steps }: { title: string; steps: Step[] }) {
               <View style={cur ? { backgroundColor: c.stage, borderRadius: radius.r2, padding: space.s4 } : { paddingVertical: space.s3 }}>
                 <Row between>
                   <T v={cur ? 'h3' : 'label'} color={cur ? c.stageInk : st.status === 'à venir' ? c.ink2 : c.ink} style={{ flex: 1 }}>{st.title}</T>
-                  {st.status === 'atteinte' ? <T v="overline" color={c.ok}>Atteinte</T> : cur ? <T v="overline" color={c.accent}>En cours</T> : <T v="h3" color={c.ink3} style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}>›</T>}
+                  {st.status === 'atteinte' ? <T v="overline" color={c.ok}>Atteinte</T> : cur ? <T v="overline" color={c.accent}>En cours</T> : <Chevron open={isOpen} />}
                 </Row>
                 {cur && st.ratio != null ? <View style={{ marginTop: space.s3 }}><Meter value={st.ratio} track="rgba(244,242,238,0.15)" color={c.accent} /></View> : null}
                 {cur && st.progress ? <T v="small" color={c.stageInk2} style={{ marginTop: 6 }}>{st.progress}</T> : null}

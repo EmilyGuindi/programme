@@ -64,7 +64,7 @@ export default function Today() {
         </GlassSurface>
       </Row>
       <UpdateBanner />
-      <T v="small" muted>{`${fmtLong(d)} · semaine ${w} · ${ph.name}`}</T>
+      <T v="small" muted>{`${fmtLong(d)} · semaine ${w}`}</T>
       <T v="title" style={{ marginTop: 2, marginBottom: space.s4 }}>{`${greeting()} ${s.user.name}`}</T>
 
       {/* B · Le focus du jour */}
@@ -79,12 +79,12 @@ export default function Today() {
           <Button kind="primary" block style={{ marginTop: space.s5 }} label={a.event!.result?.feeling ? 'Voir mon analyse' : 'Faire mon débrief'} onPress={() => router.push({ pathname: '/race/[id]', params: { id: a.event!.id } })} />
         </Stage>
       ) : (
-        <Stage mark>
+        <Stage mark={isEvent || ['run', 'box', 'renfo'].includes(shown.type)} tone={['rest', 'recup'].includes(shown.type) && !isEvent ? 'plain' : 'ink'}>
           <Row between>
             <Kicker onStage>{isEvent ? 'Compétition · jour J' : `Aujourd'hui · ${TYPE_LABEL[shown.type]}${a.optional ? ' · optionnel' : ''}`}</Kicker>
             {done ? <T v="overline" color={c.ok}>Fait</T> : a.reason ? <T v="overline" color={c.warn}>Adaptée</T> : null}
           </Row>
-          <T v="title" color={c.stageInk} style={{ fontSize: 32, lineHeight: 37, marginTop: space.s3, maxWidth: '88%' }}>{shown.title}</T>
+          <T v="title" color={c.stageInk} style={{ fontSize: ['rest', 'recup'].includes(shown.type) ? 24 : 30, lineHeight: ['rest', 'recup'].includes(shown.type) ? 30 : 35, marginTop: space.s2, maxWidth: '88%' }}>{shown.title}</T>
           {(a.dur && !a.replaced) || (done && acts.some(x => x.calories)) ? <Row gap={8} style={{ marginTop: space.s3, flexWrap: 'wrap' }}>
             {a.dur && !a.replaced ? <MetricPill icon={<Icon name="clock" size={15} color={c.accent} />} label={a.dur.replace(' au total', '')} /> : null}
             {done && acts.some(x => x.calories) ? <MetricPill icon={<Icon name="flame" size={15} color={c.accent} />} label={`${Math.round(acts.reduce((t, x) => t + (x.calories || 0), 0))} kcal`} /> : null}

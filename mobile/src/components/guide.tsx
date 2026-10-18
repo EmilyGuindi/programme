@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import type { Move } from '@/engine/guides';
 import { radius, space, useTheme } from '@/theme/tokens';
-import { Card, Row, T, Tick } from './ui';
+import { Card, Chevron, Row, T, Tick } from './ui';
 
 /** Section repliable : l'essentiel visible, le détail à la demande. */
 export function Disclosure({ title, sub, children, open: initial = false }: { title: string; sub?: string; children: ReactNode; open?: boolean }) {
@@ -11,7 +11,7 @@ export function Disclosure({ title, sub, children, open: initial = false }: { ti
     <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, marginBottom: space.s3 }}>
       <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={{ padding: space.s4, flexDirection: 'row', alignItems: 'center', gap: space.s3 }}>
         <View style={{ flex: 1 }}><T v="label">{title}</T>{sub ? <T v="small" muted>{sub}</T> : null}</View>
-        <T v="h3" muted>{open ? '–' : '+'}</T>
+        <View style={{ transform: [{ rotate: open ? '-90deg' : '90deg' }] }}><Chevron /></View>
       </Pressable>
       {open ? <View style={{ paddingHorizontal: space.s4, paddingBottom: space.s4 }}>{children}</View> : null}
     </View>
@@ -32,7 +32,7 @@ export function MoveList({ moves }: { moves: Move[] }) {
           <Row style={{ alignItems: 'flex-start' }}>
             <Tick sizePx={30} on={!!done[i]} label={m.name} onPress={() => setDone({ ...done, [i]: !done[i] })} />
             <Pressable style={{ flex: 1 }} accessibilityRole="button" accessibilityState={{ expanded: open === i }} accessibilityHint="Afficher les consignes" onPress={() => setOpen(open === i ? null : i)}>
-              <Row between><T v="label" style={{ flex: 1 }}>{m.name}</T><T v="h3" color={c.ink3} style={{ transform: [{ rotate: open === i ? '90deg' : '0deg' }] }}>›</T></Row>
+              <Row between><T v="label" style={{ flex: 1 }}>{m.name}</T><Chevron open={open === i} /></Row>
               <T v="small" muted>{m.dose}</T>
             </Pressable>
           </Row>

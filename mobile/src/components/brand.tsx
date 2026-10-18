@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, G, Line, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { radius, space, useTheme } from '@/theme/tokens';
 import { Row, T } from './ui';
@@ -19,16 +19,17 @@ const P2 = 'M114 12 L68 46 L68 114 L83 99 L83 54 L114 31 Z';
  *  Motif : le symbole officiel (tracés du kit), très grand, rogné à droite, opacité 6 % sur sombre, 10 % sur lime.
  *  Usage réservé : séance du jour, course, record, accomplissement de la semaine, temps fort du coach.
  *  Pas de bordure, pas de halo : la profondeur vient du contraste de surface. */
-export function Stage({ children, mark = false, tone = 'ink', style, glow }: { children: ReactNode; cut?: number; mark?: boolean; tone?: 'ink' | 'lime' | 'cobalt'; style?: StyleProp<ViewStyle>; glow?: boolean }) {
+export function Stage({ children, mark = false, tone = 'ink', style, glow }: { children: ReactNode; cut?: number; mark?: boolean; tone?: 'ink' | 'lime' | 'cobalt' | 'plain'; style?: StyleProp<ViewStyle>; glow?: boolean }) {
   const { c } = useTheme(); const [sz, setSz] = useState({ w: 0, h: 0 });
   const onLayout = (e: LayoutChangeEvent) => setSz({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
-  const lime = tone === 'lime' || tone === 'cobalt'; const bg = lime ? c.accent : c.stage;
-  const scale = Math.max(1.6, sz.h / 70);
+  const lime = tone === 'lime' || tone === 'cobalt'; const bg = lime ? c.accent : tone === 'plain' ? c.surface : c.stage;
+  // Cadrage : le symbole s'ancre en bas à droite, sa moitié gauche reste hors du bloc de texte principal.
+  const scale = Math.min(2.6, Math.max(1.5, sz.h / 95)); const mw = 102 * scale, mh = 102 * scale;
   return (
-    <View onLayout={onLayout} style={[{ padding: space.s5, marginBottom: space.s3, borderRadius: radius.r3, overflow: 'hidden', backgroundColor: bg }, style]}>
+    <View onLayout={onLayout} style={[{ padding: space.s5, marginBottom: space.s3, borderRadius: radius.r3, overflow: 'hidden', backgroundColor: bg, borderWidth: tone === 'ink' ? StyleSheet.hairlineWidth : 0, borderColor: c.line }, style]}>
       {sz.w > 0 ? <Svg width={sz.w} height={sz.h} style={{ position: 'absolute', left: 0, top: 0 }}>
         {glow && !lime ? <><Defs><RadialGradient id="g" cx="100%" cy="0%" r="80%"><Stop offset="0" stopColor={c.accent} stopOpacity={0.16} /><Stop offset="1" stopColor={c.accent} stopOpacity={0} /></RadialGradient></Defs><Rect width={sz.w} height={sz.h} fill="url(#g)" /></> : null}
-        {mark ? <G opacity={lime ? 0.1 : 0.06} transform={`translate(${sz.w - 102 * scale * 0.62},${sz.h * 0.08}) scale(${scale})`}><Path d={P1} fill={lime ? '#0B0D0A' : '#F5F7F2'} transform="translate(-12,-12)" /><Path d={P2} fill={lime ? '#0B0D0A' : '#F5F7F2'} transform="translate(-12,-12)" /></G> : null}
+        {mark ? <G opacity={lime ? 0.09 : 0.05} transform={`translate(${sz.w - mw * 0.58},${sz.h - mh * 0.82}) scale(${scale})`}><Path d={P1} fill={lime ? '#0B0D0A' : '#F5F7F2'} transform="translate(-12,-12)" /><Path d={P2} fill={lime ? '#0B0D0A' : '#F5F7F2'} transform="translate(-12,-12)" /></G> : null}
       </Svg> : null}
       {children}
     </View>
@@ -41,7 +42,7 @@ export function Kicker({ children, color, onStage }: { children: string; color?:
   const { c } = useTheme();
   // Capitales espacées seulement sur les scènes ; ailleurs, un micro-label en casse normale.
   return onStage
-    ? <T v="overline" color={color || c.stageInk2}>{children}</T>
+    ? <T v="eyebrow" color={color || c.stageInk2}>{children}</T>
     : <T v="small" color={color || c.ink2} style={{ fontWeight: '600' }}>{children}</T>;
 }
 
@@ -138,7 +139,7 @@ export const _r = { Rect, radius };
    - synchronisé: symbole plein + point cobalt
    ============================================================ */
 export type Status = 'planned' | 'done' | 'adapted' | 'optional' | 'rest' | 'race' | 'raceDone' | 'missed' | 'pending' | 'synced' | 'none';
-export const STATUS_LABEL: Record<Status, string> = { planned: 'prévu', done: 'fait', adapted: 'adapté', optional: 'optionnel', rest: 'repos', race: 'course', raceDone: 'course terminée', missed: 'non fait', pending: 'à confirmer', synced: 'synchronisé', none: '' };
+export const STATUS_LABEL: Record<Status, string> = { planned: 'prévu', done: 'fait', adapted: 'adapté', optional: 'optionnel', rest: 'repos', race: 'compétition', raceDone: 'compétition terminée', missed: 'non fait', pending: 'à confirmer', synced: 'synchronisé', none: '' };
 export function StatusMark({ status, size = 18, color, onStage }: { status: Status; size?: number; color?: string; onStage?: boolean }) {
   const { c } = useTheme(); const ink = color || (onStage ? c.stageInk : c.ink); const faint = onStage ? c.stageInk2 : c.ink3;
   const w = size, h = size * 1.2;

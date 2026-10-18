@@ -8,7 +8,7 @@ import { availableRecaps } from '@/engine/recap';
 import { useApp } from '@/store/store';
 import { radius, space, useTheme } from '@/theme/tokens';
 import { BrandMark } from './logo';
-import { Row, T, Tag } from './ui';
+import { Chevron, Row, T, Tag } from './ui';
 
 /** Cartes contextuelles d'Aujourd'hui : prochaine compétition, débrief, fin de séance Strava, bilan du dimanche. Au plus deux à la fois. */
 export function ContextCards({ d }: { d: string }) {
@@ -30,7 +30,7 @@ export function ContextCards({ d }: { d: string }) {
           <T v="label" style={{ marginTop: 2 }}>{ev.name}</T>
           <T v="small" muted>{`Préparation : ${rd.label.toLowerCase()}${ev.distanceKm ? ` · ${String(ev.distanceKm).replace('.', ',')} km` : ''}`}</T>
         </View>
-        <T v="h3" color={c.ink3} style={{ paddingRight: space.s4 }}>›</T>
+        <View style={{ paddingRight: space.s4 }}><Chevron /></View>
       </Pressable>);
   }
   const pc = pendingClosure(s, addDays(d, -1), d);
@@ -45,7 +45,7 @@ function Ctx({ tag, title, sub, onPress }: { tag: string; title: string; sub: st
     <Pressable onPress={onPress} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, marginBottom: space.s3, opacity: pressed ? 0.85 : 1 })}>
       <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' }}><BrandMark size={20} /></View>
       <View style={{ flex: 1 }}><T v="overline" color={c.accent}>{tag}</T><T v="label" style={{ marginTop: 2 }}>{title}</T><T v="small" muted>{sub}</T></View>
-      <T v="h3" color={c.accent}>›</T>
+      <Chevron />
     </Pressable>
   );
 }

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Animated, View } from 'react-native';
+import { AccessibilityInfo, Animated, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandMark } from '@/components/logo';
 import { Button, Card, Choices, Field, Row, T } from '@/components/ui';
@@ -17,7 +17,7 @@ export default function DoneScreen() {
   useEffect(() => {
     if (a && !s.closures?.[a.id]) update(st => { st.closures = { ...(st.closures || {}), [a.id]: Date.now() }; });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    Animated.parallel([Animated.spring(scale, { toValue: 1, friction: 6, useNativeDriver: true }), Animated.timing(fade, { toValue: 1, duration: 260, useNativeDriver: true })]).start();
+    AccessibilityInfo.isReduceMotionEnabled().then(r => { if (r) { scale.setValue(1); fade.setValue(1); return; } Animated.parallel([Animated.spring(scale, { toValue: 1, friction: 7, useNativeDriver: true }), Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: true })]).start(); }).catch(() => { scale.setValue(1); fade.setValue(1); });
   }, []);
   if (!a) return null;
   const cl = buildClosure(s, a); const ci = s.checkins[a.date];

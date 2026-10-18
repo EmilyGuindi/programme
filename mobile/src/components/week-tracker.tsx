@@ -1,3 +1,4 @@
+import type React from 'react';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Animated, Pressable, View } from 'react-native';
@@ -58,42 +59,53 @@ export function DayBadge({ status, icon, size = 32, onStage }: { status: Status;
   );
 }
 
-function Mark({ status, onStage, icon }: { status: Status; onStage?: boolean; icon: IconName }) {
+function Mark({ status, children }: { status: Status; children: React.ReactNode }) {
   const v = useRef(new Animated.Value(1)).current; const first = useRef(true);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
-    AccessibilityInfo.isReduceMotionEnabled().then(r => { if (r) return; v.setValue(0.5); Animated.spring(v, { toValue: 1, friction: 5, tension: 160, useNativeDriver: true }).start(); }).catch(() => {});
+    AccessibilityInfo.isReduceMotionEnabled().then(r => { if (r) return; v.setValue(0.9); Animated.spring(v, { toValue: 1, friction: 6, tension: 180, useNativeDriver: true }).start(); }).catch(() => {});
   }, [status]);
-  const { c } = useTheme();
-  return <Animated.View style={{ transform: [{ scale: v }] }}>{icon === 'check' ? <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: status === 'synced' ? c.accent : c.accent, alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={11} color={c.accentInk} /></View> : <DayBadge status={status} icon={icon} onStage={onStage} />}</Animated.View>;
+  return <Animated.View style={{ transform: [{ scale: v }] }}>{children}</Animated.View>;
 }
 
-/** Le tracker hebdomadaire BYYND : une colonne par jour.
- *  En haut, la coche lime = fait. Au centre, la date ; aujourd'hui en lime plein. En bas, le pictogramme de la séance prévue.
- *  Le jour sélectionné est cerclé de lime. */
+/** Rendu d'un état : UN seul signal dominant, la surface de la case.
+ *  fait = plein clair · compétition = plein lime (terminée : plein clair + drapeau lime) · prévu = contour ·
+ *  non fait = contour pâle · optionnel et repos = sans contour, atténués · à confirmer = contour ambre. */
+export function cellStyle(c: ReturnType<typeof useTheme>['c'], st: Status, isToday = false) {
+  switch (st) {
+    case 'done': case 'synced': return { bg: c.ink, fg: c.paper, glyph: c.paper, border: 'transparent', dash: false };
+    case 'raceDone': return { bg: c.ink, fg: c.paper, glyph: c.paper, border: 'transparent', dash: false };
+    case 'race': return { bg: c.accent, fg: c.accentInk, glyph: c.accentInk, border: 'transparent', dash: false };
+    case 'pending': return { bg: 'transparent', fg: c.ink, glyph: c.warn, border: c.warn, dash: false };
+    case 'missed': return { bg: 'transparent', fg: c.ink3, glyph: c.ink3, border: c.line2, dash: false };
+    case 'optional': return { bg: 'transparent', fg: c.ink2, glyph: c.ink3, border: c.stroke, dash: true };
+    case 'rest': case 'none': return { bg: 'transparent', fg: c.ink3, glyph: c.ink3, border: 'transparent', dash: false };
+    default: return { bg: 'transparent', fg: c.ink, glyph: c.ink2, border: isToday ? c.ink : c.stroke, dash: false };
+  }
+}
+
+/** Tracker hebdomadaire : une case par jour. Aujourd'hui = libellé « Auj. » ; sélection = anneau lime autour de la case. */
 export function WeekTracker({ s, start, today, selected, onSelect }: { s: AppState; start: string; today: string; selected?: string; onSelect?: (d: string) => void }) {
   const { c } = useTheme();
   const days = Array.from({ length: 7 }, (_, i) => adapted(s, addDays(start, i)));
   return (
-    <Row gap={6} style={{ justifyContent: 'space-between' }}>
+    <Row gap={4} style={{ justifyContent: 'space-between' }}>
       {days.map(a => {
-        const st = dayStatus(s, a, today); const isToday = a.date === today; const isSel = a.date === selected; const pre = st === 'none';
-        const doneish = st === 'done' || st === 'synced' || st === 'raceDone';
-        const iconCol = st === 'race' || st === 'raceDone' ? c.accent : doneish ? c.ink : st === 'optional' || st === 'rest' || st === 'missed' ? c.ink3 : c.ink2;
+        const st = dayStatus(s, a, today); const isToday = a.date === today; const isSel = a.date === selected; const pre = st === 'none' && a.date < s.user.startDate;
+        const k = cellStyle(c, st, isToday);
         return (
-          <Pressable key={a.date} disabled={pre || !onSelect} accessibilityRole="button" accessibilityState={{ selected: isSel }}
-            accessibilityLabel={`${DAY[dow(a.date)]} ${parseISO(a.date).getDate()}${isToday ? ", aujourd'hui" : ''} : ${(a.replaced || a).title}, ${STATUS_LABEL[st]}`}
+          <Pressable key={a.date} disabled={pre || !onSelect} accessibilityRole="button" accessibilityState={{ selected: isSel, disabled: pre }}
+            accessibilityLabel={`${DAY[dow(a.date)]} ${parseISO(a.date).getDate()}${isToday ? ", aujourd'hui" : ''} : ${(a.replaced || a).title}, ${STATUS_LABEL[st] || 'avant le programme'}`}
             onPress={() => { Haptics.selectionAsync().catch(() => {}); onSelect?.(a.date); }}
-            style={({ pressed }) => ({ flex: 1, alignItems: 'center', opacity: pre ? 0.35 : pressed ? 0.8 : 1 })}>
-            <View style={{ height: 18, justifyContent: 'center', marginBottom: 4 }}>
-              {doneish ? <Mark status={st} icon="check" /> : st === 'pending' ? <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: c.warn, alignItems: 'center', justifyContent: 'center' }}><T v="xs" color={c.paper} style={{ fontSize: 10, lineHeight: 12, fontWeight: '700' }}>?</T></View> : null}
-            </View>
-            <View style={{ alignSelf: 'stretch', alignItems: 'center', paddingVertical: 8, borderRadius: 18, backgroundColor: c.surface2, borderWidth: 1.5, borderColor: isSel ? c.accent : 'transparent' }}>
-              <T v="xs" color={isToday ? c.ink : c.ink3} style={{ fontWeight: '600', fontSize: 11 }}>{SHORT[dow(a.date)]}</T>
-              <View style={{ width: 34, height: 34, borderRadius: 12, marginTop: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: isToday ? c.accent : c.surface }}>
-                <T v="num" color={isToday ? c.accentInk : c.ink} style={{ fontSize: 16, lineHeight: 19 }}>{parseISO(a.date).getDate()}</T>
-              </View>
-              <View style={{ height: 22, justifyContent: 'center', marginTop: 6 }}>{!pre ? <Icon name={dayIcon(a)} size={17} color={iconCol} /> : null}</View>
+            style={({ pressed }) => ({ flex: 1, alignItems: 'center', opacity: pre ? 0.3 : pressed ? 0.75 : 1 })}>
+            <T v="xs" color={isToday ? c.ink : c.ink3} style={{ fontFamily: isToday ? 'Inter_700Bold' : 'Inter_500Medium', fontSize: 11, lineHeight: 14, marginBottom: 6 }} maxFontSizeMultiplier={1.2}>{isToday ? 'Auj.' : LETTERS[dow(a.date)]}</T>
+            <View style={{ padding: 2, borderRadius: 18, borderWidth: 2, borderColor: isSel ? c.accent : 'transparent', alignSelf: 'stretch' }}>
+              <Mark status={st}>
+                <View style={{ height: 58, borderRadius: 14, backgroundColor: k.bg, borderWidth: k.border === 'transparent' ? 0 : isToday && st === 'planned' ? 2 : 1.5, borderStyle: k.dash ? 'dashed' : 'solid', borderColor: k.border, alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                  <T v="num" color={k.fg} style={{ fontSize: 17, lineHeight: 20 }} maxFontSizeMultiplier={1.2}>{parseISO(a.date).getDate()}</T>
+                  {!pre ? <Icon name={st === 'raceDone' ? 'flag' : dayIcon(a)} size={13} color={st === 'raceDone' ? c.accent : k.glyph} filled={st === 'raceDone'} /> : <View style={{ height: 13 }} />}
+                </View>
+              </Mark>
             </View>
           </Pressable>
         );
@@ -114,14 +126,12 @@ export function StatusLegend({ statuses }: { statuses: Status[] }) {
   );
 }
 
-/** Version ligne : pictogramme de la séance + coche lime si faite (même langage que le tracker). */
+/** Version ligne : la même case en miniature, avec le pictogramme de la séance. */
 export function DayMini({ status, a }: { status: Status; a: AdaptedPlan }) {
-  const { c } = useTheme(); const done = status === 'done' || status === 'synced' || status === 'raceDone';
-  const col = status === 'race' || status === 'raceDone' ? c.accent : done ? c.ink : status === 'rest' || status === 'optional' || status === 'missed' ? c.ink3 : c.ink2;
+  const { c } = useTheme(); const k = cellStyle(c, status);
   return (
-    <Row gap={6}>
-      <View style={{ width: 34, height: 34, borderRadius: 12, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}><Icon name={dayIcon(a)} size={18} color={col} /></View>
-      <View style={{ width: 18 }}>{done ? <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={12} color={c.accentInk} /></View> : null}</View>
-    </Row>
+    <View accessibilityLabel={STATUS_LABEL[status]} style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: k.bg, borderWidth: k.border === 'transparent' ? 0 : 1.5, borderStyle: k.dash ? 'dashed' : 'solid', borderColor: k.border, alignItems: 'center', justifyContent: 'center' }}>
+      <Icon name={status === 'raceDone' ? 'flag' : dayIcon(a)} size={18} color={status === 'raceDone' ? c.accent : k.glyph} filled={status === 'raceDone'} />
+    </View>
   );
 }
