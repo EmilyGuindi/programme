@@ -1,22 +1,23 @@
 /** Contenu pédagogique des séances faites hors box. Tout est explicite : quoi, comment, pourquoi, quoi ressentir. */
 import type { Zone } from './types';
 
-export interface Move { name: string; dose: string; how: string[]; why?: string; feel?: string; mistakes?: string[] }
+/** `id` : identifiant stable, utilisé pour mémoriser les coches. Ne jamais le changer une fois publié. */
+export interface Move { id: string; name: string; dose: string; how: string[]; why?: string; feel?: string; mistakes?: string[] }
 
 /* ---------- Running ---------- */
 export const RUN_WARMUP: Move[] = [
-  { name: 'Footing très lent', dose: '5 à 10 min', how: ['Pars beaucoup plus lentement que tu ne le penses : tu dois pouvoir chanter.', 'Petites foulées, bras relâchés.'], why: 'Monter la température des muscles et le rythme cardiaque progressivement.' },
-  { name: 'Montées de genoux', dose: '2 × 20 m', how: ['Sur place qui avance doucement, genoux à hauteur de hanches.', 'Pose l\'avant du pied sous ton bassin, pas devant.', 'Bras en opposition, coudes à 90°.'], why: 'Réveille les fléchisseurs de hanche et apprend à poser le pied sous toi.' },
-  { name: 'Talons-fesses', dose: '2 × 20 m', how: ['Ramène le talon vers la fesse, rapide et léger.', 'Le genou reste pointé vers le sol, il ne monte pas.'], why: 'Active les ischio-jambiers et la fréquence de pas.' },
-  { name: 'Pas chassés', dose: '2 × 20 m, une fois de chaque côté', how: ['De profil, pieds qui se rejoignent sans se croiser.', 'Reste sur l\'avant du pied.'], why: 'Stabilité des chevilles et des hanches.' },
-  { name: 'Accélérations progressives', dose: '3 × 60 à 80 m, retour en marchant', how: ['Commence en footing, accélère jusqu\'à environ 80 % de ta vitesse max, puis relâche.', 'Garde le buste droit, regarde loin devant.'], why: 'Prépare le cœur et les jambes à l\'allure de la séance.' },
+  { id: 'footing-lent', name: 'Footing très lent', dose: '5 à 10 min', how: ['Pars beaucoup plus lentement que tu ne le penses : tu dois pouvoir chanter.', 'Petites foulées, bras relâchés.'], why: 'Monter la température des muscles et le rythme cardiaque progressivement.' },
+  { id: 'montees-genoux', name: 'Montées de genoux', dose: '2 × 20 m', how: ['Sur place qui avance doucement, genoux à hauteur de hanches.', 'Pose l\'avant du pied sous ton bassin, pas devant.', 'Bras en opposition, coudes à 90°.'], why: 'Réveille les fléchisseurs de hanche et apprend à poser le pied sous toi.' },
+  { id: 'talons-fesses', name: 'Talons-fesses', dose: '2 × 20 m', how: ['Ramène le talon vers la fesse, rapide et léger.', 'Le genou reste pointé vers le sol, il ne monte pas.'], why: 'Active les ischio-jambiers et la fréquence de pas.' },
+  { id: 'pas-chasses', name: 'Pas chassés', dose: '2 × 20 m, une fois de chaque côté', how: ['De profil, pieds qui se rejoignent sans se croiser.', 'Reste sur l\'avant du pied.'], why: 'Stabilité des chevilles et des hanches.' },
+  { id: 'accelerations', name: 'Accélérations progressives', dose: '3 × 60 à 80 m, retour en marchant', how: ['Commence en footing, accélère jusqu\'à environ 80 % de ta vitesse max, puis relâche.', 'Garde le buste droit, regarde loin devant.'], why: 'Prépare le cœur et les jambes à l\'allure de la séance.' },
 ];
 export const RUN_COOLDOWN: Move[] = [
-  { name: 'Retour au calme', dose: '5 à 10 min', how: ['Trot très lent puis marche.', 'Laisse la respiration redescendre complètement.'], why: 'Faire redescendre le cœur doucement et éliminer la fatigue.' },
-  { name: 'Mollets contre un mur', dose: '30 s par jambe', how: ['Mains au mur, une jambe tendue derrière, talon au sol.', 'Avance le bassin jusqu\'à sentir l\'étirement dans le mollet.'], feel: 'Tiraillement doux, jamais de douleur.' },
-  { name: 'Fléchisseurs de hanche (fente basse)', dose: '30 s par côté', how: ['Un genou au sol, l\'autre pied devant, genou à 90°.', 'Serre la fesse du côté du genou au sol et avance légèrement le bassin.'], feel: 'Étirement à l\'avant de la hanche du genou posé.' },
-  { name: 'Ischio-jambiers', dose: '30 s par jambe', how: ['Talon posé sur une marche ou un banc bas, jambe presque tendue.', 'Penche le buste vers l\'avant dos droit, sans arrondir.'], feel: 'Arrière de la cuisse.' },
-  { name: 'Fessiers (figure 4)', dose: '30 s par côté', how: ['Allongée sur le dos, cheville droite posée sur le genou gauche.', 'Ramène la jambe gauche vers toi.'], feel: 'Fessier droit.' },
+  { id: 'retour-calme', name: 'Retour au calme', dose: '5 à 10 min', how: ['Trot très lent puis marche.', 'Laisse la respiration redescendre complètement.'], why: 'Faire redescendre le cœur doucement et éliminer la fatigue.' },
+  { id: 'mollets', name: 'Mollets contre un mur', dose: '30 s par jambe', how: ['Mains au mur, une jambe tendue derrière, talon au sol.', 'Avance le bassin jusqu\'à sentir l\'étirement dans le mollet.'], feel: 'Tiraillement doux, jamais de douleur.' },
+  { id: 'flechisseurs', name: 'Fléchisseurs de hanche (fente basse)', dose: '30 s par côté', how: ['Un genou au sol, l\'autre pied devant, genou à 90°.', 'Serre la fesse du côté du genou au sol et avance légèrement le bassin.'], feel: 'Étirement à l\'avant de la hanche du genou posé.' },
+  { id: 'ischios', name: 'Ischio-jambiers', dose: '30 s par jambe', how: ['Talon posé sur une marche ou un banc bas, jambe presque tendue.', 'Penche le buste vers l\'avant dos droit, sans arrondir.'], feel: 'Arrière de la cuisse.' },
+  { id: 'fessiers-fig4', name: 'Fessiers (figure 4)', dose: '30 s par côté', how: ['Allongée sur le dos, cheville droite posée sur le genou gauche.', 'Ramène la jambe gauche vers toi.'], feel: 'Fessier droit.' },
 ];
 export const ZONE_GUIDE: Record<Zone, { feel: string; talk: string; breath: string; tip: string }> = {
   easy: { feel: 'Effort 3–4 sur 10 : tu pourrais continuer très longtemps.', talk: 'Tu parles en phrases complètes sans chercher ton souffle.', breath: 'Respiration calme, régulière, souvent possible par le nez.', tip: 'En montée, ralentis ou marche : on garde l\'effort, pas l\'allure. C\'est la zone qui construit ta base, et c\'est normal qu\'elle te paraisse « trop lente ».' },
@@ -41,13 +42,13 @@ export const RUN_TERMS: [RegExp, string][] = [
 
 /* ---------- Récupération active ---------- */
 export const MOBILITY: Move[] = [
-  { name: 'Marche', dose: '30 min, rythme tranquille', how: ['Dehors si possible. La promenade avec Sirius compte.'], why: 'Relance la circulation et aide la récupération sans fatigue supplémentaire.' },
-  { name: 'Chat-vache', dose: '10 lents', how: ['À quatre pattes, mains sous les épaules, genoux sous les hanches.', 'Inspire en creusant le dos et en levant la tête, expire en arrondissant le dos et en rentrant le menton.'], why: 'Mobilise toute la colonne.' },
-  { name: 'Ouverture thoracique', dose: '8 par côté', how: ['À quatre pattes, une main derrière la tête.', 'Fais pivoter le coude vers le plafond en suivant du regard, puis vers le sol.'], why: 'Rotation du haut du dos, utile pour l\'épaule et la course.' },
-  { name: 'Hanches 90/90', dose: '8 passages', how: ['Assise, les deux genoux pliés à 90°, un devant toi, un sur le côté.', 'Bascule les deux genoux de l\'autre côté sans t\'aider des mains si possible.'], why: 'Rotation des hanches, souvent raides après CrossFit et course.' },
-  { name: 'Fente basse', dose: '45 s par côté', how: ['Genou au sol, pied avant devant, bassin qui avance doucement.', 'Serre la fesse du côté du genou posé.'], why: 'Fléchisseurs de hanche.' },
-  { name: 'Chevilles au mur', dose: '10 par côté', how: ['Pied à 10 cm du mur, amène le genou toucher le mur sans décoller le talon.'], why: 'Mobilité de cheville pour squats et course.' },
-  { name: 'Wall slides épaules', dose: '10 lents', how: ['Dos, tête et bras contre le mur, coudes à 90°.', 'Fais glisser les bras vers le haut sans décoller les poignets ni cambrer.'], why: 'Mobilité et contrôle de l\'épaule. Arrête-toi avant la douleur.' },
+  { id: 'marche', name: 'Marche', dose: '30 min, rythme tranquille', how: ['Dehors si possible. La promenade avec Sirius compte.'], why: 'Relance la circulation et aide la récupération sans fatigue supplémentaire.' },
+  { id: 'chat-vache', name: 'Chat-vache', dose: '10 lents', how: ['À quatre pattes, mains sous les épaules, genoux sous les hanches.', 'Inspire en creusant le dos et en levant la tête, expire en arrondissant le dos et en rentrant le menton.'], why: 'Mobilise toute la colonne.' },
+  { id: 'thoracique', name: 'Ouverture thoracique', dose: '8 par côté', how: ['À quatre pattes, une main derrière la tête.', 'Fais pivoter le coude vers le plafond en suivant du regard, puis vers le sol.'], why: 'Rotation du haut du dos, utile pour l\'épaule et la course.' },
+  { id: 'hanches-9090', name: 'Hanches 90/90', dose: '8 passages', how: ['Assise, les deux genoux pliés à 90°, un devant toi, un sur le côté.', 'Bascule les deux genoux de l\'autre côté sans t\'aider des mains si possible.'], why: 'Rotation des hanches, souvent raides après CrossFit et course.' },
+  { id: 'fente-basse', name: 'Fente basse', dose: '45 s par côté', how: ['Genou au sol, pied avant devant, bassin qui avance doucement.', 'Serre la fesse du côté du genou posé.'], why: 'Fléchisseurs de hanche.' },
+  { id: 'chevilles', name: 'Chevilles au mur', dose: '10 par côté', how: ['Pied à 10 cm du mur, amène le genou toucher le mur sans décoller le talon.'], why: 'Mobilité de cheville pour squats et course.' },
+  { id: 'wall-slides', name: 'Wall slides épaules', dose: '10 lents', how: ['Dos, tête et bras contre le mur, coudes à 90°.', 'Fais glisser les bras vers le haut sans décoller les poignets ni cambrer.'], why: 'Mobilité et contrôle de l\'épaule. Arrête-toi avant la douleur.' },
 ];
 
 /* ---------- Renforcement : fiches détaillées ---------- */

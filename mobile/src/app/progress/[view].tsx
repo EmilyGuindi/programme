@@ -21,6 +21,7 @@ import { adapted, doneOn, mandatoryStats, runInsight, trend, weekOf, weekStart, 
 import { addDays, clock, fmtShort, mmss, num, today } from '@/engine/dates';
 import { EX } from '@/engine/library';
 import { useApp } from '@/store/store';
+import { eventState } from '@/engine/status';
 import { radius, space, useTheme } from '@/theme/tokens';
 
 export default function Detail() {
@@ -90,7 +91,7 @@ function Running() {
   const recs = recordsUntil(s, t); const best10 = recs.find(r => r.id === 'run-10k'); const best5 = recs.find(r => r.id === 'run-5k');
   const runs = s.activities.filter(a => a.type === 'running' && !a.complementary && a.distanceKm && a.durationMin).sort((a, b) => a.date.localeCompare(b.date));
   const races = s.events.filter(e => e.result && e.type === 'course').sort((a, b) => a.date.localeCompare(b.date)); // OCR et HYROX hors analyses running
-  const next = s.events.filter(e => e.type === 'course' && !e.result && e.status !== 'annulé' && e.date >= t).sort((a, b) => a.date.localeCompare(b.date))[0];
+  const next = s.events.filter(e => e.type === 'course' && ['upcoming', 'today'].includes(eventState(s, e, t))).sort((a, b) => a.date.localeCompare(b.date))[0];
   const refPts = [...races.filter(e => e.distanceKm).map(e => ({ d: e.date, p: e.result!.time / e.distanceKm!, kind: 'course' as const })), ...runs.filter(r => r.kind === 'test').map(r => ({ d: r.date, p: (r.durationMin! * 60) / r.distanceKm!, kind: 'test' as const }))].sort((a, b) => a.d.localeCompare(b.d));
   const easy = runs.filter(r => (r.kind || 'facile') === 'facile').map(r => ({ d: r.date, p: (r.durationMin! * 60) / r.distanceKm! }));
   const wk: Record<number, number> = {}; runs.forEach(r => { const w = weekOf(s, r.date); wk[w] = (wk[w] || 0) + (r.distanceKm || 0); }); const ws = Object.keys(wk).map(Number).sort((a, b) => a - b).slice(-10);

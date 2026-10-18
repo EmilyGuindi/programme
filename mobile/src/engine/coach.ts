@@ -1,5 +1,5 @@
 import { addDays, daysBetween, dow, mmss, num, parseISO } from './dates';
-import { EX, FIXED, RUN, WED, type Exercise } from './library';
+import { EX, FIXED, RECUP, RUN, WED, type Exercise } from './library';
 import type { Activity, AdaptedPlan, AppState, ISODate, Level, Measurement, Plan, RunSession, SportEvent, Zone } from './types';
 
 /* ---------- calendrier ---------- */
@@ -96,12 +96,12 @@ export function adapted(s: AppState, d: ISODate): AdaptedPlan {
   // Adaptation acceptée explicitement depuis une proposition du coach
   if (ov.adj) {
     const j = ov.adj;
-    if (j.kind === 'rest') { a.replaced = { type: 'recup', title: 'Récupération active', goal: 'Marche 30 min et 10 min de mobilité.' }; a.reason = j.reason; return a; }
+    if (j.kind === 'rest') { a.replaced = { type: 'recup', title: RECUP.title, goal: RECUP.goal, dur: RECUP.dur }; a.reason = j.reason; return a; }
     if (j.kind === 'easy' && p.type === 'run' && p.run && p.run.kind !== 'facile' && p.run.kind !== 'recup') { a.run = RUN.easy(40, 4); a.title = a.run.title; a.dur = a.run.dur; a.goal = a.run.goal; a.reason = j.reason; return a; }
     if ((j.kind === 'reduced' || j.kind === 'shoulder') && p.type === 'renfo') { a.level = 'orange'; a.reason = j.reason; return a; }
     if (j.kind === 'easy' && p.type === 'box') { a.reason = j.reason; return a; }
   }
-  if (lv === 'rouge' && p.type !== 'box') { a.replaced = { type: 'recup', title: 'Récupération active', goal: 'Marche 30 min et 10 min de mobilité. Rien à rattraper.' }; a.reason = 'Rouge : ' + lc(r.reasons[0]); }
+  if (lv === 'rouge' && p.type !== 'box') { a.replaced = { type: 'recup', title: RECUP.title, goal: `${RECUP.goal} Rien à rattraper.`, dur: RECUP.dur }; a.reason = 'Rouge : ' + lc(r.reasons[0]); }
   else if (lv === 'rouge' && p.type === 'box') a.reason = `Rouge : va à la box si tu y tiens, effort ≤ 6/10, ou repos. ${r.reasons[0]}`;
   else if (lv === 'orange') {
     if (p.type === 'run' && p.run && (p.run.kind === 'qualite' || p.run.kind === 'test')) { a.run = RUN.easy(40, 4); a.title = a.run.title; a.dur = a.run.dur; a.goal = a.run.goal; a.reason = `Orange : séance d'allure remplacée par du facile. ${r.reasons[0]}`; }

@@ -27,7 +27,7 @@ export function buildRecap(s: AppState, w: number): Recap {
   const success = deload ? ratio >= 0.6 : ratio >= 0.75;
   cards.push({ kind: 'numbers', title: deload ? 'Semaine allégée' : `Semaine ${w}`, big: `${done}/${planned}`, bigLabel: 'séances prévues réalisées',
     lines: [optional ? `+ ${optional} séance${optional > 1 ? 's' : ''} optionnelle${optional > 1 ? 's' : ''}` : '', minutes ? `${Math.round(minutes)} min d'entraînement` : '', km ? `${String(Math.round(km * 10) / 10).replace('.', ',')} km courus` : '',
-      (() => { const e = energy(s, from, to); return e.withData >= 2 ? `Dépense estimée enregistrée : ${e.total.toLocaleString('fr-FR')} kcal sur ${coverage(e)}` : ''; })(),
+      (() => { const e = energy(s, from, to); return e.withData ? `Dépense estimée par ta montre : ${e.total.toLocaleString('fr-FR')} kcal sur ${coverage(e)}` : ''; })(),
       deload && success ? 'Une semaine allégée bien respectée, c\'est exactement ce qu\'il fallait.' : success ? 'Semaine réussie.' : planned ? 'Semaine incomplète : rien à rattraper, la suite s\'ajuste.' : ''].filter(Boolean) });
   if (sessions.length) cards.push({ kind: 'sessions', title: 'Tes séances', lines: sessions });
   const ev = s.events.find(e => e.date >= from && e.date <= to && e.result);

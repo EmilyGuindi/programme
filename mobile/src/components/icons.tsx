@@ -3,10 +3,13 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useTheme } from '@/theme/tokens';
 
 /** Icônes linéaires 22 px, trait 1,8 : un seul jeu pour les accès secondaires et les réglages. */
-export type IconName = 'calendar' | 'run' | 'body' | 'dumbbell' | 'path' | 'peak' | 'story' | 'target' | 'bell' | 'link' | 'cycle' | 'data' | 'spark' | 'shoe' | 'kettlebell' | 'sled' | 'walk' | 'moon' | 'flag' | 'flame' | 'check' | 'today' | 'chevrons' | 'person' | 'coach' | 'play' | 'pause' | 'stop' | 'swap' | 'plus' | 'next' | 'clock';
+export type IconName = 'calendar' | 'run' | 'body' | 'dumbbell' | 'path' | 'peak' | 'story' | 'target' | 'bell' | 'link' | 'cycle' | 'data' | 'spark' | 'shoe' | 'kettlebell' | 'sled' | 'walk' | 'moon' | 'flag' | 'flame' | 'check' | 'today' | 'chevrons' | 'person' | 'coach' | 'play' | 'pause' | 'stop' | 'swap' | 'plus' | 'next' | 'clock' | 'home' | 'plan' | 'stats' | 'profile';
 type N = IconName;
-export function Icon({ name, size = 22, color, filled }: { name: N; size?: number; color?: string; filled?: boolean }) {
+export function Icon({ name, size = 22, color, filled, cut }: { name: N; size?: number; color?: string; filled?: boolean; /** Couleur des découpes intérieures d'une icône pleine (= fond sous l'icône). */ cut?: string }) {
   const { c } = useTheme(); const s = color || c.ink; const p = { stroke: s, strokeWidth: 1.8, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }; const f = filled ? s : 'none';
+  /* Navigation : une famille à part, trait 1,75, mêmes proportions optiques (≈ 16,5 × 16,5 dans la grille de 24), coins arrondis.
+     Contour = onglet inactif ; plein, avec découpes dans la couleur du fond = onglet actif. */
+  const n = { stroke: s, strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: f }; const k = cut || c.nav;
   const shapes: Record<N, React.ReactElement> = {
     calendar: <><Rect x={3.5} y={5} width={17} height={15} rx={3} {...p} /><Path d="M3.5 10h17M8 3v4M16 3v4" {...p} /><Path d="M8.5 14.5l2 2 4-4" {...p} /></>,
     run: <><Circle cx={4.5} cy={19} r={1.6} fill={s} /><Path d="M7 18c4 0 3.5-6 8-6s3-6 4.5-8" {...p} strokeDasharray="0.1 3.4" /><Path d="M19.5 10V3.5h-0M19.5 4h4" {...p} /></>,
@@ -39,6 +42,10 @@ export function Icon({ name, size = 22, color, filled }: { name: N; size?: numbe
     clock: <><Circle cx={12} cy={12} r={8.5} {...p} /><Path d="M12 7.5V12l3 2" {...p} /></>,
     plus: <Path d="M12 5v14M5 12h14" {...p} />,
     swap: <><Path d="M7 7h11l-3-3M17 17H6l3 3" {...p} /></>,
+    home: <Path d="M4.5 10.2 12 4.25l7.5 5.95v8.3a2 2 0 0 1-2 2h-3v-5.25a.75.75 0 0 0-.75-.75h-3.5a.75.75 0 0 0-.75.75v5.25h-3a2 2 0 0 1-2-2z" {...n} />,
+    plan: <><Rect x={3.75} y={5} width={16.5} height={15.25} rx={3} {...n} /><Path d={filled ? 'M5.5 9.75h13' : 'M3.75 9.75h16.5'} {...n} stroke={filled ? k : s} /><Path d="M8.25 3.25v3.5M15.75 3.25v3.5" {...n} fill="none" /><Rect x={13.25} y={13.25} width={3.5} height={3.5} rx={0.9} fill={filled ? k : s} /></>,
+    stats: <><Rect x={3.5} y={13.25} width={4.5} height={7} rx={1.4} {...n} /><Rect x={9.75} y={8.75} width={4.5} height={11.5} rx={1.4} {...n} /><Rect x={16} y={4.25} width={4.5} height={16} rx={1.4} {...n} /></>,
+    profile: <><Circle cx={12} cy={8} r={3.75} {...n} /><Path d={filled ? 'M4.75 20.25c.7-3.85 3.55-5.85 7.25-5.85s6.55 2 7.25 5.85z' : 'M4.75 20.25c.7-3.85 3.55-5.85 7.25-5.85s6.55 2 7.25 5.85'} {...n} /></>,
     spark: <><Path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z" {...p} /><Path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" {...p} /></>,
   };
   return <Svg width={size} height={size} viewBox="0 0 24 24">{shapes[name]}</Svg>;

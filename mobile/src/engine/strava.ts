@@ -47,6 +47,7 @@ export function mergeStrava(s: AppState, items: StravaItem[]) {
 }
 function mergeStravaInner(s: AppState, items: StravaItem[]) {
   for (const it of items) {
+    if (s.deleted?.['strava-' + it.stravaId]) continue; // supprimée dans l'app : on ne la fait pas revenir
     const i = s.activities.findIndex(a => a.stravaId === it.stravaId);
     if (it.deleted) { if (i >= 0 && !s.activities[i].userEdited) s.activities.splice(i, 1); continue; }
     const metrics = { date: it.date, durationMin: it.movingMin, elapsedMin: it.elapsedMin, distanceKm: it.distanceKm, elevM: it.elevM, avgHr: it.avgHr, maxHr: it.maxHr, sportType: it.sportType, startLocal: it.startLocal, laps: it.laps, effort: it.perceived ?? undefined,
@@ -60,7 +61,12 @@ function mergeStravaInner(s: AppState, items: StravaItem[]) {
       const c = classify(s, it);
       const dup = s.activities.findIndex(a => a.source === 'manuel' && a.date === it.date && a.type === c.type && !a.eventId);
       const base: Activity = { id: 'strava-' + it.stravaId, stravaId: it.stravaId, source: 'strava', ...metrics, ...c, effort: it.perceived ?? (dup >= 0 ? s.activities[dup].effort : null) } as Activity;
-      if (dup >= 0) { base.notes = s.activities[dup].notes; s.activities.splice(dup, 1); }
+      if (dup >= 0) {
+        const old = s.activities[dup]; base.notes = old.notes;
+        // L'écran de fin déjà vu pour la saisie manuelle vaut pour la version Strava : pas de second écran pour la même séance.
+        if (s.closures?.[old.id]) s.closures[base.id] = s.closures[old.id];
+        s.activities.splice(dup, 1);
+      }
       s.activities.push(base);
     }
   }

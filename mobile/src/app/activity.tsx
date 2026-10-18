@@ -4,6 +4,7 @@ import { Pressable, View } from 'react-native';
 import { Sheet } from '@/components/sheet';
 import { Button, Choices, Field, Gap, Input, Row, T, Tick } from '@/components/ui';
 import { num, today, uid } from '@/engine/dates';
+import { RECUP } from '@/engine/library';
 import type { Activity, ActivityType } from '@/engine/types';
 import { update, useApp } from '@/store/store';
 import { fmtDay, mmss } from '@/engine/dates';
@@ -13,16 +14,18 @@ const TYPES: [ActivityType, string][] = [['crossfit', 'CrossFit'], ['hyrox', 'Co
 const TITLE: Record<ActivityType, string> = { crossfit: 'CrossFit', hyrox: 'Cours HYROX', 'hyrox-simu': 'Simulation HYROX', 'hyrox-compet': 'Compétition HYROX', running: 'Running', course: 'Course', renfo: 'Renforcement', marche: 'Marche', autre: 'Activité' };
 
 export default function ActivityScreen() {
-  const p = useLocalSearchParams<{ id?: string; date?: string; preset?: ActivityType }>(); const s = useApp();
+  const p = useLocalSearchParams<{ id?: string; date?: string; preset?: ActivityType; plan?: 'recup' }>(); const s = useApp();
   const ex = p.id ? s.activities.find(a => a.id === p.id) : undefined;
-  const [f, setF] = useState<Partial<Activity>>(ex || { date: p.date || today(), type: p.preset || 'crossfit', durationMin: p.preset === 'marche' ? 30 : 60, complementary: p.preset === 'marche' && p.date !== '2026-10-14' ? true : false });
+  // Récupération active prévue : c'est la séance du jour (elle valide le jour), durée totale marche + mobilité.
+  const recup = p.plan === 'recup';
+  const [f, setF] = useState<Partial<Activity>>(ex || { date: p.date || today(), type: recup ? 'marche' : p.preset || 'crossfit', title: recup ? RECUP.title : undefined, durationMin: recup ? RECUP.walkMin + RECUP.mobilityMin : p.preset === 'marche' ? 30 : 60, complementary: recup ? false : p.preset === 'marche' && p.date !== '2026-10-14' });
   const set = (patch: Partial<Activity>) => setF(x => ({ ...x, ...patch }));
   function save() {
     const t = f.type as ActivityType; const comp = !!f.complementary;
-    const obj: Activity = { ...(ex || {}), userEdited: true, needsConfirm: false, id: ex?.id || uid(), source: ex?.source || 'manuel', date: f.date || today(), type: t, title: f.title && ex && f.title !== TITLE[ex.type] ? f.title : t === 'marche' && comp ? 'Marche avec Sirius' : TITLE[t],
+    const obj: Activity = { ...(ex || {}), userEdited: true, needsConfirm: false, id: ex?.id || uid(), source: ex?.source || 'manuel', date: f.date || today(), type: t, title: f.title && (recup || (ex && f.title !== TITLE[ex.type])) ? f.title : t === 'marche' && comp ? 'Marche avec Sirius' : TITLE[t],
       durationMin: num(f.durationMin), distanceKm: num(f.distanceKm), elevM: num(f.elevM), avgHr: num(f.avgHr), effort: f.effort ?? null, notes: f.notes || '', complementary: comp, matched: comp ? null : (ex?.source === 'strava' ? (ex.matched ?? f.date) : f.date), kind: f.kind || 'facile', eventId: ex?.eventId };
     update(st => { const i = st.activities.findIndex(a => a.id === obj.id); if (i >= 0) st.activities[i] = obj; else st.activities.push(obj); });
-    if (!ex && !obj.complementary && (obj.type === 'crossfit' || obj.type === 'hyrox' || obj.type === 'running' || obj.type === 'renfo' || obj.type === 'hyrox-simu')) router.replace({ pathname: '/done/[id]', params: { id: obj.id } });
+    if (!ex && !obj.complementary && (recup || obj.type === 'crossfit' || obj.type === 'hyrox' || obj.type === 'running' || obj.type === 'renfo' || obj.type === 'hyrox-simu')) router.replace({ pathname: '/done/[id]', params: { id: obj.id } });
     else router.back();
   }
   return (
@@ -39,7 +42,7 @@ export default function ActivityScreen() {
       <Field label="Note" hint="WOD, contenu, ressenti"><Input defaultValue={f.notes} onChangeText={t => set({ notes: t })} /></Field>
       <Pressable onPress={() => set({ complementary: !f.complementary })}><Row style={{ marginBottom: 16 }}><Tick sizePx={28} on={!!f.complementary} label="Complémentaire" onPress={() => set({ complementary: !f.complementary })} /><T style={{ flex: 1 }}>Activité complémentaire (promenade avec Sirius…) : ne valide pas une séance</T></Row></Pressable>
       <Button kind="primary" block label={ex ? 'Enregistrer' : 'Ajouter'} onPress={save} />
-      {ex ? <><Gap h={8} /><Button kind="danger" block label="Supprimer" onPress={() => { update(st => { st.activities = st.activities.filter(a => a.id !== ex.id); }); router.back(); }} /></> : null}
+      {ex ? <><Gap h={8} /><Button kind="danger" block label="Supprimer" onPress={() => { update(st => { st.activities = st.activities.filter(a => a.id !== ex.id); st.deleted = { ...(st.deleted || {}), [ex.id]: Date.now() }; }); router.back(); }} /></> : null}
     </Sheet>
   );
 }

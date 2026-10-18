@@ -1,14 +1,22 @@
-import * as Haptics from 'expo-haptics';
 import { useCallback, useRef, type ReactNode } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
+import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-export const NAV_H = 64; export const NAV_SPACE = NAV_H + 12 + 32;
+import { navLayout } from '@/theme/nav-layout';
+import { haptic, reducedMotion } from '@/feedback';
+
+/** Mise en page de la barre de navigation pour l'écran courant (largeur, police système, zone système).
+ *  Sur le web uniquement, `?fs=1.3` simule une police agrandie (captures de contrôle). */
+export function useNavLayout() {
+  const { width, fontScale } = useWindowDimensions(); const insets = useSafeAreaInsets();
+  const forced = Platform.OS === 'web' && typeof location !== 'undefined' ? Number(new URLSearchParams(location.search).get('fs')) || 0 : 0;
+  return navLayout(width, forced || fontScale, insets.bottom);
+}
 import type { Level } from '@/engine/types';
 import { font, radius, size, space, touch, useTheme } from '@/theme/tokens';
 import Svg, { Defs, Path as SvgPath, RadialGradient, Rect as SvgRect, Stop } from 'react-native-svg';
 
-const tap = () => Haptics.selectionAsync().catch(() => {});
+const tap = () => haptic('select');
 
 /* ---------- Typographie ---------- */
 type TV = 'mega' | 'hero' | 'display' | 'title' | 'h2' | 'h3' | 'body' | 'small' | 'xs' | 'label' | 'overline' | 'eyebrow' | 'num';
@@ -39,9 +47,9 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
   const { c } = useTheme(); const ref = useRef<ScrollView>(null);
   // Chaque fois qu'on revient sur un écran (onglet ou retour), il repart en haut.
   useFocusEffect(useCallback(() => { ref.current?.scrollTo({ y: 0, animated: false }); }, []));
-  const insets = useSafeAreaInsets();
-  // Espace sous le contenu = hauteur de la barre (64) + marge (12) + zone système + respiration (32).
-  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: space.s5 - 4, paddingBottom: NAV_SPACE + insets.bottom }}>{children}</View>;
+  // Espace sous le contenu = hauteur réelle du socle de navigation (barre + zone système) + respiration : le dernier élément reste toujours atteignable.
+  const nav = useNavLayout();
+  const inner = <View style={{ maxWidth: 560, width: '100%', alignSelf: 'center', paddingHorizontal: space.s5 - 4, paddingBottom: nav.contentInset }}>{children}</View>;
   return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}><Ambient />{scroll ? <ScrollView ref={ref} keyboardShouldPersistTaps="handled">{inner}</ScrollView> : inner}</SafeAreaView>;
 }
 export function Row({ children, gap = space.s3, between, style }: { children: ReactNode; gap?: number; between?: boolean; style?: StyleProp<ViewStyle> }) {
@@ -70,13 +78,25 @@ export function Button({ label, onPress, kind = 'secondary', small, disabled, bl
     </Pressable>
   );
 }
+/** Case à cocher BYYND. Animation courte (≈ 250 ms) jouée uniquement au geste de l'utilisateur, jamais au chargement
+ *  d'une séance déjà cochée ; supprimée si les animations sont réduites. Retour haptique selon le réglage. */
 export function Tick({ on, onPress, label, sizePx = 36 }: { on: boolean; onPress: () => void; label: string; sizePx?: number }) {
-  const { c } = useTheme();
+  const { c } = useTheme(); const v = useRef(new Animated.Value(1)).current; const ring = useRef(new Animated.Value(0)).current;
+  const press = () => {
+    haptic(on ? 'untick' : 'tick');
+    if (!on && !reducedMotion()) {
+      v.setValue(0.82); ring.setValue(0);
+      Animated.parallel([Animated.spring(v, { toValue: 1, friction: 5, tension: 260, useNativeDriver: true }), Animated.timing(ring, { toValue: 1, duration: 260, useNativeDriver: true })]).start();
+    }
+    onPress();
+  };
   return (
-    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={label} hitSlop={8}
-      onPress={() => { Haptics.impactAsync(on ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); onPress(); }}
-      style={{ width: sizePx, height: sizePx, borderRadius: sizePx / 2, borderWidth: 2, borderColor: on ? c.ok : c.line2, backgroundColor: on ? c.ok : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-      {on ? <Text style={{ color: c.paper, fontFamily: font.bold, fontSize: 16 }}>✓</Text> : null}
+    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} aria-checked={on} accessibilityLabel={label} hitSlop={Math.max(6, (48 - sizePx) / 2)} onPress={press}
+      style={{ width: sizePx, height: sizePx, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View pointerEvents="none" style={{ position: 'absolute', width: sizePx, height: sizePx, borderRadius: sizePx / 2, borderWidth: 2, borderColor: c.accent, opacity: ring.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.7, 0] }), transform: [{ scale: ring.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }) }] }} />
+      <Animated.View style={{ width: sizePx, height: sizePx, borderRadius: sizePx / 2, borderWidth: 2, borderColor: on ? c.accent : c.stroke, backgroundColor: on ? c.accent : 'transparent', alignItems: 'center', justifyContent: 'center', transform: [{ scale: v }] }}>
+        {on ? <Svg width={sizePx * 0.55} height={sizePx * 0.55} viewBox="0 0 24 24"><SvgPath d="M5 12.5l4.3 4.3L19 7.2" stroke={c.accentInk} strokeWidth={3} fill="none" strokeLinecap="round" strokeLinejoin="round" /></Svg> : null}
+      </Animated.View>
     </Pressable>
   );
 }

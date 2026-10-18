@@ -4,6 +4,7 @@ import { StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyl
 import Svg, { Circle, Defs, G, Line, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { radius, space, useTheme } from '@/theme/tokens';
 import { Row, T } from './ui';
+import { STATUS_LABEL, type Status } from '@/engine/status';
 
 /* ============================================================
    Langage graphique BYYND
@@ -138,8 +139,8 @@ export const _r = { Rect, radius };
    - en attente : tige vide avec point central
    - synchronisé: symbole plein + point cobalt
    ============================================================ */
-export type Status = 'planned' | 'done' | 'adapted' | 'optional' | 'rest' | 'race' | 'raceDone' | 'missed' | 'pending' | 'synced' | 'none';
-export const STATUS_LABEL: Record<Status, string> = { planned: 'prévu', done: 'fait', adapted: 'adapté', optional: 'optionnel', rest: 'repos', race: 'compétition', raceDone: 'compétition terminée', missed: 'non fait', pending: 'à confirmer', synced: 'synchronisé', none: '' };
+export type { Status } from '@/engine/status';
+export { STATUS_LABEL } from '@/engine/status';
 export function StatusMark({ status, size = 18, color, onStage }: { status: Status; size?: number; color?: string; onStage?: boolean }) {
   const { c } = useTheme(); const ink = color || (onStage ? c.stageInk : c.ink); const faint = onStage ? c.stageInk2 : c.ink3;
   const w = size, h = size * 1.2;

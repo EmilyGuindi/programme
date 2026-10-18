@@ -10,6 +10,7 @@ import { Button, Row, T } from '@/components/ui';
 import { adapted, coachLine, planFor, recovery } from '@/engine/coach';
 import { addDays, daysBetween, fmtShort, sportDay } from '@/engine/dates';
 import { MOBILITY } from '@/engine/guides';
+import { RECUP } from '@/engine/library';
 import { insights } from '@/engine/insights';
 import { acceptProposal, keepProgram, proposals } from '@/engine/proactive';
 import { nextEvent, taperTips } from '@/engine/race';
@@ -53,7 +54,7 @@ export default function CoachScreen() {
         {hardToday && !s.overrides[d]?.adj ? <>
           <T v="small" muted style={{ fontWeight: '600', marginBottom: space.s2 }}>Si la séance prévue ne passe pas aujourd'hui</T>
           <ActionCard title="Version facile" lines={['La séance devient un footing facile ou un renforcement réduit.', 'Utile si tu es fatiguée ou courbaturée.']} onApply={() => { planB(planFor(s, d).type === 'renfo' ? 'reduced' : 'easy', 'Plan B choisi avec le coach : version facile.'); setSaved('Séance du jour passée en version facile.'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }} />
-          <ActionCard title="Récupération active" lines={['Marche 30 min et 10 min de mobilité.', 'À choisir en cas de douleur ou de grosse fatigue.']} onApply={() => { planB('rest', 'Plan B choisi avec le coach : récupération active.'); setSaved('Séance du jour remplacée par une récupération active.'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }} />
+          <ActionCard title="Récupération active" lines={[RECUP.goal, 'À choisir en cas de douleur ou de grosse fatigue.']} onApply={() => { planB('rest', 'Plan B choisi avec le coach : récupération active.'); setSaved('Séance du jour remplacée par une récupération active.'); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }} />
         </> : null}
         {s.overrides[d]?.adj ? <Button kind="ghost" label="Revenir à la séance prévue" style={{ alignSelf: 'flex-start', paddingHorizontal: 0 }} onPress={() => { update(st => { delete st.overrides[d].adj; }); setSaved('Séance prévue rétablie.'); }} /> : null}
       </> : null}

@@ -1,6 +1,7 @@
 import { addDays } from './dates';
 import { EX } from './library';
 import { num } from './dates';
+import { isOn } from './session';
 import type { Activity, AppState, ISODate } from './types';
 
 export interface Record_ { id: string; label: string; value: string; raw: number; date: ISODate; better: 'lower' | 'higher' }
@@ -24,7 +25,7 @@ export function recordsUntil(s: AppState, until: ISODate): Record_[] {
   if (longestT) out.push({ id: 'run-duration', label: 'Plus longue durée de course', value: `${Math.round(longestT.durationMin!)} min`, raw: longestT.durationMin!, date: longestT.date, better: 'higher' });
   for (const id of ['f1', 'f2', 'f3', 'm1', 'm2', 'm3', 'm4']) {
     let best: { kg: number; date: ISODate } | null = null;
-    for (const [d, l] of Object.entries(s.strength)) { if (d > until) continue; const e = l.ex?.[id]; if (!e) continue; e.kg.forEach((k, i) => { const v = num(k); if (v && v > 0 && v < 400 && (e.done[i] || num(e.reps[i])) && (!best || v > best.kg)) best = { kg: v, date: d }; }); }
+    for (const [d, l] of Object.entries(s.strength)) { if (d > until) continue; const e = l.ex?.[id]; if (!e) continue; e.kg.forEach((k, i) => { const v = num(k); if (v && v > 0 && v < 400 && (e.done[i] || isOn(s, d, `set:${id}:${i + 1}`) || num(e.reps[i])) && (!best || v > best.kg)) best = { kg: v, date: d }; }); }
     if (best) out.push({ id: 'str-' + id, label: EX[id].name.split(',')[0], value: `${String((best as any).kg).replace('.', ',')} kg`, raw: (best as any).kg, date: (best as any).date, better: 'higher' });
   }
   return out;

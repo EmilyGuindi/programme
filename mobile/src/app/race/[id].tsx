@@ -7,6 +7,7 @@ import { Pressable } from 'react-native';
 import { Sheet } from '@/components/sheet';
 import { Button, Card, Choices, Coach, Field, Gap, KV, ListGroup, ListRow, Row, T, Tag, Tick } from '@/components/ui';
 import { checklistFor, eventActivity, raceAnalysis, readiness, strategy, taperTips } from '@/engine/race';
+import { eventState } from '@/engine/status';
 import { clock, daysBetween, DAYS_SHORT, dow, fmtLong, fmtShort, mmss, sportDay } from '@/engine/dates';
 import { update, useApp } from '@/store/store';
 import { radius, space, useTheme } from '@/theme/tokens';
@@ -17,7 +18,7 @@ export default function RaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>(); const s = useApp(); const { c } = useTheme();
   const ev = s.events.find(e => e.id === id);
   if (!ev) return <Sheet title="Événement introuvable"><T>Cet événement a été supprimé.</T></Sheet>;
-  const d = sportDay(); const n = daysBetween(d, ev.date); const act0 = eventActivity(s, ev); const past = n < 0 || !!ev.result || (n === 0 && !!act0);
+  const d = sportDay(); const n = daysBetween(d, ev.date); const evs = eventState(s, ev, d); const past = evs === 'done' || evs === 'toConfirm';
   const rd = readiness(s, ev, d); const st = strategy(s, ev); const act = eventActivity(s, ev);
   const setEv = (fn: (e: NonNullable<typeof ev>) => void) => update(x => { const e = x.events.find(y => y.id === id); if (e) fn(e); });
   return (
@@ -90,8 +91,9 @@ export default function RaceScreen() {
       <>
         {!r ? <Card>
           <T v="h3">Ton résultat</T>
-          <T v="small" muted style={{ marginVertical: 6 }}>{act ? `Strava a rattaché ${act.title}${act.elapsedMin ? ` (${Math.round(act.elapsedMin)} min)` : ''}. Saisis ton temps officiel pour une analyse juste.` : 'Saisis ton temps officiel, il deviendra ta référence.'}</T>
+          <T v="small" muted style={{ marginVertical: 6 }}>{act ? `Strava a rattaché ${act.title}${act.elapsedMin ? ` (${Math.round(act.elapsedMin)} min)` : ''}. Saisis ton temps officiel pour une analyse juste.` : 'Aucune activité Strava rattachée pour l\'instant. Saisis ton temps officiel, il deviendra ta référence.'}</T>
           <Button kind="primary" block label="Saisir mon résultat" onPress={() => router.push({ pathname: '/result/[id]', params: { id: ev!.id } })} />
+          {!act ? <Button small kind="ghost" label="Je n'y ai pas participé" style={{ alignSelf: 'center', marginTop: 4 }} onPress={() => setEv(e => { e.status = 'annulé'; })} /> : null}
         </Card> : <>
           {!r.feeling ? <Card>
             <T v="h3">Débrief rapide</T>

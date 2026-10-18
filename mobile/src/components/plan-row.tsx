@@ -17,6 +17,11 @@ export function openPlan(a: AdaptedPlan) {
   else openDay(a.date);
 }
 export const openDay = (date: string) => router.push({ pathname: '/day/[date]', params: { date } });
+/** Ouvre la saisie « fait » adaptée à la séance prévue (récupération active : séance du jour, pas une promenade complémentaire). */
+export function markDone(a: AdaptedPlan) {
+  if ((a.replaced || a).type === 'recup') router.push({ pathname: '/activity', params: { date: a.date, plan: 'recup' } });
+  else router.push({ pathname: '/activity', params: { date: a.date, preset: presetFor(a) } });
+}
 export function presetFor(a: AdaptedPlan) { return a.hyrox ? 'hyrox' : a.type === 'box' ? 'crossfit' : a.type === 'run' ? 'running' : a.type === 'renfo' ? 'renfo' : 'marche'; }
 
 export function PlanRow({ a, showDay = true }: { a: AdaptedPlan; showDay?: boolean }) {
@@ -44,8 +49,8 @@ export function toggleDone(a: AdaptedPlan) {
   const s = getState();
   if (doneOn(s, a.date)) {
     const manual = s.activities.filter(x => x.date === a.date && !x.complementary && x.source === 'manuel' && !x.eventId);
-    if (manual.length) update(st => { st.activities = st.activities.filter(x => !manual.some(m => m.id === x.id)); });
-  } else router.push({ pathname: '/activity', params: { date: a.date, preset: presetFor(a) } });
+    if (manual.length) update(st => { st.activities = st.activities.filter(x => !manual.some(m => m.id === x.id)); st.deleted = { ...(st.deleted || {}), ...Object.fromEntries(manual.map(m => [m.id, Date.now()])) }; });
+  } else markDone(a);
 }
 
 export function ActivityRow({ x }: { x: Activity }) {

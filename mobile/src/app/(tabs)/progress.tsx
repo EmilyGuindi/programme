@@ -11,6 +11,7 @@ import { achievements, bodyJourney, runningJourney, weekSuccess } from '@/engine
 import { availableRecaps } from '@/engine/recap';
 import { newRecords, recordsUntil } from '@/engine/records';
 import { useApp } from '@/store/store';
+import { eventState } from '@/engine/status';
 import { radius, space, useTheme } from '@/theme/tokens';
 
 const go = (view: string) => router.push({ pathname: '/progress/[view]', params: { view } });
@@ -23,7 +24,7 @@ export default function Progress() {
   const past = weekSuccess(s, today);
   const runStep = runningJourney(s, today).find(x => x.status === 'en cours');
   const bodyStep = bodyJourney(s, today).find(x => x.status === 'en cours');
-  const recs = recordsUntil(s, today); const best10 = recs.find(r => r.id === 'run-10k'); const ev = s.events.filter(e => e.type === 'course' && e.status !== 'annulé' && !e.result && e.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
+  const recs = recordsUntil(s, today); const best10 = recs.find(r => r.id === 'run-10k'); const ev = s.events.filter(e => e.type === 'course' && ['upcoming', 'today'].includes(eventState(s, e, today))).sort((a, b) => a.date.localeCompare(b.date))[0];
   const weighs = weightSeries(s); const nextMonday = addDays(today, (7 - ((new Date().getDay() + 6) % 7)) % 7 || 7);
   const fresh = [...newRecords(s, addDays(today, -14), today).map(r => ({ t: `Record · ${r.label}`, d: r.date })), ...achievements(s, today).filter(a => a.date && daysBetween(a.date, today) <= 14).map(a => ({ t: a.title, d: a.date! }))].sort((a, b) => b.d.localeCompare(a.d))[0];
   const recap = availableRecaps(s)[0]; const recapNew = recap && !s.recapsSeen?.[String(recap)];
