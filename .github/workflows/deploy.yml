@@ -18,8 +18,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Dépendances du Worker
+        run: npm ci --prefix worker
       - name: Tests de sécurité du Worker
-        run: node --test worker/test/auth.test.mjs
+        run: node --test worker/test/auth.test.mjs worker/test/coach.test.mjs
       - name: Installer wrangler
         run: npm install -g wrangler@4
       - name: Vérifier les secrets
@@ -55,16 +57,18 @@ jobs:
           wrangler deploy 2>&1 | tee /tmp/deploy.log || { echo "::error title=wrangler deploy::$(tail -c 900 /tmp/deploy.log | tr '\n' ' ')"; exit 1; }
           URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' /tmp/deploy.log | head -1)
           echo "::notice title=Adresse BYYND::$URL"
-      - name: Secrets du Worker (clé, Strava, Google)
+      - name: Secrets du Worker (clé, Strava, Google, coach)
         env:
           APP_KEY: ${{ secrets.APP_KEY }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           ALLOWED_EMAILS: ${{ secrets.ALLOWED_EMAILS }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          COACH_DAILY_LIMIT: ${{ secrets.COACH_DAILY_LIMIT }}
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
           STRAVA_VERIFY_TOKEN: ${{ secrets.STRAVA_VERIFY_TOKEN }}
         run: |
-          for K in APP_KEY STRAVA_CLIENT_ID STRAVA_CLIENT_SECRET STRAVA_VERIFY_TOKEN GOOGLE_WEB_CLIENT_ID ALLOWED_EMAILS; do
+          for K in APP_KEY STRAVA_CLIENT_ID STRAVA_CLIENT_SECRET STRAVA_VERIFY_TOKEN GOOGLE_WEB_CLIENT_ID ALLOWED_EMAILS ANTHROPIC_API_KEY COACH_DAILY_LIMIT; do
             V="${!K}"; if [ -n "$V" ]; then printf '%s' "$V" | wrangler secret put "$K" > /dev/null && echo "$K ok (${#V} caractères)"; else echo "::warning::$K absent"; fi
           done
       - name: Abonnement webhook Strava (création si absent)

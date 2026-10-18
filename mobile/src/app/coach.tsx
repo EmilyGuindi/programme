@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { ask, appendMessages, decide, memory, providerFor, threadById } from '@/ai/studio';
 import { SUGGESTIONS } from '@/ai/local';
+import { setupRemoteCoach } from '@/ai/remote';
 import { CoachCardView } from '@/components/coach-cards';
 import { CoachGuided } from '@/components/coach-guided';
 import { Icon } from '@/components/icons';
@@ -28,6 +29,7 @@ export default function CoachStudio() {
   const [threadId, setThreadId] = useState<string | null>(threadParam || null); const [text, setText] = useState(q || ''); const [busy, setBusy] = useState(false); const [note, setNote] = useState('');
   const th = threadById(s, threadId); const msgs = th?.messages || []; const prov = providerFor(s);
   const sugg = CONTEXT_SUGGESTIONS[context || ''] || SUGGESTIONS.slice(0, 4);
+  const [, setReady] = useState(0); useEffect(() => { setupRemoteCoach().then(() => setReady(x => x + 1)); }, []);
 
   async function send(input = text) {
     const t = input.trim(); if (!t || busy) return;
@@ -51,7 +53,7 @@ export default function CoachStudio() {
   );
 
   return (
-    <Sheet title="Coach" sub={`${prov.name}, ${prov.status().label.toLowerCase()}`} footer={composer} scrollEndKey={msgs.length + (busy ? 1 : 0)}>
+    <Sheet title="Coach" sub={prov.id === 'claude' ? 'Claude, avec tes données BYYND' : `${prov.name}, règles locales`} footer={composer} scrollEndKey={msgs.length + (busy ? 1 : 0)}>
       <Row gap={space.s2} style={{ marginBottom: space.s4, flexWrap: 'wrap' }}>
         {threadId ? <Button small label="Nouvelle conversation" onPress={() => { setThreadId(null); setNote(''); }} /> : null}
         <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label={`Historique et données${memory(s).threads.length ? ` (${memory(s).threads.length})` : ''}`} onPress={() => router.push('/coach-settings')} />
@@ -68,7 +70,7 @@ export default function CoachStudio() {
           {(m.cards || []).map(cd => <CoachCardView key={cd.id} card={cd} decision={m.decisions?.[cd.id]} onDecide={cd.kind === 'action' || cd.kind === 'program' ? a => onDecide(m, cd.id, a) : undefined} />)}
           {m.scopes?.length ? <T v="xs" muted style={{ marginTop: 6 }}>{`Données utilisées : ${m.scopes.map(x => SCOPE_LABEL[x].toLowerCase()).join(', ')}.`}</T> : null}
         </View>)}
-      {busy ? <T muted>…</T> : null}
+      {busy ? <T muted>{prov.id === 'claude' ? 'Claude réfléchit…' : '…'}</T> : null}
       {note ? <View accessibilityLiveRegion="polite" style={{ marginBottom: space.s3 }}><T v="small" color={c.accent}>{note}</T></View> : null}
       {msgs.length ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: space.s2 }}>{sugg.slice(0, 2).map(x => <Button key={x} small label={x.length > 34 ? x.slice(0, 33) + '…' : x} onPress={() => send(x)} />)}</View> : null}
       <T v="xs" muted style={{ marginTop: space.s5 }}>Le coach propose, tu décides : rien ne change sans ton accord. Il ne remplace pas un avis médical.</T>

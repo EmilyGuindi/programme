@@ -13,7 +13,15 @@ import type { CoachContext, CoachProvider } from './provider';
    ============================================================ */
 const uid = () => Math.random().toString(36).slice(2, 10);
 export const MAX_THREADS = 20, MAX_MESSAGES = 60;
-export const providerFor = (s: AppState): CoachProvider => (s.coach?.provider === 'chatgpt' && chatgptProvider.status().available ? chatgptProvider : localProvider);
+/** Fournisseur distant (Claude via le serveur), enregistré par l'app au démarrage. Absent en test : coach à règles. */
+let remote: CoachProvider | null = null;
+export const registerRemoteProvider = (p: CoachProvider | null) => { remote = p; };
+/** Claude par défaut quand il est disponible ; « Règles locales » si l'utilisatrice l'a choisi. */
+export const providerFor = (s: AppState): CoachProvider => {
+  const pref = s.coach?.provider;
+  if (pref !== 'local' && remote && remote.status().available) return remote;
+  return pref === 'chatgpt' && chatgptProvider.status().available ? chatgptProvider : localProvider;
+};
 export const memory = (s: AppState): CoachMemory => s.coach || { perms: {}, threads: [], decisions: [] };
 
 /** Une demande → une réponse. Toutes les lectures et propositions passent par les contrôles de tools.ts. */
