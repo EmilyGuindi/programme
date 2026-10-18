@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Pressable, View } from 'react-native';
 import { ask, appendMessages, decide, ensureMemory, memory, providerFor, threadById } from '@/ai/studio';
 import { SUGGESTIONS } from '@/ai/local';
@@ -7,7 +7,7 @@ import { setupRemoteCoach } from '@/ai/remote';
 import { useDictation } from '@/ai/voice';
 import { attachmentLabel, MAX_ATTACHMENTS, pickFile, pickPhoto, type Attachment } from '@/ai/attachments';
 import { remoteDetail } from '@/ai/claude';
-import { CoachCardView } from '@/components/coach-cards';
+import { CoachCardView, RichText } from '@/components/coach-cards';
 import { CoachGuided } from '@/components/coach-guided';
 import { Icon } from '@/components/icons';
 import { Sheet } from '@/components/sheet';
@@ -35,6 +35,8 @@ export default function CoachStudio() {
   const [, setReady] = useState(0); useEffect(() => { setupRemoteCoach().then(() => setReady(x => x + 1)); }, []);
 
   const [files, setFiles] = useState<Attachment[]>([]);
+  /** Pièces jointes déjà envoyées dans cette conversation : gardées en mémoire vive (jamais enregistrées) et renvoyées tant que l'écran est ouvert. */
+  const carried = useRef<Attachment[]>([]);
   const voice = useDictation(setText);
   async function attach(kind: 'photo' | 'file') {
     if (files.length >= MAX_ATTACHMENTS) { setNote(`${MAX_ATTACHMENTS} pièces jointes maximum par message.`); return; }
@@ -47,7 +49,9 @@ export default function CoachStudio() {
     if (voice.listening) voice.stop();
     const sent = files; setBusy(true); setText(''); setFiles([]); setNote(''); haptic('select');
     const user: CoachMsg = { id: Math.random().toString(36).slice(2, 10), role: 'user', at: Date.now(), text: t.slice(0, 500), files: sent.length ? sent.map(f => ({ name: f.name, kind: f.kind })) : undefined };
-    const reply = await ask(getState(), t, today, msgs, undefined, sent);
+    const all = [...sent, ...carried.current.filter(x => !sent.some(y => y.name === x.name))].slice(0, MAX_ATTACHMENTS);
+    const reply = await ask(getState(), t, today, msgs, undefined, all);
+    if (sent.length) carried.current = all;
     let id = threadId; update(st => { id = appendMessages(st, threadId, [user, reply]); }); setThreadId(id); setBusy(false);
   }
   function onDecide(m: CoachMsg, cardId: string, accept: boolean) {
@@ -70,7 +74,7 @@ export default function CoachStudio() {
         style={({ pressed }) => ({ width: 44, height: 48, borderRadius: 22, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
         <Icon name="plus" size={24} color={c.ink2} />
       </Pressable>
-      <Input style={{ flex: 1 }} value={text} onChangeText={setText} placeholder={voice.listening ? 'Parle, le texte s\'écrit ici…' : 'Demande à ton coach…'} maxLength={500} returnKeyType="send" onSubmitEditing={() => send()} accessibilityLabel="Message au coach" />
+      <Input style={{ flex: 1 }} value={text} onChangeText={setText} placeholder={voice.listening ? 'Je t\'écoute…' : 'Message'} maxLength={500} returnKeyType="send" onSubmitEditing={() => send()} accessibilityLabel="Message au coach" />
       {voice.supported ? <Pressable accessibilityRole="button" accessibilityLabel={voice.listening ? 'Arrêter la dictée' : 'Dicter un message'} disabled={busy} hitSlop={4}
         onPress={() => { haptic('select'); if (voice.listening) voice.stop(); else voice.start(text); }}
         style={({ pressed }) => ({ width: 44, height: 48, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: voice.listening ? c.stopSoft : 'transparent', opacity: pressed ? 0.6 : 1 })}>
@@ -85,7 +89,7 @@ export default function CoachStudio() {
   return (
     <Sheet title="Coach" sub={prov.id === 'claude' ? 'Claude, avec tes données BYYND' : `${prov.name}, règles locales`} footer={composer} scrollEndKey={msgs.length + (busy ? 1 : 0)}>
       <Row gap={space.s2} style={{ marginBottom: space.s4, flexWrap: 'wrap' }}>
-        {threadId ? <Button small label="Nouvelle conversation" onPress={() => { setThreadId(null); setNote(''); }} /> : null}
+        {threadId ? <Button small label="Nouvelle conversation" onPress={() => { setThreadId(null); setNote(''); carried.current = []; }} /> : null}
         {s.coach?.provider === 'local' ? <View style={{ width: '100%', backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s3, gap: space.s2 }}>
           <T v="small" style={{ fontWeight: '700' }}>Mode règles locales</T>
           <T v="small" muted>Ce coach simple ne comprend que quelques phrases et ne lit pas les photos. Claude comprend tout, avec tes données.</T>
@@ -103,7 +107,8 @@ export default function CoachStudio() {
         ? <View key={m.id} style={{ alignSelf: 'flex-end', maxWidth: '85%', backgroundColor: c.accentSoft, borderRadius: 18, borderBottomRightRadius: 6, paddingVertical: 10, paddingHorizontal: 14, marginBottom: space.s3, gap: 4 }}>
           {(m.files || []).map((f, i) => <T key={i} v="xs" color={c.accent} style={{ fontWeight: '600' }}>{`📎 ${attachmentLabel(f)}`}</T>)}{m.text ? <T>{m.text}</T> : null}</View>
         : <View key={m.id} style={{ marginBottom: space.s4 }}>
-          <Row gap={8} style={{ alignItems: 'flex-start' }}><Icon name="coach" size={18} color={c.accent} /><T style={{ flex: 1 }}>{m.text}</T></Row>
+          <Row gap={8} style={{ alignItems: 'flex-start' }}><Icon name="coach" size={18} color={c.accent} /><View style={{ flex: 1 }}><RichText text={m.text} /></View></Row>
+          {(m.memo || []).map((n, i) => <T key={i} v="xs" color={c.ink2} style={{ marginTop: 6 }}>{`📝 Retenu : ${n}`}</T>)}
           {(m.cards || []).map(cd => <CoachCardView key={cd.id} card={cd} decision={m.decisions?.[cd.id]} onDecide={cd.kind === 'action' || cd.kind === 'program' ? a => onDecide(m, cd.id, a) : undefined} />)}
           {m.scopes?.length ? <T v="xs" muted style={{ marginTop: 6 }}>{`Données utilisées : ${m.scopes.map(x => SCOPE_LABEL[x].toLowerCase()).join(', ')}.`}</T> : null}
         </View>)}

@@ -59,7 +59,7 @@ export async function ask(s: AppState, input: string, today: ISODate, history: C
   let reply; try { reply = await provider.respond(input, ctx); } catch { reply = { text: 'Je n\'ai pas pu traiter ta demande.', cards: [] }; }
   // Les sorties du fournisseur restent des données : textes bornés, cartes reconnues seulement.
   const cards = (reply.cards || []).filter(c => ['facts', 'week', 'compare', 'action', 'program'].includes(c.kind)).slice(0, 4);
-  return { id: uid(), role: 'coach', at: Date.now(), text: String(reply.text || '').slice(0, 1200), cards, scopes: [...scopes], tools: [...new Set(tools)] };
+  return { id: uid(), role: 'coach', at: Date.now(), text: String(reply.text || '').slice(0, 8000), cards, scopes: [...scopes], tools: [...new Set(tools)], memo: reply.memo?.length ? reply.memo : undefined };
 }
 
 /* ---------- Mémoire (mutations, dans update()) ---------- */
@@ -68,6 +68,7 @@ export function appendMessages(st: AppState, threadId: string | null, msgs: Coac
   const m = ensureMemory(st); let th = threadId ? m.threads.find(t => t.id === threadId) : null;
   if (!th) { th = { id: uid(), title: msgs.find(x => x.role === 'user')?.text.slice(0, 60) || 'Conversation', at: Date.now(), messages: [] }; m.threads.unshift(th); }
   th.messages.push(...msgs); th.messages = th.messages.slice(-MAX_MESSAGES); th.at = Date.now();
+  for (const f of msgs.flatMap(x => x.memo || [])) addNote(st, f);
   m.threads = m.threads.sort((a, b) => b.at - a.at).slice(0, MAX_THREADS);
   return th.id;
 }
@@ -85,7 +86,15 @@ export function decide(st: AppState, threadId: string, msgId: string, cardId: st
   }
   return res;
 }
+/** Mémoire durable du coach : une phrase par information, sans doublon, 40 au plus (les plus anciennes partent). */
+export const MAX_NOTES = 40;
+export function addNote(st: AppState, text: string) {
+  const m = ensureMemory(st); const t = text.trim().slice(0, 240); if (!t) return;
+  const notes = (m.notes || []).filter(n => n.text.toLowerCase() !== t.toLowerCase());
+  m.notes = [...notes, { id: uid(), at: Date.now(), text: t }].slice(-MAX_NOTES);
+}
+export function deleteNote(st: AppState, id: string) { const m = ensureMemory(st); m.notes = (m.notes || []).filter(n => n.id !== id); st.deleted = { ...(st.deleted || {}), [`note:${id}`]: Date.now() }; }
 export function deleteThread(st: AppState, id: string) { const m = ensureMemory(st); m.threads = m.threads.filter(t => t.id !== id); st.deleted = { ...(st.deleted || {}), [`thread:${id}`]: Date.now() }; }
-export function forgetAll(st: AppState) { const m = ensureMemory(st); m.threads = []; m.decisions = []; m.clearedAt = Date.now(); }
+export function forgetAll(st: AppState) { const m = ensureMemory(st); m.threads = []; m.decisions = []; m.notes = []; m.clearedAt = Date.now(); }
 export function setPerm(st: AppState, scope: DataScope, on: boolean) { const m = ensureMemory(st); m.perms = { ...m.perms, [scope]: on }; }
 export const threadById = (s: AppState, id: string | null): CoachThread | null => (id ? memory(s).threads.find(t => t.id === id) || null : null);

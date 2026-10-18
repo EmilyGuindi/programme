@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { historyText, makeClaudeProvider } from '../../ai/claude';
 import { ask, appendMessages, decide, registerRemoteProvider, providerFor, setPerm } from '../../ai/studio';
 import { planFor } from '../coach';
+import { mergeStates } from '../merge';
 import { DEFAULT_STATE, migrate, seed } from '../state';
 import { coachContext } from '../tools';
 import type { AppState } from '../types';
@@ -108,5 +109,23 @@ test('pièces jointes : envoyées à Claude pour ce message seulement, jamais co
   assert.match(sent[1].messages[0].text, /Pièce jointe déjà vue : montre\.jpg/);
   registerRemoteProvider(makeClaudeProvider(async () => { throw new Error('offline'); }));
   assert.match((await ask(s, '', TODAY, [], undefined, files)).text, /ne lit pas les pièces jointes/);
+  registerRemoteProvider(null);
+});
+
+test('mémoire du coach : retenu automatiquement, envoyé ensuite, supprimable durablement ; modèle choisi transmis', async () => {
+  const { deleteNote } = await import('../../ai/studio');
+  const s = fresh(); const sent: any[] = [];
+  registerRemoteProvider(makeClaudeProvider(async body => { sent.push(body); return { status: 200, data: { text: '**Noté.**', calls: [{ name: 'remember', args: { fact: 'Compétition « Winter is coming » le 5 décembre, duo mixte scaled.' } }] } }; }));
+  s.coach = { perms: {}, threads: [], decisions: [], model: 'sonnet' };
+  const reply = await ask(s, 'compét le 5 décembre en duo scaled', TODAY);
+  assert.deepEqual(reply.memo, ['Compétition « Winter is coming » le 5 décembre, duo mixte scaled.']);
+  assert.equal(sent[0].model, 'sonnet');
+  appendMessages(s, null, [{ id: 'u', role: 'user', at: 1, text: 'q' }, reply]);
+  assert.equal(s.coach!.notes!.length, 1);
+  await ask(s, 'et ensuite ?', TODAY);
+  assert.deepEqual(sent[1].context.notesRetenues, ['Compétition « Winter is coming » le 5 décembre, duo mixte scaled.']);
+  const b = structuredClone(s); b.updatedAt = 10;
+  deleteNote(s, s.coach!.notes![0].id); s.updatedAt = 20;
+  assert.equal(mergeStates(s, b).coach!.notes!.length, 0, 'une info oubliée ne revient pas par la synchro');
   registerRemoteProvider(null);
 });
