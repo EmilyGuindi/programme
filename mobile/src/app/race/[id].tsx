@@ -6,13 +6,13 @@ import { Countdown, EffortProfile, Kicker, Ring, Stage } from '@/components/bran
 import { Pressable } from 'react-native';
 import { Sheet } from '@/components/sheet';
 import { Button, Card, Choices, Coach, Field, Gap, KV, ListGroup, ListRow, Meta, Row, T, Tag, Tick } from '@/components/ui';
-import { checklistFor, eventActivity, raceAnalysis, readiness, strategy, taperTips } from '@/engine/race';
+import { checklistFor, eventActivity, raceAnalysis, readiness, resultValue, strategy, taperTips } from '@/engine/race';
 import { eventState } from '@/engine/status';
 import { clock, daysBetween, DAYS_SHORT, dow, fmtLong, fmtShort, mmss, sportDay } from '@/engine/dates';
 import { update, useApp } from '@/store/store';
 import { radius, space, useTheme } from '@/theme/tokens';
 
-const TYPE = { course: 'Course', ocr: 'Course à obstacles', 'hyrox-compet': 'HYROX', autre: 'Événement' } as const;
+const TYPE = { course: 'Course', ocr: 'Course à obstacles', 'hyrox-compet': 'HYROX', 'crossfit-compet': 'Compétition CrossFit', autre: 'Événement' } as const;
 
 export default function RaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>(); const s = useApp(); const { c } = useTheme();
@@ -33,8 +33,8 @@ export default function RaceScreen() {
           {!past ? <Countdown days={n} /> : null}
         </Row>
         {past ? <View style={{ marginTop: space.s4 }}>
-          <T v="display" color={c.stageInk}>{ev.result ? clock(ev.result.time) : 'Terminé'}</T>
-          <T color={c.stageInk2}>{ev.result ? (ev.result.source === 'montre' ? 'temps relevé par ta montre' : ev.distanceKm ? `${mmss(ev.result.time / ev.distanceKm)} /km de moyenne` : 'temps officiel') : 'Saisis ton résultat pour le débrief'}</T>
+          <T v="display" color={c.stageInk}>{ev.result ? resultValue(ev, clock) : 'Terminé'}</T>
+          <T color={c.stageInk2}>{ev.result ? ev.type === 'crossfit-compet' ? (ev.result.score || 'classement') : (ev.result.source === 'montre' ? 'temps relevé par ta montre' : ev.distanceKm ? `${mmss(ev.result.time / ev.distanceKm)} /km de moyenne` : 'temps officiel') : 'Saisis ton résultat pour le débrief'}</T>
         </View> : ev.goal ? <View style={{ marginTop: space.s4, borderTopWidth: 1, borderTopColor: 'rgba(244,242,238,0.14)', paddingTop: space.s3 }}><T v="overline" color={c.stageInk2}>Objectif</T><T color={c.stageInk} style={{ marginTop: 2 }}>{ev.goal}</T></View> : null}
       </Stage>
 
@@ -68,7 +68,7 @@ export default function RaceScreen() {
             <T v="label" style={{ marginTop: space.s3 }}>Échauffement</T><Bullets items={st.warmup} numbered />
             <T v="label" style={{ marginTop: space.s3 }}>Plan B</T><Bullets items={st.planB} />
           </Disclosure>
-        </> : <><Kicker>Ta stratégie</Kicker><View style={{ backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, marginTop: space.s2, marginBottom: space.s3 }}><Bullets items={ev.type === 'ocr' ? ['Course plaisir : pas de chrono à viser.', 'Entre les obstacles, effort 6/10 pour garder de l\'énergie.', 'Contourne les obstacles qui sollicitent trop l\'épaule.', 'Bois aux ravitaillements.'] : ['Pars à un effort contrôlé, accélère sur la fin.', 'Pense technique plutôt que vitesse sur les stations.']} /></View></>}
+        </> : <><Kicker>Ta stratégie</Kicker><View style={{ backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, marginTop: space.s2, marginBottom: space.s3 }}><Bullets items={ev.type === 'crossfit-compet' ? ['Lis chaque épreuve en entier avant de partir : standards, poids, cap de temps.', 'Découpe les grosses séries dès le début, avant d\'en avoir besoin.', 'Respire et reste propre sur les mouvements : un no-rep coûte plus cher qu\'une pause.', 'Entre les épreuves : mange, bois, garde-toi chaude.'] : ev.type === 'ocr' ? ['Course plaisir : pas de chrono à viser.', 'Entre les obstacles, effort 6/10 pour garder de l\'énergie.', 'Contourne les obstacles qui sollicitent trop l\'épaule.', 'Bois aux ravitaillements.'] : ['Pars à un effort contrôlé, accélère sur la fin.', 'Pense technique plutôt que vitesse sur les stations.']} /></View></>}
         {(() => { const items = checklistFor(ev); const ok = items.filter(x => ev.checklist?.[x]).length; return (
           <View style={{ marginTop: space.s4 }}>
             <Row between style={{ marginBottom: space.s2 }}><Kicker>Checklist</Kicker><Ring value={ok / items.length} label={`${ok}/${items.length}`} /></Row>

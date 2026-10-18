@@ -1,6 +1,6 @@
 export type ISODate = string; // YYYY-MM-DD
 
-export type ActivityType = 'crossfit' | 'hyrox' | 'hyrox-simu' | 'hyrox-compet' | 'running' | 'course' | 'renfo' | 'marche' | 'autre';
+export type ActivityType = 'crossfit' | 'crossfit-compet' | 'hyrox' | 'hyrox-simu' | 'hyrox-compet' | 'running' | 'course' | 'renfo' | 'marche' | 'autre';
 export type RunKind = 'facile' | 'recup' | 'affutage' | 'rappel' | 'qualite' | 'test';
 export type Zone = 'easy' | 'seuil' | '10k' | '5k';
 export type Level = 'vert' | 'orange' | 'rouge' | 'inconnu';
@@ -28,10 +28,11 @@ export interface StravaItem {
 }
 
 export interface SportEvent {
-  id: string; name: string; type: 'course' | 'ocr' | 'hyrox-compet' | 'autre'; date: ISODate; time?: string;
+  id: string; name: string; type: 'course' | 'ocr' | 'hyrox-compet' | 'crossfit-compet' | 'autre'; date: ISODate; time?: string;
   distanceKm?: number | null; place?: string; priority: 'participation' | 'repère' | 'objectif'; goal?: string;
   status: 'prévu' | 'fait' | 'annulé';
-  result?: { time: number; elevM?: number | null; avgHr?: number | null; effort?: number | null; notes?: string;
+  /** time : secondes (0 = pas de chrono, compétition CrossFit notée au classement). */
+  result?: { time: number; rank?: string; score?: string; elevM?: number | null; avgHr?: number | null; effort?: number | null; notes?: string;
     feeling?: number | null; pacing?: 'trop-vite' | 'regulier' | 'fini-fort' | null; conditions?: string[];
     /** D'où vient le temps : saisi, description Strava, ou chrono de la montre. */
     source?: 'saisi' | 'description' | 'montre'; movingSec?: number; distanceKm?: number | null; maxHr?: number | null; calories?: number | null };

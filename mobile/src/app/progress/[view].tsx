@@ -1,3 +1,4 @@
+import { resultValue } from '@/engine/race';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -120,7 +121,7 @@ function Running() {
       <Disclosure title="Allures d'entraînement" sub={`Calculées depuis ${z.src}`}>
         {(['easy', 'seuil', '10k', '5k'] as const).map(k => <KV key={k} k={`${ZONE_NAME[k]}, effort ${ZONE_EFFORT[k]}`} v={zoneText(s, k)} />)}
       </Disclosure>
-      {races.length ? <ListGroup title="Compétitions">{races.map((e, i) => <ListRow key={e.id} last={i === races.length - 1} title={e.name} sub={`${fmtShort(e.date)}, ${clock(e.result!.time)}${e.distanceKm ? `, ${mmss(e.result!.time / e.distanceKm)} /km` : ''}${e.result!.elevM ? `, ${e.result!.elevM} m D+` : ''}`} onPress={() => router.push({ pathname: '/race/[id]', params: { id: e.id } })} />)}</ListGroup> : null}
+      {races.length ? <ListGroup title="Compétitions">{races.map((e, i) => <ListRow key={e.id} last={i === races.length - 1} title={e.name} sub={`${fmtShort(e.date)}, ${resultValue(e, clock)}${e.distanceKm && e.result!.time ? `, ${mmss(e.result!.time / e.distanceKm)} /km` : ''}${e.result!.elevM ? `, ${e.result!.elevM} m D+` : ''}`} onPress={() => router.push({ pathname: '/race/[id]', params: { id: e.id } })} />)}</ListGroup> : null}
       {ws.length ? <ListGroup title="Distance par semaine"><View style={{ padding: space.s3 }}><BarChart labels={ws.map(w => `S${w}`)} values={ws.map(w => +wk[w].toFixed(1))} unit="km" /></View></ListGroup> : null}
       <ListGroup title="Sorties">{runs.length ? [...runs].reverse().slice(0, 12).map((r, i, arr) => <ListRow key={r.id} last={i === arr.length - 1} title={r.title} sub={`${fmtShort(r.date)}, ${String(r.distanceKm).replace('.', ',')} km, ${mmss((r.durationMin! * 60) / r.distanceKm!)} /km${r.elevM ? `, ${r.elevM} m D+` : ''}`} onPress={() => router.push({ pathname: '/activity', params: { id: r.id } })} />) : <ListRow last chevron={false} title="Aucune sortie enregistrée" sub="Les cours de box et les marches ne comptent pas ici." />}</ListGroup>
     </>

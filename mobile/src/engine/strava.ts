@@ -17,7 +17,7 @@ export function classify(s: AppState, it: StravaItem): Pick<Activity, 'type' | '
   }
   if (ev) {
     const fits = ev.type === 'course' ? RUN.includes(it.sportType) && (!ev.distanceKm || Math.abs((it.distanceKm || 0) - ev.distanceKm) <= ev.distanceKm * 0.15) : RUN.includes(it.sportType) || BOX.includes(it.sportType);
-    if (fits) return { type: ev.type === 'course' ? 'course' : 'autre', title: ev.name, complementary: false, matched: it.date, needsConfirm: false, kind: 'test', eventId: ev.id };
+    if (fits) return { type: ev.type === 'course' ? 'course' : ev.type === 'crossfit-compet' ? 'crossfit-compet' : 'autre', title: ev.name, complementary: false, matched: it.date, needsConfirm: false, kind: 'test', eventId: ev.id };
   }
   if (RUN.includes(it.sportType)) {
     const plannedRun = (a.replaced ? null : a.run) || p.run;
