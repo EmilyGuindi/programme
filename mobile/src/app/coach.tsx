@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Pressable, View } from 'react-native';
 import { ask, appendMessages, decide, ensureMemory, memory, providerFor, threadById } from '@/ai/studio';
 import { SUGGESTIONS } from '@/ai/local';
-import { setupRemoteCoach } from '@/ai/remote';
+import { registerClaude, setupRemoteCoach } from '@/ai/remote';
+
+registerClaude(); // Claude prêt dès l'ouverture de l'écran, sans attendre le réseau
 import { useDictation } from '@/ai/voice';
 import { attachmentLabel, MAX_ATTACHMENTS, pickFile, pickPhoto, type Attachment } from '@/ai/attachments';
 import { remoteDetail } from '@/ai/claude';
@@ -99,7 +101,7 @@ export default function CoachStudio() {
           <T v="small" muted>Ce coach simple ne comprend que quelques phrases et ne lit pas les photos. Claude comprend tout, avec tes données.</T>
           <Button small kind="primary" style={{ alignSelf: 'flex-start' }} label="Passer à Claude" onPress={() => { update(st => { ensureMemory(st).provider = 'claude'; }); haptic('select'); }} />
         </View> : null}
-        {prov.id !== 'claude' && s.coach?.provider !== 'local' ? <View style={{ width: '100%', backgroundColor: c.warnSoft, borderRadius: radius.r2, padding: space.s3 }}><T v="small" color={c.warn} style={{ fontWeight: '700' }}>Claude n'est pas actif</T><T v="small">{remoteDetail()}</T></View> : null}
+        {prov.id !== 'claude' && s.coach?.provider !== 'local' && remoteDetail() ? <View style={{ width: '100%', backgroundColor: c.warnSoft, borderRadius: radius.r2, padding: space.s3 }}><T v="small" color={c.warn} style={{ fontWeight: '700' }}>Claude n'est pas actif</T><T v="small">{remoteDetail()}</T></View> : null}
         <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label={`Historique et données${memory(s).threads.length ? ` (${memory(s).threads.length})` : ''}`} onPress={() => router.push('/coach-settings')} />
       </Row>
 

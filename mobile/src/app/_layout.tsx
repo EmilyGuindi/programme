@@ -8,11 +8,13 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { checkForUpdate } from '@/components/update-banner';
 import { listenResponses, setupChannel, syncReminders } from '@/notifications';
+import { registerClaude } from '@/ai/remote';
 import { dayTick, flush, loadStore, pull, useApp, useReady } from '@/store/store';
 import { useTheme } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
 loadStore();
+registerClaude();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, InterTight_600SemiBold, InterTight_700Bold, InterTight_800ExtraBold });
