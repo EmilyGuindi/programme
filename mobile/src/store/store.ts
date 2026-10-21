@@ -102,6 +102,8 @@ export async function api(path: string, init: RequestInit = {}) {
   return r;
 }
 export const apiBase = () => base();
+/** En-têtes authentifiés, pour un appel qui n'utilise pas api() (flux en direct). */
+export const authHeaders = () => ({ Authorization: `Bearer ${server.session || server.key}`, 'Content-Type': 'application/json' });
 /** Réessais hors ligne : 30 s, 1 min, 2 min… jusqu'à 10 min, tant que des modifications attendent. */
 let retryDelay = 30_000, retryTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleRetry() { if (retryTimer) return; retryTimer = setTimeout(() => { retryTimer = null; push(); }, retryDelay); retryDelay = Math.min(retryDelay * 2, 600_000); }

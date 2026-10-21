@@ -88,3 +88,18 @@ test('modèle : Haiku par défaut, Sonnet sur demande (avec repli de sécurité)
   assert.equal(seen[2][1].model, 'claude-haiku-5-5');
   assert.ok(TOOLS.some(t => t.name === 'remember'));
 });
+
+test('flux : le texte arrive par morceaux, puis la réponse finale avec les propositions', async () => {
+  const final = { content: [{ type: 'text', text: 'Bonjour Emily' }, { type: 'tool_use', name: 'remember', input: { fact: 'x' } }], stop_reason: 'tool_use', usage: { input_tokens: 1, output_tokens: 2 } };
+  const c = { messages: { stream: () => { const h = {}; return { on: (e, f) => { h[e] = f; }, finalMessage: async () => { h.text?.('Bonjour '); h.text?.('Emily'); return final; } }; } } };
+  const r = await coachChat({ DB: d1() }, { userId: 'u1' }, { ...ok, stream: true }, c);
+  assert.equal(r.status, 200); assert.ok(r.stream);
+  const txt = await new Response(r.stream).text();
+  const events = txt.trim().split('\n\n').map(b => ({ ev: b.match(/^event: (.*)$/m)[1], data: JSON.parse(b.match(/^data: (.*)$/m)[1]) }));
+  assert.deepEqual(events.map(e => e.ev), ['start', 'delta', 'delta', 'done']);
+  assert.equal(events.filter(e => e.ev === 'delta').map(e => e.data.text).join(''), 'Bonjour Emily');
+  assert.deepEqual(events.at(-1).data.calls, [{ name: 'remember', args: { fact: 'x' } }]);
+  const bad = { messages: { stream: () => ({ on() {}, finalMessage: async () => { throw new Error('boom'); } }) } };
+  const t2 = await new Response((await coachChat({ DB: d1() }, { userId: 'u1' }, { ...ok, stream: true }, bad)).stream).text();
+  assert.match(t2, /event: error/);
+});

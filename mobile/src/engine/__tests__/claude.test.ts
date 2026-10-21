@@ -129,3 +129,16 @@ test('mémoire du coach : retenu automatiquement, envoyé ensuite, supprimable d
   assert.equal(mergeStates(s, b).coach!.notes!.length, 0, 'une info oubliée ne revient pas par la synchro');
   registerRemoteProvider(null);
 });
+
+test('flux SSE : événements découpés n\'importe où, réponse en direct puis finale', async () => {
+  const { sseParser } = await import('../../ai/sse');
+  const got: [string, any][] = []; const feed = sseParser((e, d) => got.push([e, d]));
+  const raw = 'event: start\ndata: {}\n\nevent: delta\ndata: {"text":"Bon"}\n\nevent: delta\ndata: {"text":"jour"}\n\nevent: done\ndata: {"text":"Bonjour","calls":[]}\n\n';
+  for (let i = 0; i < raw.length; i += 7) feed(raw.slice(i, i + 7));
+  assert.deepEqual(got.map(g => g[0]), ['start', 'delta', 'delta', 'done']);
+  const s = fresh(); const live: string[] = [];
+  registerRemoteProvider(makeClaudeProvider(async (_b, onDelta) => { onDelta?.('Bon'); onDelta?.('Bonjour'); return { status: 200, data: { text: 'Bonjour', calls: [] } }; }));
+  const r = await ask(s, 'salut', TODAY, [], undefined, [], t => live.push(t));
+  assert.deepEqual(live, ['Bon', 'Bonjour']); assert.equal(r.text, 'Bonjour');
+  registerRemoteProvider(null);
+});

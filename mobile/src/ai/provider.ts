@@ -12,6 +12,8 @@ export interface CoachContext {
   history: readonly CoachMsg[];
   /** Pièces jointes du message en cours (photo, PDF, texte). */
   attachments?: readonly import('./attachments').Attachment[];
+  /** Texte en cours d'écriture (réponse en direct). */
+  onDelta?: (textSoFar: string) => void;
 }
 export interface CoachReply { text: string; cards: CoachCard[]; suggestions?: string[]; memo?: string[] }
 export interface ProviderStatus { available: boolean; label: string; detail: string; blockers?: string[] }
