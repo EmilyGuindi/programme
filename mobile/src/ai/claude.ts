@@ -10,7 +10,7 @@ import type { CoachProvider, CoachReply } from './provider';
    En cas d'indisponibilité (hors ligne, crédit, quota), le coach à règles répond à sa place, en le disant.
    ============================================================ */
 
-export type Transport = (body: unknown) => Promise<{ status: number; data: any }>;
+export type Transport = (body: unknown, onDelta?: (textSoFar: string) => void) => Promise<{ status: number; data: any }>;
 const ERR: Record<string, string> = {
   coach_not_configured: 'Claude n\'est pas encore configuré sur ton serveur',
   coach_key_invalid: 'la clé Claude du serveur est refusée',
@@ -40,7 +40,7 @@ export function makeClaudeProvider(send: Transport): CoachProvider {
       const fallback = async (why: string) => { const r = await localProvider.respond(input, ctx); return { ...r, text: `(${why} : réponse du coach à règles${ctx.attachments?.length ? ', qui ne lit pas les pièces jointes' : ''}.) ${r.text}` }; };
       let res;
       const attachments = (ctx.attachments || []).map(a => a.kind === 'image' ? { kind: 'image', mediaType: a.mediaType, data: a.data, name: a.name } : a.kind === 'pdf' ? { kind: 'pdf', data: a.data, name: a.name } : { kind: 'text', text: a.text, name: a.name });
-      try { res = await send({ messages: [...historyText(ctx.history), { role: 'user', text: input.slice(0, 2000) || 'Regarde la pièce jointe.' }], context: coachContext(ctx.state as any, ctx.today), attachments, model: (ctx.state as any).coach?.model === 'sonnet' ? 'sonnet' : 'haiku' }); }
+      try { res = await send({ messages: [...historyText(ctx.history), { role: 'user', text: input.slice(0, 2000) || 'Regarde la pièce jointe.' }], context: coachContext(ctx.state as any, ctx.today), attachments, model: (ctx.state as any).coach?.model === 'sonnet' ? 'sonnet' : 'haiku' }, ctx.onDelta); }
       catch { return fallback('Hors ligne'); }
       if (res.status !== 200) { if (res.data?.error === 'coach_not_configured') setClaudeAvailability(false); return fallback(ERR[res.data?.error] || `erreur ${res.status}`); }
       const cards: CoachCard[] = []; const notes: string[] = []; const memo: string[] = [];

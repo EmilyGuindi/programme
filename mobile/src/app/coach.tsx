@@ -15,7 +15,7 @@ import { Button, Input, Row, T } from '@/components/ui';
 import { sportDay } from '@/engine/dates';
 import { SCOPE_LABEL } from '@/engine/tools';
 import type { CoachMsg } from '@/engine/types';
-import { haptic } from '@/feedback';
+import { haptic, useReducedMotion } from '@/feedback';
 import { getState, update, useApp } from '@/store/store';
 import { radius, space, useTheme } from '@/theme/tokens';
 
@@ -35,6 +35,8 @@ export default function CoachStudio() {
   const [, setReady] = useState(0); useEffect(() => { setupRemoteCoach().then(() => setReady(x => x + 1)); }, []);
 
   const [files, setFiles] = useState<Attachment[]>([]);
+  /** Message en cours : le tien, affiché tout de suite, et la réponse qui s'écrit. */
+  const [pending, setPending] = useState<{ user: CoachMsg; text: string; since: number } | null>(null);
   /** Pièces jointes déjà envoyées dans cette conversation : gardées en mémoire vive (jamais enregistrées) et renvoyées tant que l'écran est ouvert. */
   const carried = useRef<Attachment[]>([]);
   const voice = useDictation(setText);
@@ -50,9 +52,11 @@ export default function CoachStudio() {
     const sent = files; setBusy(true); setText(''); setFiles([]); setNote(''); haptic('select');
     const user: CoachMsg = { id: Math.random().toString(36).slice(2, 10), role: 'user', at: Date.now(), text: t.slice(0, 500), files: sent.length ? sent.map(f => ({ name: f.name, kind: f.kind })) : undefined };
     const all = [...sent, ...carried.current.filter(x => !sent.some(y => y.name === x.name))].slice(0, MAX_ATTACHMENTS);
-    const reply = await ask(getState(), t, today, msgs, undefined, all);
+    setPending({ user, text: '', since: Date.now() }); // ton message s'affiche tout de suite
+    const reply = await ask(getState(), t, today, msgs, undefined, all, txt => setPending(p => p && { ...p, text: txt }));
     if (sent.length) carried.current = all;
-    let id = threadId; update(st => { id = appendMessages(st, threadId, [user, reply]); }); setThreadId(id); setBusy(false);
+    let id = threadId; update(st => { id = appendMessages(st, threadId, [user, reply]); }); setThreadId(id); setBusy(false); setPending(null);
+    haptic('success');
   }
   function onDecide(m: CoachMsg, cardId: string, accept: boolean) {
     let res = { ok: false, message: '' }; update(st => { res = decide(st, threadId!, m.id, cardId, accept, today); });
@@ -87,7 +91,7 @@ export default function CoachStudio() {
   </View>);
 
   return (
-    <Sheet title="Coach" sub={prov.id === 'claude' ? 'Claude, avec tes données BYYND' : `${prov.name}, règles locales`} footer={composer} scrollEndKey={msgs.length + (busy ? 1 : 0)}>
+    <Sheet title="Coach" sub={prov.id === 'claude' ? 'Claude, avec tes données BYYND' : `${prov.name}, règles locales`} footer={composer} scrollEndKey={msgs.length * 1000 + (pending ? 1 + Math.floor(pending.text.length / 60) : 0)}>
       <Row gap={space.s2} style={{ marginBottom: space.s4, flexWrap: 'wrap' }}>
         {threadId ? <Button small label="Nouvelle conversation" onPress={() => { setThreadId(null); setNote(''); carried.current = []; }} /> : null}
         {s.coach?.provider === 'local' ? <View style={{ width: '100%', backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s3, gap: space.s2 }}>
@@ -99,7 +103,7 @@ export default function CoachStudio() {
         <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label={`Historique et données${memory(s).threads.length ? ` (${memory(s).threads.length})` : ''}`} onPress={() => router.push('/coach-settings')} />
       </Row>
 
-      {!msgs.length ? <>
+      {!msgs.length && !pending ? <>
         <T v="small" muted style={{ marginBottom: space.s2 }}>Essaie</T>
         <View style={{ gap: 8, marginBottom: space.s5 }}>{sugg.map(x => <Pressable key={x} accessibilityRole="button" onPress={() => send(x)} style={({ pressed }) => ({ backgroundColor: pressed ? c.surface2 : c.surface, borderRadius: radius.r2, paddingVertical: 12, paddingHorizontal: space.s4 })}><T>{x}</T></Pressable>)}</View>
         <CoachGuided />
@@ -112,10 +116,28 @@ export default function CoachStudio() {
           {(m.cards || []).map(cd => <CoachCardView key={cd.id} card={cd} decision={m.decisions?.[cd.id]} onDecide={cd.kind === 'action' || cd.kind === 'program' ? a => onDecide(m, cd.id, a) : undefined} />)}
           {m.scopes?.length ? <T v="xs" muted style={{ marginTop: 6 }}>{`Données utilisées : ${m.scopes.map(x => SCOPE_LABEL[x].toLowerCase()).join(', ')}.`}</T> : null}
         </View>)}
-      {busy ? <T muted>{prov.id === 'claude' ? 'Claude réfléchit…' : '…'}</T> : null}
+      {pending ? <>
+        <View style={{ alignSelf: 'flex-end', maxWidth: '85%', backgroundColor: c.accentSoft, borderRadius: 18, borderBottomRightRadius: 6, paddingVertical: 10, paddingHorizontal: 14, marginBottom: space.s3, gap: 4 }}>
+          {(pending.user.files || []).map((f, i) => <T key={i} v="xs" color={c.accent} style={{ fontWeight: '600' }}>{`📎 ${attachmentLabel(f)}`}</T>)}{pending.user.text ? <T>{pending.user.text}</T> : null}</View>
+        <View style={{ marginBottom: space.s4 }} accessibilityLiveRegion="polite">
+          <Row gap={8} style={{ alignItems: 'flex-start' }}><Icon name="coach" size={18} color={c.accent} />
+            <View style={{ flex: 1 }}>{pending.text ? <RichText text={pending.text} /> : <Thinking since={pending.since} label={prov.id === 'claude' ? 'Claude réfléchit' : 'Le coach réfléchit'} />}</View></Row>
+        </View>
+      </> : null}
       {note ? <View accessibilityLiveRegion="polite" style={{ marginBottom: space.s3 }}><T v="small" color={c.accent}>{note}</T></View> : null}
       {msgs.length ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: space.s2 }}>{sugg.slice(0, 2).map(x => <Button key={x} small label={x.length > 34 ? x.slice(0, 33) + '…' : x} onPress={() => send(x)} />)}</View> : null}
       <T v="xs" muted style={{ marginTop: space.s5 }}>Le coach propose, tu décides : rien ne change sans ton accord. Il ne remplace pas un avis médical.</T>
     </Sheet>
   );
+}
+
+/** Indicateur d'attente : trois points qui pulsent (fixes si les animations sont réduites) et le temps écoulé. */
+function Thinking({ since, label }: { since: number; label: string }) {
+  const { c } = useTheme(); const reduced = useReducedMotion(); const [n, setN] = useState(0);
+  useEffect(() => { const t = setInterval(() => setN(x => x + 1), 400); return () => clearInterval(t); }, []);
+  const secs = Math.floor((Date.now() - since) / 1000);
+  return <Row gap={8} style={{ minHeight: 24 }}>
+    <Row gap={4}>{[0, 1, 2].map(i => <View key={i} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: c.accent, opacity: reduced ? 0.7 : (n % 3 === i ? 1 : 0.3) }} />)}</Row>
+    <T v="small" muted>{`${label}${secs >= 3 ? `, ${secs} s` : '…'}`}</T>
+  </Row>;
 }

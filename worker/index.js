@@ -50,6 +50,7 @@ async function api(req, env, url, c) {
   // Coach conversationnel : réservé à une personne identifiée (session ou clé historique rattachée au propriétaire).
   if (p === "/api/coach/chat" && req.method === "POST") {
     const r = await coachChat(env, who, await req.json().catch(() => ({})));
+    if (r.stream) return new Response(r.stream, { status: 200, headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no", ...c } });
     return json(r.body, r.status, c);
   }
   if (p === "/api/auth/me") {

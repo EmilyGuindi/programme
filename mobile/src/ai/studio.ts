@@ -26,10 +26,10 @@ export const providerFor = (s: AppState): CoachProvider => {
 export const memory = (s: AppState): CoachMemory => s.coach || { perms: {}, threads: [], decisions: [] };
 
 /** Une demande → une réponse. Toutes les lectures et propositions passent par les contrôles de tools.ts. */
-export async function ask(s: AppState, input: string, today: ISODate, history: CoachMsg[] = [], provider = providerFor(s), attachments: Attachment[] = []): Promise<CoachMsg> {
+export async function ask(s: AppState, input: string, today: ISODate, history: CoachMsg[] = [], provider = providerFor(s), attachments: Attachment[] = [], onDelta?: (t: string) => void): Promise<CoachMsg> {
   const scopes = new Set<DataScope>(); const tools: string[] = []; const drafts: Record<string, unknown> = {};
   const ctx: CoachContext = {
-    today, state: s, history, attachments,
+    today, state: s, history, attachments, onDelta,
     read(call: ToolCall) {
       const c = checkCall(s, call.name, call.args); if (!c.ok) return { error: c.error };
       if (c.tool.write) return { error: 'Une écriture ne passe pas par la lecture.' };
