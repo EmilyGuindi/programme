@@ -24,7 +24,7 @@ import { radius, space, useTheme } from '@/theme/tokens';
 
 /** Coach Studio : conversation, cartes structurées, actions confirmées. Ouvert depuis Aujourd'hui, Programme ou Progression. */
 export default function CoachStudio() {
-  const { context, q, thread: threadParam } = useLocalSearchParams<{ context?: string; q?: string; thread?: string }>();
+  const { context, q, thread: threadParam, focus } = useLocalSearchParams<{ context?: string; q?: string; thread?: string; focus?: string }>();
   const s = useApp(); const { c } = useTheme(); const today = sportDay();
   const [threadId, setThreadId] = useState<string | null>(threadParam || null); const [text, setText] = useState(q || ''); const [busy, setBusy] = useState(false); const [note, setNote] = useState('');
   const th = threadById(s, threadId); const msgs = th?.messages || []; const prov = providerFor(s);
@@ -81,7 +81,7 @@ export default function CoachStudio() {
         style={({ pressed }) => ({ width: 44, height: 48, borderRadius: 22, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
         <Icon name="plus" size={24} color={c.ink2} />
       </Pressable>
-      <Input style={{ flex: 1 }} value={text} onChangeText={setText} placeholder={voice.listening ? 'Je t\'écoute…' : 'Message'} maxLength={500} returnKeyType="send" onSubmitEditing={() => send()} accessibilityLabel="Message au coach" />
+      <Input style={{ flex: 1 }} autoFocus={focus === '1'} value={text} onChangeText={setText} placeholder={voice.listening ? 'Je t\'écoute…' : 'Message'} maxLength={500} returnKeyType="send" onSubmitEditing={() => send()} accessibilityLabel="Message au coach" />
       {voice.supported ? <Pressable accessibilityRole="button" accessibilityLabel={voice.listening ? 'Arrêter la dictée' : 'Dicter un message'} disabled={busy} hitSlop={4}
         onPress={() => { haptic('select'); if (voice.listening) voice.stop(); else voice.start(text); }}
         style={({ pressed }) => ({ width: 44, height: 48, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: voice.listening ? c.stopSoft : 'transparent', opacity: pressed ? 0.6 : 1 })}>

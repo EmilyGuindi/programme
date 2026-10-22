@@ -4,15 +4,13 @@ import { Pressable, View } from 'react-native';
 import { ask, ensureMemory, providerFor } from '@/ai/studio';
 import { AchBadge } from '@/components/badges';
 import { Icon } from '@/components/icons';
-import { Button, Chevron, Row, T } from '@/components/ui';
+import { Chevron, Row, T } from '@/components/ui';
 import { WeekMeter, WeekTracker } from '@/components/week-tracker';
 import { achievementsMemo } from '@/engine/achievements';
-import { daysBetween, sportDay, uid } from '@/engine/dates';
+import { daysBetween, sportDay } from '@/engine/dates';
 import { localWord, momentum } from '@/engine/momentum';
 import { weekSummary } from '@/engine/status';
 import { weekOf, weekStart } from '@/engine/coach';
-import type { Activity, AdaptedPlan } from '@/engine/types';
-import { haptic } from '@/feedback';
 import { getState, update, useApp } from '@/store/store';
 import { layout, radius, space, useTheme } from '@/theme/tokens';
 
@@ -33,15 +31,18 @@ export function CoachWord() {
     }).catch(() => { asking = ''; });
   }, [d, !!daily, providerFor(s).id]);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Le mot du coach : ${daily || fallback}. Répondre au coach`} onPress={() => router.push({ pathname: '/coach', params: { context: 'today' } })}
-      style={({ pressed }) => ({ flexDirection: 'row', gap: space.s3, alignItems: 'flex-start', backgroundColor: pressed ? c.surface2 : c.surface, borderRadius: radius.r2, padding: space.s4, marginBottom: layout.gap })}>
-      <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="coach" size={17} color={c.accent} /></View>
-      <View style={{ flex: 1 }}>
-        <T v="xs" muted style={{ fontWeight: '700', marginBottom: 2 }}>LE MOT DU COACH</T>
-        <T>{daily || fallback}</T>
-        <T v="xs" color={c.accent} style={{ marginTop: 6, fontWeight: '600' }}>Répondre ›</T>
-      </View>
-    </Pressable>
+    <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, marginBottom: layout.gap, gap: space.s3 }}>
+      <Row gap={space.s3} style={{ alignItems: 'flex-start' }}>
+        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="coach" size={17} color={c.accent} /></View>
+        <View style={{ flex: 1 }}><T v="xs" muted style={{ fontWeight: '700', marginBottom: 2 }}>LE MOT DU COACH</T><T>{daily || fallback}</T></View>
+      </Row>
+      {/* Entrée directe : parler au coach de n'importe quoi */}
+      <Pressable accessibilityRole="button" accessibilityLabel="Écrire au coach" onPress={() => router.push({ pathname: '/coach', params: { focus: '1' } })}
+        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s2, minHeight: 48, borderRadius: 24, borderWidth: 1, borderColor: c.line2, backgroundColor: pressed ? c.surface2 : c.paper, paddingLeft: space.s4, paddingRight: 6 })}>
+        <T muted style={{ flex: 1 }}>Écris à ton coach…</T>
+        <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}><Icon name="mic" size={20} color={c.ink2} /></View>
+      </Pressable>
+    </View>
   );
 }
 
@@ -57,7 +58,7 @@ export function ProgressCard() {
       <Pressable accessibilityRole="button" accessibilityLabel={`Ma progression. Semaine ${m.week} sur ${m.weeks}. Ouvrir Progression`} onPress={() => router.navigate('/progress')} style={({ pressed }) => ({ padding: layout.pad, paddingBottom: space.s3, opacity: pressed ? 0.85 : 1 })}>
         <Row between style={{ marginBottom: space.s3 }}><T v="label">Ma progression</T><Row gap={6}><T v="small" muted>{`Semaine ${m.week} sur ${m.weeks}`}</T><Chevron /></Row></Row>
         <Row gap={space.s3}>
-          <Stat v={`${m.done}/${m.planned}`} l={`séances du programme${m.planned ? ` (${pct} %)` : ''}`} />
+          <Stat v={`${m.done}/${m.planned}`} l={m.planned ? `séances faites, ${pct} %` : 'séances faites'} />
           <Stat v={`${m.streak}`} l={m.streak > 1 ? 'semaines réussies d\'affilée' : 'semaine réussie d\'affilée'} />
           {m.event ? <Stat v={m.eventIn === 0 ? 'Jour J' : `J-${m.eventIn}`} l={m.event.name} /> : <Stat v={`${m.daysLeft}`} l="jours avant la fin du programme" />}
         </Row>
@@ -78,23 +79,6 @@ export function ProgressCard() {
         </View>
         <Chevron />
       </Pressable> : null}
-    </View>
-  );
-}
-
-const FEEL: { l: string; effort: number }[] = [{ l: 'Facile', effort: 4 }, { l: 'Correct', effort: 6 }, { l: 'Dur', effort: 8 }];
-/** Séance de box (CrossFit, HYROX) : un geste pour dire qu'elle est faite et comment c'était. */
-export function QuickFeedback({ a }: { a: AdaptedPlan }) {
-  const { c } = useTheme();
-  function save(effort: number) {
-    const act: Activity = { id: uid(), date: a.date, type: a.hyrox ? 'hyrox' : 'crossfit', title: a.hyrox ? 'Cours HYROX' : 'CrossFit', durationMin: 60, effort, complementary: false, matched: a.date, source: 'manuel', userEdited: true, notes: '' };
-    update(st => { st.activities.push(act); }); haptic('success');
-    router.push({ pathname: '/done/[id]', params: { id: act.id } });
-  }
-  return (
-    <View>
-      <T v="small" color={c.stageInk2} style={{ marginBottom: space.s2, fontWeight: '600' }}>Séance faite ? Comment c'était ?</T>
-      <Row gap={space.s2}>{FEEL.map(f => <Button key={f.l} kind={f.effort === 6 ? 'primary' : 'secondary'} style={{ flex: 1 }} label={f.l} onPress={() => save(f.effort)} />)}</Row>
     </View>
   );
 }
