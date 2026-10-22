@@ -12,7 +12,7 @@ import { ProposalCard } from '@/components/proposal-card';
 import { ContextCards } from '@/components/today-cards';
 import { Button, Chip, Panel, Row, Screen, T } from '@/components/ui';
 import { UpdateBanner } from '@/components/update-banner';
-import { CoachWord, ProgressCard, QuickFeedback } from '@/components/home-progress';
+import { CoachWord, ProgressCard } from '@/components/home-progress';
 import { SessionProgressLine } from '@/components/session-progress';
 import { sessionProgress } from '@/engine/session';
 import { activitiesOn, adapted, coachLine, doneOn, recovery } from '@/engine/coach';
@@ -51,7 +51,7 @@ export default function Today() {
     : shown.type === 'recup' ? { label: sp.done ? 'Reprendre la routine' : 'Ouvrir la routine', go: () => openDay(d) }
     : null;
   const links = [checkinFirst && primary ? { label: primary.label, go: primary.go } : null, !isEvent && !done && shown.type !== 'rest' ? { label: 'Adapter avec le coach', go: () => router.push({ pathname: '/coach', params: { context: 'today' } }) } : null,
-    shown.type === 'box' && !done && !checkinFirst ? { label: 'Plus de détails', go: () => markDone(a) } : null,
+    shown.type === 'box' && !done && !checkinFirst ? { label: 'Saisir à la main', go: () => markDone(a) } : null,
     done || shown.type === 'rest' ? { label: 'Détail du jour', go: () => openDay(d) } : null].filter(Boolean).slice(0, 2) as { label: string; go: () => void }[];
 
   return (
@@ -101,7 +101,7 @@ export default function Today() {
           <View style={{ marginTop: space.s4 }}>
             {checkinFirst ? <Button kind="primary" block label="Faire mon check-in" onPress={() => router.push('/checkin')} />
               : primary ? <Button kind="primary" block label={primary.label} onPress={primary.go} />
-              : shown.type === 'box' && !done ? <QuickFeedback a={a} /> : null}
+              : shown.type === 'box' && !done ? <Row gap={8}><Icon name="link" size={15} color={c.stageInk2} /><T v="small" color={c.stageInk2} style={{ flex: 1 }}>Validée automatiquement quand ton cours arrive de Strava.</T></Row> : null}
             {links.length ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space.s5, marginTop: space.s1 }}>
               {links.map(l => <Button key={l.label} small kind="ghost" label={l.label} style={{ paddingHorizontal: 0 }} onPress={l.go} />)}
             </View> : null}
