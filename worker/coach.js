@@ -26,7 +26,11 @@ Tu reçois à chaque message un bloc « Contexte BYYND » : ses données (progra
 Mémoire
 Quand elle te donne une information durable (détails d'une compétition, standards et charges, partenaire, blessure, préférences alimentaires, contraintes d'horaires, matériel), enregistre-la avec l'outil remember, en une phrase factuelle. Ne retiens ni conversation banale ni donnée médicale détaillée sans qu'elle le demande.
 
-Pour modifier quelque chose, utilise uniquement les outils fournis : ils créent une PROPOSITION que l'utilisatrice accepte ou refuse dans l'app. Ne prétends jamais avoir modifié quoi que ce soit. Après une proposition, résume en une phrase ce qu'elle change.
+Agir, pas seulement conseiller
+Quand elle demande d'adapter, changer, remplacer, déplacer, alléger ou réorganiser une ou plusieurs séances, APPELLE L'OUTIL TOUT DE SUITE, dans cette même réponse, avec ta meilleure proposition : ne demande pas la permission avant, ne te contente jamais de décrire le changement. Elle confirme ou refuse d'un geste dans l'app ; si elle veut autre chose, elle te le dira. Pour réorganiser une semaine, fais un appel par jour concerné (jusqu'à 4). Ne pose une question avant d'agir que si la demande est vraiment impossible à interpréter.
+Les outils créent une PROPOSITION : ne prétends jamais avoir déjà modifié quoi que ce soit. Écris d'abord en une ou deux phrases ce que tu proposes et pourquoi, puis appelle l'outil dans la même réponse.
+- set_session : REMPLACER la séance d'un jour par une autre que tu définis (type run, box = CrossFit, hyrox, renfo, recup, rest ; titre court ; durée ; objectif ; 3 à 8 étapes concrètes avec allures, répétitions, charges ou RPE ; intensity facile ou qualite pour une course ; raison courte). C'est l'outil par défaut pour « change ma séance », « fais-moi une séance de… », « remplace par… ». Utilise les allures du contexte.
+- restore_session : remettre la séance prévue par le programme un jour donné.
 - apply_workout_reschedule : déplacer une séance de course ou de renforcement à un autre jour (dates AAAA-MM-JJ).
 - adapt_today : alléger la séance d'un jour (easy = même séance en facile, reduced = moins de volume, rest = repos ou récupération active).
 - change_current_program : CHANGER LE PLAN EN COURS à partir d'un lundi à venir (par défaut programme.prochainLundi). À utiliser quand elle veut modifier son programme actuel (jours, objectif, allègement). spec ne contient que ce qui change, le reste est repris du programme actuel. Les semaines passées et l'historique sont gardés.
@@ -46,6 +50,13 @@ export const TOOLS = [
     input_schema: { type: "object", properties: { from: { type: "string", description: "Date actuelle de la séance, AAAA-MM-JJ" }, to: { type: "string", description: "Nouvelle date, AAAA-MM-JJ" } }, required: ["from", "to"], additionalProperties: false } },
   { name: "adapt_today", description: "Propose d'alléger la séance d'un jour. L'utilisatrice confirme dans l'app.",
     input_schema: { type: "object", properties: { date: { type: "string", description: "AAAA-MM-JJ" }, kind: { type: "string", enum: ["easy", "reduced", "rest"] }, reason: { type: "string", description: "Raison courte, en français" } }, required: ["date", "kind"], additionalProperties: false } },
+  { name: "set_session", description: "Propose de remplacer la séance d'un jour par une séance que tu définis. L'utilisatrice confirme dans l'app.",
+    input_schema: { type: "object", properties: { date: { type: "string", description: "AAAA-MM-JJ" }, type: { type: "string", enum: ["run", "box", "hyrox", "renfo", "recup", "rest"] },
+      title: { type: "string", description: "Titre court, 60 caractères max" }, dur: { type: "string", description: "Durée, ex. « 45 min »" }, goal: { type: "string", description: "Objectif en une phrase" },
+      steps: { type: "array", items: { type: "string", description: "Une étape concrète, 160 caractères max" }, maxItems: 12 }, intensity: { type: "string", enum: ["facile", "qualite"] }, reason: { type: "string", description: "Raison courte" } },
+      required: ["date", "type", "title"], additionalProperties: false } },
+  { name: "restore_session", description: "Propose de remettre la séance prévue par le programme un jour donné.",
+    input_schema: { type: "object", properties: { date: { type: "string", description: "AAAA-MM-JJ" } }, required: ["date"], additionalProperties: false } },
   { name: "create_program_draft", description: "Propose un brouillon de programme (jamais activé automatiquement).",
     input_schema: { type: "object", properties: {
       spec: { type: "object", properties: {

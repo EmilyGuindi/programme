@@ -2,28 +2,25 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Pressable, View } from 'react-native';
 import { ask, appendMessages, decide, ensureMemory, memory, providerFor, threadById } from '@/ai/studio';
-import { SUGGESTIONS } from '@/ai/local';
-import { setupRemoteCoach } from '@/ai/remote';
+import { registerClaude, setupRemoteCoach } from '@/ai/remote';
+
+registerClaude(); // Claude prêt dès l'ouverture de l'écran, sans attendre le réseau
 import { useDictation } from '@/ai/voice';
 import { attachmentLabel, MAX_ATTACHMENTS, pickFile, pickPhoto, type Attachment } from '@/ai/attachments';
 import { remoteDetail } from '@/ai/claude';
 import { CoachCardView, RichText } from '@/components/coach-cards';
-import { CoachGuided } from '@/components/coach-guided';
-import { Icon } from '@/components/icons';
+import { Icon, type IconName } from '@/components/icons';
 import { Sheet } from '@/components/sheet';
 import { Button, Input, Row, T } from '@/components/ui';
-import { sportDay } from '@/engine/dates';
+import { daysBetween, sportDay } from '@/engine/dates';
+import { adapted, doneOn, recovery } from '@/engine/coach';
+import { nextEvent } from '@/engine/race';
 import { SCOPE_LABEL } from '@/engine/tools';
-import type { CoachMsg } from '@/engine/types';
+import type { AppState, CoachMsg, ISODate } from '@/engine/types';
 import { haptic, useReducedMotion } from '@/feedback';
 import { getState, update, useApp } from '@/store/store';
 import { radius, space, useTheme } from '@/theme/tokens';
 
-const CONTEXT_SUGGESTIONS: Record<string, string[]> = {
-  today: ['Je suis fatiguée aujourd\'hui, adapte ma séance', 'Mets ma séance de demain à un autre jour', 'Ma semaine'],
-  program: ['La semaine prochaine, mets mon running lundi plutôt que mercredi', 'Construis mon programme après celui de février', 'Je veux garder deux CrossFit, un HYROX et progresser en running'],
-  progress: ['Pourquoi je ne progresse plus en allure ?', 'Regarde mes trois dernières sorties et dis-moi ce qui change', 'Prépare-moi pour mon prochain 10 km'],
-};
 
 /** Coach Studio : conversation, cartes structurées, actions confirmées. Ouvert depuis Aujourd'hui, Programme ou Progression. */
 export default function CoachStudio() {
@@ -31,7 +28,6 @@ export default function CoachStudio() {
   const s = useApp(); const { c } = useTheme(); const today = sportDay();
   const [threadId, setThreadId] = useState<string | null>(threadParam || null); const [text, setText] = useState(q || ''); const [busy, setBusy] = useState(false); const [note, setNote] = useState('');
   const th = threadById(s, threadId); const msgs = th?.messages || []; const prov = providerFor(s);
-  const sugg = CONTEXT_SUGGESTIONS[context || ''] || SUGGESTIONS.slice(0, 4);
   const [, setReady] = useState(0); useEffect(() => { setupRemoteCoach().then(() => setReady(x => x + 1)); }, []);
 
   const [files, setFiles] = useState<Attachment[]>([]);
@@ -63,6 +59,13 @@ export default function CoachStudio() {
     haptic(res.ok && accept ? 'success' : 'select'); setNote(res.message);
   }
 
+  /** Propositions encore ouvertes d'un message, applicables (non bloquées). */
+  const openCards = (m: CoachMsg) => (m.cards || []).filter(cd => (cd.kind === 'action' || cd.kind === 'program') && !m.decisions?.[cd.id] && !cd.issues.some(i => i.severity === 'block'));
+  function applyAll(m: CoachMsg) {
+    const ids = openCards(m).map(cd => cd.id); let ok = 0, ko = 0; let last = '';
+    update(st => { for (const id of ids) { const r = decide(st, threadId!, m.id, id, true, today); if (r.ok) ok++; else { ko++; last = r.message; } } });
+    haptic(ko ? 'select' : 'success'); setNote(ko ? `${ok} appliquée${ok > 1 ? 's' : ''}, ${ko} refusée${ko > 1 ? 's' : ''} par les règles : ${last}` : `${ok} changements appliqués.`);
+  }
   const canSend = (!!text.trim() || files.length > 0) && !busy;
   const composer = (<View style={{ gap: space.s2 }}>
     {voice.listening ? <View accessibilityLiveRegion="polite"><T v="xs" color={c.stop} style={{ fontWeight: '700' }}>● Je t'écoute… appuie sur ■ quand tu as fini</T></View> : voice.error ? <T v="xs" color={c.warn}>{voice.error}</T> : null}
@@ -92,27 +95,38 @@ export default function CoachStudio() {
 
   return (
     <Sheet title="Coach" sub={prov.id === 'claude' ? 'Claude, avec tes données BYYND' : `${prov.name}, règles locales`} footer={composer} scrollEndKey={msgs.length * 1000 + (pending ? 1 + Math.floor(pending.text.length / 60) : 0)}>
-      <Row gap={space.s2} style={{ marginBottom: space.s4, flexWrap: 'wrap' }}>
-        {threadId ? <Button small label="Nouvelle conversation" onPress={() => { setThreadId(null); setNote(''); carried.current = []; }} /> : null}
-        {s.coach?.provider === 'local' ? <View style={{ width: '100%', backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s3, gap: space.s2 }}>
-          <T v="small" style={{ fontWeight: '700' }}>Mode règles locales</T>
-          <T v="small" muted>Ce coach simple ne comprend que quelques phrases et ne lit pas les photos. Claude comprend tout, avec tes données.</T>
-          <Button small kind="primary" style={{ alignSelf: 'flex-start' }} label="Passer à Claude" onPress={() => { update(st => { ensureMemory(st).provider = 'claude'; }); haptic('select'); }} />
-        </View> : null}
-        {prov.id !== 'claude' && s.coach?.provider !== 'local' ? <View style={{ width: '100%', backgroundColor: c.warnSoft, borderRadius: radius.r2, padding: space.s3 }}><T v="small" color={c.warn} style={{ fontWeight: '700' }}>Claude n'est pas actif</T><T v="small">{remoteDetail()}</T></View> : null}
-        <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label={`Historique et données${memory(s).threads.length ? ` (${memory(s).threads.length})` : ''}`} onPress={() => router.push('/coach-settings')} />
+      {/* Barre d'outils discrète : nouvelle conversation et historique, rien d'autre. */}
+      <Row between style={{ marginBottom: space.s3, minHeight: 32 }}>
+        {threadId && !busy ? <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label="＋ Nouvelle conversation" onPress={() => { setThreadId(null); setNote(''); carried.current = []; }} /> : <View />}
+        <Button small kind="ghost" style={{ paddingHorizontal: 0 }} label={`Historique${memory(s).threads.length ? ` (${memory(s).threads.length})` : ''}`} onPress={() => router.push('/coach-settings')} />
       </Row>
+      {s.coach?.provider === 'local' ? <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s3, gap: space.s2, marginBottom: space.s4 }}>
+        <T v="small" style={{ fontWeight: '700' }}>Mode règles locales</T>
+        <T v="small" muted>Ce coach simple ne comprend que quelques phrases. Claude comprend tout et modifie tes séances.</T>
+        <Button small kind="primary" style={{ alignSelf: 'flex-start' }} label="Passer à Claude" onPress={() => { update(st => { ensureMemory(st).provider = 'claude'; }); haptic('select'); }} />
+      </View> : null}
+      {prov.id !== 'claude' && s.coach?.provider !== 'local' && remoteDetail() ? <View style={{ backgroundColor: c.warnSoft, borderRadius: radius.r2, padding: space.s3, marginBottom: space.s4 }}><T v="small" color={c.warn} style={{ fontWeight: '700' }}>Claude n'est pas actif</T><T v="small">{remoteDetail()}</T></View> : null}
 
       {!msgs.length && !pending ? <>
-        <T v="small" muted style={{ marginBottom: space.s2 }}>Essaie</T>
-        <View style={{ gap: 8, marginBottom: space.s5 }}>{sugg.map(x => <Pressable key={x} accessibilityRole="button" onPress={() => send(x)} style={({ pressed }) => ({ backgroundColor: pressed ? c.surface2 : c.surface, borderRadius: radius.r2, paddingVertical: 12, paddingHorizontal: space.s4 })}><T>{x}</T></Pressable>)}</View>
-        <CoachGuided />
+        <Brief />
+        <T v="h3" style={{ marginTop: space.s5, marginBottom: space.s1 }}>Que veux-tu faire ?</T>
+        <T v="small" muted style={{ marginBottom: space.s3 }}>Le coach connaît ton programme, tes séances et ta forme. Il propose, tu valides d'un geste.</T>
+        <View style={{ gap: space.s2 }}>{actionsFor(s, today, context).map(x => (
+          <Pressable key={x.title} accessibilityRole="button" accessibilityLabel={x.title} accessibilityHint={x.sub}
+            onPress={() => { haptic('select'); if (x.send) send(x.send); else setText(x.fill || ''); }}
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.s3, backgroundColor: pressed ? c.surface2 : c.surface, borderRadius: radius.r2, paddingVertical: 14, paddingHorizontal: space.s4 })}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' }}><Icon name={x.icon} size={18} color={c.accent} /></View>
+            <View style={{ flex: 1 }}><T v="label">{x.title}</T><T v="xs" muted>{x.sub}</T></View>
+            <T muted>{x.send ? '›' : '✎'}</T>
+          </Pressable>))}</View>
+        <T v="xs" muted style={{ marginTop: space.s4 }}>Ou écris-lui librement, ou dicte avec le micro : « remplace mon CrossFit de jeudi par un footing », « que manger avant ma compet ? »…</T>
       </> : msgs.map(m => m.role === 'user'
         ? <View key={m.id} style={{ alignSelf: 'flex-end', maxWidth: '85%', backgroundColor: c.accentSoft, borderRadius: 18, borderBottomRightRadius: 6, paddingVertical: 10, paddingHorizontal: 14, marginBottom: space.s3, gap: 4 }}>
           {(m.files || []).map((f, i) => <T key={i} v="xs" color={c.accent} style={{ fontWeight: '600' }}>{`📎 ${attachmentLabel(f)}`}</T>)}{m.text ? <T>{m.text}</T> : null}</View>
         : <View key={m.id} style={{ marginBottom: space.s4 }}>
           <Row gap={8} style={{ alignItems: 'flex-start' }}><Icon name="coach" size={18} color={c.accent} /><View style={{ flex: 1 }}><RichText text={m.text} /></View></Row>
           {(m.memo || []).map((n, i) => <T key={i} v="xs" color={c.ink2} style={{ marginTop: 6 }}>{`📝 Retenu : ${n}`}</T>)}
+          {openCards(m).length >= 2 ? <Button kind="primary" block style={{ marginTop: space.s3 }} label={`Tout appliquer (${openCards(m).length})`} onPress={() => applyAll(m)} /> : null}
           {(m.cards || []).map(cd => <CoachCardView key={cd.id} card={cd} decision={m.decisions?.[cd.id]} onDecide={cd.kind === 'action' || cd.kind === 'program' ? a => onDecide(m, cd.id, a) : undefined} />)}
           {m.scopes?.length ? <T v="xs" muted style={{ marginTop: 6 }}>{`Données utilisées : ${m.scopes.map(x => SCOPE_LABEL[x].toLowerCase()).join(', ')}.`}</T> : null}
         </View>)}
@@ -125,8 +139,7 @@ export default function CoachStudio() {
         </View>
       </> : null}
       {note ? <View accessibilityLiveRegion="polite" style={{ marginBottom: space.s3 }}><T v="small" color={c.accent}>{note}</T></View> : null}
-      {msgs.length ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: space.s2 }}>{sugg.slice(0, 2).map(x => <Button key={x} small label={x.length > 34 ? x.slice(0, 33) + '…' : x} onPress={() => send(x)} />)}</View> : null}
-      <T v="xs" muted style={{ marginTop: space.s5 }}>Le coach propose, tu décides : rien ne change sans ton accord. Il ne remplace pas un avis médical.</T>
+      <T v="xs" muted style={{ marginTop: space.s5 }}>Rien ne change sans ton accord. Le coach ne remplace pas un avis médical.</T>
     </Sheet>
   );
 }
@@ -140,4 +153,33 @@ function Thinking({ since, label }: { since: number; label: string }) {
     <Row gap={4}>{[0, 1, 2].map(i => <View key={i} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: c.accent, opacity: reduced ? 0.7 : (n % 3 === i ? 1 : 0.3) }} />)}</Row>
     <T v="small" muted>{`${label}${secs >= 3 ? `, ${secs} s` : '…'}`}</T>
   </Row>;
+}
+
+type Action = { icon: IconName; title: string; sub: string; send?: string; fill?: string };
+/** Les 4 à 5 choses que l'on vient vraiment demander au coach, formulées à partir des données du jour. */
+function actionsFor(s: AppState, d: ISODate, context?: string): Action[] {
+  const a = adapted(s, d); const sh = a.replaced || a; const ev = nextEvent(s, d, 90);
+  const today: Action = a.type === 'rest' || a.type === 'event'
+    ? { icon: 'today', title: 'Changer une séance', sub: 'Remplacer, alléger ou déplacer une séance de la semaine', fill: 'Change ma séance de ' }
+    : { icon: 'today', title: 'Adapter ma séance du jour', sub: `${sh.title} : selon ta forme, ton temps, ton envie`, send: `Adapte ma séance d'aujourd'hui (${sh.title}) à ma forme du jour et propose-la directement.` };
+  const xs: Action[] = [today,
+    { icon: 'calendar', title: 'Réorganiser ma semaine', sub: 'Un empêchement, un jour en moins, une envie : dis-le', fill: 'Réorganise ma semaine : ' },
+    ev ? { icon: 'flag', title: `Préparer ${ev.name}`, sub: `Dans ${daysBetween(d, ev.date)} jours : séances, affûtage, stratégie`, send: `Prépare-moi pour ${ev.name} (${ev.date}) : ajuste mes séances d'ici là et donne-moi la stratégie.` }
+      : { icon: 'plan', title: 'Faire évoluer mon programme', sub: 'Changer les jours, l\'objectif, préparer la suite', fill: 'Je voudrais changer mon programme : ' },
+    { icon: 'stats', title: 'Analyser ma progression', sub: 'Ce qui avance, ce qui coince, quoi changer', send: 'Analyse mes 4 dernières semaines : ce qui progresse, ce qui coince, et ce que tu changerais. Propose les changements directement.' },
+    { icon: 'flame', title: 'Une question nutrition', sub: 'Avant, pendant, après l\'effort', fill: 'Nutrition : ' },
+  ];
+  return context === 'progress' ? [xs[3], xs[2], xs[0], xs[1], xs[4]] : context === 'program' ? [xs[1], xs[2], xs[0], xs[3], xs[4]] : xs;
+}
+
+/** Brief du jour : ce que le coach sait déjà, en trois lignes. */
+function Brief() {
+  const s = useApp(); const { c } = useTheme(); const d = sportDay(); const a = adapted(s, d); const sh = a.replaced || a; const r = recovery(s, d); const ev = nextEvent(s, d, 90);
+  const lv = { vert: ['Forme au vert', c.ok], orange: ['Forme moyenne', c.warn], rouge: ['Récupération prioritaire', c.stop], inconnu: ['Pas encore de check-in', c.ink3] }[r.level] as [string, string];
+  return <View style={{ backgroundColor: c.surface, borderRadius: radius.r2, padding: space.s4, gap: 6 }}>
+    <T v="overline" color={c.accent}>Brief du jour</T>
+    <T v="label">{a.type === 'rest' ? 'Jour de repos' : `${sh.title}${sh.dur ? `, ${sh.dur}` : ''}`}{doneOn(s, d) ? ' ✓' : ''}</T>
+    <Row gap={6}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: lv[1] }} /><T v="small" muted style={{ flex: 1 }}>{r.level === 'inconnu' ? lv[0] : `${lv[0]} · ${r.reasons[0]}`}</T></Row>
+    {ev ? <T v="small" muted>{`${ev.name} dans ${daysBetween(d, ev.date)} jours`}</T> : null}
+  </View>;
 }

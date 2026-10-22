@@ -53,13 +53,13 @@ export default function Progress() {
 
       {/* 2 · Accomplissements : les réussites d'abord, un seul prochain jalon */}
       <UnlockMoment />
-      <SectionHeader title="Accomplissements" action="Tout voir" onAction={() => go('records')} />
-      <Pressable onPress={() => go('records')} accessibilityRole="button" accessibilityLabel={`Accomplissements : ${got.length} atteints sur ${ach.length}`} style={({ pressed }) => ({ backgroundColor: pressed ? c.surface2 : c.surface, borderRadius: radius.r2, marginBottom: layout.gap, overflow: 'hidden' })}>
+      <SectionHeader title="Jalons du programme" action="Tout voir" onAction={() => go('records')} />
+      <Pressable onPress={() => go('records')} accessibilityRole="button" accessibilityLabel={`Jalons du programme : ${got.length} atteints sur ${ach.length}`} style={({ pressed }) => ({ backgroundColor: pressed ? c.surface2 : c.surface, borderRadius: radius.r2, marginBottom: layout.gap, overflow: 'hidden' })}>
         <View style={{ padding: layout.pad, paddingBottom: nxt ? space.s2 : layout.pad }}>
           <Row gap={6} style={{ alignItems: 'flex-end' }}><T v="num" style={{ fontSize: 22, lineHeight: 26 }}>{`${got.length}`}</T><T v="small" muted style={{ paddingBottom: 2 }}>{`atteint${got.length > 1 ? 's' : ''} sur ${ach.length}`}</T></Row>
           {got.length && !celebrating ? <Row gap={space.s2} style={{ marginTop: space.s3, marginLeft: -6 }}>{got.slice(0, 5).map(a => <AchBadge key={a.id} cat={a.cat} status="unlocked" major={a.tier === 'major'} size={52} label={a.title} />)}</Row>
             : !got.length ? <T v="small" muted style={{ marginTop: space.s1 }}>Les premiers arrivent avec tes séances réelles.</T> : null}
-          {fresh ? <T v="small" color={c.accent} style={{ marginTop: space.s3, fontWeight: '600' }}>{`Nouveau record : ${fresh.label.toLowerCase()}, ${fresh.value}`}</T> : null}
+          {fresh ? <T v="small" color={c.accent} style={{ marginTop: space.s3, fontWeight: '600' }}>{`Nouveau record perso : ${fresh.label.toLowerCase()}, ${fresh.value}`}</T> : null}
         </View>
         {nxt ? <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line2 }}><T v="xs" muted style={{ paddingHorizontal: layout.pad, paddingTop: space.s3 }}>Prochain jalon</T><MilestoneRow a={nxt} last /></View> : null}
       </Pressable>
@@ -79,7 +79,7 @@ export default function Progress() {
       <ListGroup title="Analyses">
         <ListRow title={recapNew ? `Bilan de la semaine ${recap}` : 'Bilans de la semaine'} sub={recapNew ? 'Nouveau, 30 secondes' : recap ? `${nRecaps} bilan${nRecaps > 1 ? 's' : ''}` : 'Le premier arrive dimanche soir'} left={<Icon name="story" color={recapNew ? c.accent : undefined} />} right={recapNew ? <Chip tone="accent" label="Nouveau" /> : undefined} onPress={() => (recapNew ? router.push({ pathname: '/recap/[week]', params: { week: String(recap) } }) : go('recaps'))} />
         <ListRow title="Mon parcours" sub={`Chapitre ${ch.n}, ${ch.name.toLowerCase()}`} left={<Icon name="path" />} onPress={() => go('journey')} />
-        <ListRow title="Records" sub={recs.length ? `${recs.length} record${recs.length > 1 ? 's' : ''} mesuré${recs.length > 1 ? 's' : ''}` : 'Avec tes premières sorties et charges'} left={<Icon name="peak" />} onPress={() => go('records')} />
+        <ListRow title="Records personnels" sub={recs.length ? `${recs.length} record${recs.length > 1 ? "s" : ""} de tous les temps, Strava compris` : 'Avec tes premières sorties et charges'} left={<Icon name="peak" />} onPress={() => go('records')} />
         <ListRow title="Régularité" sub="Toutes les semaines du cycle" left={<Icon name="calendar" />} onPress={() => go('regularity')} />
         <ListRow title="Dépense des activités" sub={e7.withData ? `${e7.total.toLocaleString('fr-FR')} kcal estimées sur 7 jours` : 'Estimations de ta montre via Strava'} left={<Icon name="flame" />} onPress={() => go('energy')} />
         <ListRow last title="Renforcement" sub={nStr ? `${nStr} séance${nStr > 1 ? 's' : ''} enregistrée${nStr > 1 ? 's' : ''}` : 'Tes charges, séance après séance'} left={<Icon name="dumbbell" />} onPress={() => go('strength')} />

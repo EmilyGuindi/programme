@@ -1,5 +1,5 @@
 import { adapted, comparable, countsFor, deloadOf, mandatoryStats, phasesOf, runsList, trend, weekOf, weekStart, weightSeries } from './coach';
-import { achievementsFor } from './achievements';
+import { achievementsFor, programWindow } from './achievements';
 import { addDays, fmtShort, mmss, num } from './dates';
 import { newRecords, recordsUntil } from './records';
 import type { AppState, ISODate } from './types';
@@ -32,9 +32,10 @@ function sequence(steps: Omit<Step, 'status'>[], achieved: (Date | ISODate | nul
   });
 }
 
-export function runningJourney(s: AppState, today: ISODate): Step[] {
+export function runningJourney(s0: AppState, today: ISODate): Step[] {
   // Même règle et même compteur que l'accomplissement « Footing régulier » : un seul calcul.
-  const reg = achievementsFor(s, today).find(a => a.id === 'run-regular')!;
+  const reg = achievementsFor(s0, today).find(a => a.id === 'run-regular')!;
+  const s = programWindow(s0, today); // étapes du programme : uniquement ce qui a été fait pendant ce programme
   const ws = weekSuccess(s, today); const easyWeeks = ws.map(w => w.easyRuns >= 1);
   const runs = runsList(s).filter(r => r.type === 'running');
   const easy = runs.filter(r => (r.kind || 'facile') === 'facile' && (r.effort == null || r.effort <= 5));
@@ -57,7 +58,8 @@ export function runningJourney(s: AppState, today: ISODate): Step[] {
   return sequence(steps, [reg.date, r45?.date || null, improved, firstRef?.d || null, better?.d || null, best10 && best10.raw <= 3300 ? best10.date : null]);
 }
 
-export function bodyJourney(s: AppState, today: ISODate): Step[] {
+export function bodyJourney(s0: AppState, today: ISODate): Step[] {
+  const s = programWindow(s0, today);
   const ws = weekSuccess(s, today); const okWeeks = ws.map(w => w.ok);
   const main = ['f1', 'm1', 'm2', 'm3'];
   const sessions = Object.keys(s.strength).filter(d => d <= today).sort();

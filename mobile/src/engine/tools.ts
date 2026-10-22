@@ -17,7 +17,7 @@ export const SCOPE_LABEL: Record<DataScope, string> = { programs: 'Objectifs et 
 export const DEFAULT_PERMS: Record<DataScope, boolean> = { programs: true, history: true, strava: true, recovery: true, body: false, sensitive: false };
 export const permsOf = (s: AppState): Record<DataScope, boolean> => ({ ...DEFAULT_PERMS, ...(s.coach?.perms || {}) });
 
-type Param = { type: 'date' | 'int' | 'string' | 'object' | 'enum'; required?: boolean; min?: number; max?: number; values?: string[]; max_len?: number };
+type Param = { type: 'date' | 'int' | 'string' | 'object' | 'enum' | 'list'; max_items?: number; required?: boolean; min?: number; max?: number; values?: string[]; max_len?: number };
 export interface ToolDef { name: string; description: string; scopes: DataScope[]; write: boolean; params: Record<string, Param> }
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -31,6 +31,9 @@ export const TOOLS: ToolDef[] = [
   { name: 'preview_workout_reschedule', description: 'Vérifie le déplacement d\'une séance (conflits, récupération).', scopes: ['programs'], write: false, params: { from: { type: 'date', required: true }, to: { type: 'date', required: true } } },
   { name: 'apply_workout_reschedule', description: 'Déplace une séance (après confirmation).', scopes: ['programs'], write: true, params: { from: { type: 'date', required: true }, to: { type: 'date', required: true }, swap: { type: 'enum', values: ['yes', 'no'] } } },
   { name: 'adapt_today', description: 'Allège la séance d\'un jour (après confirmation).', scopes: ['programs', 'recovery'], write: true, params: { date: { type: 'date', required: true }, kind: { type: 'enum', values: ['easy', 'reduced', 'rest'], required: true }, reason: { type: 'string', max_len: 160 } } },
+  { name: 'set_session', description: 'Remplace la séance d\'un jour par une autre (type, titre, durée, étapes), après confirmation.', scopes: ['programs'], write: true,
+    params: { date: { type: 'date', required: true }, type: { type: 'enum', values: ['run', 'box', 'hyrox', 'renfo', 'recup', 'rest'], required: true }, title: { type: 'string', required: true, max_len: 60 }, dur: { type: 'string', max_len: 40 }, goal: { type: 'string', max_len: 200 }, steps: { type: 'list', max_items: 12, max_len: 160 }, intensity: { type: 'enum', values: ['facile', 'qualite'] }, reason: { type: 'string', max_len: 160 } } },
+  { name: 'restore_session', description: 'Remet la séance prévue par le programme un jour donné (annule un changement).', scopes: ['programs'], write: true, params: { date: { type: 'date', required: true } } },
   { name: 'create_program_draft', description: 'Crée un brouillon de programme (jamais activé).', scopes: ['programs'], write: true, params: { spec: { type: 'object', required: true }, start: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
   { name: 'update_program_draft', description: 'Modifie un brouillon existant (semaine type, objectif, dates, nom). Reste un brouillon.', scopes: ['programs'], write: true, params: { id: { type: 'string', required: true, max_len: 40 }, spec: { type: 'object' }, start: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
   { name: 'change_current_program', description: 'Change le programme en cours à partir d\'un lundi à venir : l\'historique est gardé, la suite suit la nouvelle semaine type (après confirmation).', scopes: ['programs'], write: true, params: { spec: { type: 'object', required: true }, from: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
@@ -39,7 +42,7 @@ export const TOOLS: ToolDef[] = [
 ];
 export const toolByName = (n: string) => TOOLS.find(t => t.name === n) || null;
 /** Schémas JSON des fonctions (pour un futur modèle externe ou serveur MCP). */
-export const toolSchemas = () => TOOLS.map(t => ({ name: t.name, description: t.description, input_schema: { type: 'object', properties: Object.fromEntries(Object.entries(t.params).map(([k, p]) => [k, p.type === 'date' ? { type: 'string', format: 'date' } : p.type === 'int' ? { type: 'integer', minimum: p.min, maximum: p.max } : p.type === 'enum' ? { type: 'string', enum: p.values } : p.type === 'object' ? { type: 'object' } : { type: 'string', maxLength: p.max_len }])), required: Object.entries(t.params).filter(([, p]) => p.required).map(([k]) => k), additionalProperties: false } }));
+export const toolSchemas = () => TOOLS.map(t => ({ name: t.name, description: t.description, input_schema: { type: 'object', properties: Object.fromEntries(Object.entries(t.params).map(([k, p]) => [k, p.type === 'date' ? { type: 'string', format: 'date' } : p.type === 'int' ? { type: 'integer', minimum: p.min, maximum: p.max } : p.type === 'enum' ? { type: 'string', enum: p.values } : p.type === 'object' ? { type: 'object' } : p.type === 'list' ? { type: 'array', items: { type: 'string', maxLength: p.max_len }, maxItems: p.max_items } : { type: 'string', maxLength: p.max_len }])), required: Object.entries(t.params).filter(([, p]) => p.required).map(([k]) => k), additionalProperties: false } }));
 
 export type Checked = { ok: true; tool: ToolDef; args: Record<string, unknown> } | { ok: false; error: string };
 /** Contrôle d'un appel proposé : fonction connue, permissions accordées, paramètres conformes. Les clés inconnues sont refusées. */
@@ -59,6 +62,7 @@ export function checkCall(s: AppState, name: unknown, args: unknown): Checked {
     if (p.type === 'enum' && !p.values!.includes(v as string)) return { ok: false, error: `Valeur invalide : ${k}.` };
     if (p.type === 'string' && !(typeof v === 'string' && v.length <= (p.max_len || 200))) return { ok: false, error: `Texte invalide : ${k}.` };
     if (p.type === 'object' && !(typeof v === 'object' && !Array.isArray(v))) return { ok: false, error: `Objet invalide : ${k}.` };
+    if (p.type === 'list' && !(Array.isArray(v) && v.length <= (p.max_items || 12) && v.every(x => typeof x === 'string' && x.length <= (p.max_len || 200)))) return { ok: false, error: `Liste invalide : ${k}.` };
     out[k] = v;
   }
   return { ok: true, tool, args: out };
@@ -106,6 +110,26 @@ export function prepare(s: AppState, name: string, a: Record<string, unknown>, t
       const what = kind === 'rest' ? 'Repos ou récupération active à la place' : kind === 'easy' ? 'Version facile : même séance, intensité basse' : 'Version réduite : moins de volume';
       return { title: `${p.title}, ${fmtDay(d)}`, summary: what, consequences: [`${what}.`, 'Le reste de la semaine ne change pas.', 'Annulable depuis la séance du jour.'], issues: p.type === 'rest' ? [{ severity: 'info', text: 'C\'est déjà un jour de repos.' }] : [], executable: p.type !== 'rest' };
     }
+    case 'set_session': {
+      const d = a.date as ISODate; const cur = adapted(s, d); const t = String(a.type);
+      const label: Record<string, string> = { run: 'Course', box: 'CrossFit', hyrox: 'HYROX', renfo: 'Renforcement', recup: 'Récupération active', rest: 'Repos' };
+      if (d < today) return { title: 'Jour passé', summary: '', consequences: [], issues: [{ severity: 'block', text: 'On ne change pas une séance passée.' }], executable: false };
+      if (d > addDays(today, 60)) return { title: 'Trop loin', summary: '', consequences: [], issues: [{ severity: 'block', text: 'Change une séance des 60 prochains jours ; au-delà, modifie le programme.' }], executable: false };
+      if (cur.type === 'event') return { title: 'Jour de compétition', summary: '', consequences: [], issues: [{ severity: 'block', text: `${cur.title} ce jour-là : la compétition reste prioritaire.` }], executable: false };
+      const steps = ((a.steps as string[]) || []).map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+      const issues: Prepared['issues'] = [];
+      const r = recovery(s, d); if ((t === 'run' && a.intensity === 'qualite' || t === 'box' || t === 'hyrox') && r.level === 'rouge') issues.push({ severity: 'warn', text: 'Récupération au rouge ce jour-là : séance intense déconseillée.' });
+      const prevHard = adapted(s, addDays(d, -1)); if (t === 'run' && a.intensity === 'qualite' && prevHard.type === 'run' && prevHard.run?.kind === 'qualite') issues.push({ severity: 'warn', text: 'Deux séances d\'allure de suite : garde au moins un jour facile entre les deux.' });
+      return { title: `${fmtDay(d)} : ${String(a.title)}`, summary: `${cur.replaced?.title || cur.title} → ${String(a.title)}${a.dur ? ` (${a.dur})` : ''}`,
+        consequences: [`${label[t]}${a.dur ? `, ${a.dur}` : ''} à la place de « ${cur.replaced?.title || cur.title} ».`, ...steps.slice(0, 6).map(x => `• ${x}`), 'Le reste du programme ne change pas. Annulable depuis la séance.'],
+        issues, executable: true };
+    }
+    case 'restore_session': {
+      const d = a.date as ISODate; const ov = s.overrides[d];
+      if (!ov?.custom && !ov?.adj) return { title: 'Rien à annuler', summary: '', consequences: [], issues: [{ severity: 'info', text: 'Cette séance est déjà celle du programme.' }], executable: false };
+      const { custom, adj, ...rest } = ov; const orig = adapted({ ...s, overrides: { ...s.overrides, [d]: rest } }, d);
+      return { title: `${fmtDay(d)} : revenir au programme`, summary: `${(orig.replaced || orig).title}`, consequences: [`Séance prévue rétablie : ${(orig.replaced || orig).title}.`], issues: [], executable: d >= today };
+    }
     case 'create_program_draft': {
       const prev = previousProgram(s, today); const spec = parseSpec(a.spec, { ...specOf(prev), deloadEvery: specOf(prev).deloadEvery || 4 });
       const start = (a.start as ISODate) || suggestedStart(s, today); const goal = spec.goalEventId ? s.events.find(e => e.id === spec.goalEventId) : null;
@@ -150,6 +174,11 @@ export function execute(st: AppState, name: string, args: unknown, today: ISODat
   switch (name) {
     case 'apply_workout_reschedule': { const chk = checkMove(st, a.from as ISODate, a.to as ISODate, today, false); applyMove(st, a.from as ISODate, a.to as ISODate, !!chk.swapWith && a.swap !== 'no'); return { ok: true, message: pr.summary }; }
     case 'adapt_today': { const d = a.date as ISODate; st.overrides[d] = { ...(st.overrides[d] || {}), adj: { kind: a.kind as 'easy' | 'reduced' | 'rest', reason: String(a.reason || 'Adapté avec le coach').slice(0, 160), proposalId: `coach-${d}` } }; return { ok: true, message: pr.summary }; }
+    case 'set_session': { const d = a.date as ISODate; const steps = ((a.steps as string[]) || []).map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+      const { adj, ...rest } = st.overrides[d] || {};
+      st.overrides[d] = { ...rest, custom: { type: a.type as 'run', title: String(a.title).trim(), dur: (a.dur as string) || undefined, goal: (a.goal as string) || undefined, steps: steps.length ? steps : undefined, intensity: (a.intensity as 'facile') || undefined, reason: (a.reason as string) || undefined, at: Date.now() } };
+      return { ok: true, message: pr.title }; }
+    case 'restore_session': { const d = a.date as ISODate; const { custom, adj, ...rest } = st.overrides[d] || {}; st.overrides[d] = rest; return { ok: true, message: 'Séance du programme rétablie.' }; }
     case 'create_program_draft': { const d = draft && draft.status === 'draft' ? { ...pr.draft!, id: draft.id } : pr.draft!; saveDraft(st, d); return { ok: true, message: `Brouillon « ${nameOf(d)} » enregistré.` }; }
     case 'update_program_draft': { saveDraft(st, pr.draft!); return { ok: true, message: `Brouillon « ${nameOf(pr.draft!)} » mis à jour.` }; }
     case 'change_current_program': { saveDraft(st, pr.draft!); const r = activate(st, pr.draft!.id, today); return { ok: r.ok, message: r.ok ? `Nouveau plan à partir du ${fmtShort(pr.draft!.start)}. L'historique est gardé.` : r.issues[0]?.text || 'Changement refusé.' }; }
@@ -183,7 +212,7 @@ export function coachContext(s: AppState, today: ISODate): Record<string, unknow
     out.objectifs = { course: s.user.goals.run, poidsSouhaite: p.body ? s.user.goals.weightTarget : undefined };
     const day = (d: ISODate) => { const a = adapted(s, d); const sh = a.replaced || a;
       return { date: d, jour: DOW[dow(d)], seance: sh.title, type: a.type, duree: sh.dur || null, obligatoire: a.mandatory, faite: d < today || d === today ? doneOn(s, d) : undefined,
-        deplaceeDepuis: a.movedFrom || undefined, adaptation: a.reason || undefined, etapes: a.run && !a.replaced ? a.run.steps.map(x => x.zone ? `${x.text} (${zoneText(s, x.zone)})` : x.text) : undefined }; };
+        deplaceeDepuis: a.movedFrom || undefined, adaptation: a.reason || undefined, changeeAvecCoach: a.custom || undefined, etapes: a.run && !a.replaced ? a.run.steps.map(x => x.zone ? `${x.text} (${zoneText(s, x.zone)})` : x.text) : a.details && !a.replaced ? a.details : undefined }; };
     out.planning = Array.from({ length: 22 }, (_, i) => addDays(today, i - 7)).map(day);
     out.competitions = s.events.filter(e => e.status !== 'annulé' && e.date >= addDays(today, -30)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 8)
       .map(e => ({ id: e.id, nom: e.name, date: e.date, km: e.distanceKm ?? null, priorite: e.priority, statut: e.status, resultat: e.result ? (e.type === 'crossfit-compet' ? [e.result.rank && `classement ${e.result.rank}`, e.result.score].filter(Boolean).join(', ') || 'terminée' : e.distanceKm ? mmss(e.result.time / e.distanceKm) + ' /km' : `${Math.round(e.result.time / 60)} min`) : undefined, type: e.type }));
