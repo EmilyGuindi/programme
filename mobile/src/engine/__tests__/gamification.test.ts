@@ -123,3 +123,13 @@ test('calories : le bilan précise le nombre d\'activités couvertes ; elles ne 
   assert.equal(energy(walk, '2026-11-02', '2026-11-08').total, 120, 'la promenade compte dans la dépense');
   assert.equal(walk.activities.find(a => a.stravaId === '9')!.complementary, true, 'mais pas dans la régularité');
 });
+test('les sorties d\'avant le programme (vieux Strava) ne valident aucun jalon, mais restent des records personnels', async () => {
+  const { recordsUntil } = await import('../records');
+  const s = fresh(); const before = addDays(s.program.start, -30);
+  s.activities.push(run('old1', before, 10, 55, { kind: 'test' }), run('old2', addDays(before, 2), 5, 24, { kind: 'test' }), run('old3', addDays(before, 4), 8, 50));
+  const xs = achievementsFor(s, addDays(s.program.start, 3));
+  assert.equal(xs.filter(a => a.date).length, 0, 'aucun jalon validé par l\'historique');
+  assert.ok(recordsUntil(s, addDays(s.program.start, 3)).some(r => r.id === 'run-10k'), 'le 10 km d\'avant reste un record perso');
+  s.activities.push(run('in1', addDays(s.program.start, 1), 8, 50));
+  assert.equal(get(s, 'run-45', addDays(s.program.start, 3)).date, addDays(s.program.start, 1));
+});

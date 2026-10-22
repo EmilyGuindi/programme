@@ -224,8 +224,8 @@ function Records() {
     </View>);
   return (
     <>
-      <T v="title" style={{ fontSize: 32, lineHeight: 38, marginBottom: space.s2 }}>Accomplissements</T>
-      <T muted style={{ marginBottom: space.s4 }}>{`${got.length} atteint${got.length > 1 ? 's' : ''} sur ${ach.length}. Chacun repose sur des données vérifiables : séances, Strava, résultats.`}</T>
+      <T v="title" style={{ fontSize: 32, lineHeight: 38, marginBottom: space.s2 }}>Jalons du programme</T>
+      <T muted style={{ marginBottom: space.s4 }}>{`${got.length} atteint${got.length > 1 ? 's' : ''} sur ${ach.length}. Seul ce que tu fais pendant ton programme (depuis le ${fmtShort(s.program.start)}) les valide ; ton historique d'avant compte dans tes records personnels, plus bas.`}</T>
       {majors.map(a => (
         <Stage key={a.id} mark tone="lime">
           <Row gap={space.s4}><AchBadge cat={a.cat} status="unlocked" major size={76} label={a.title} />
@@ -246,9 +246,11 @@ function Records() {
       {later.length ? <Disclosure title={`${later.length} jalons à découvrir`} sub="Critères et sources, par catégorie">
         {(Object.keys(CAT_LABEL) as AchCat[]).map(k => { const xs = later.filter(a => a.cat === k); return xs.length ? <View key={k} style={{ marginBottom: space.s3 }}><T v="label" style={{ marginBottom: 4 }}>{CAT_LABEL[k]}</T>{xs.map(a => <Row key={a.id} gap={space.s3} style={{ paddingVertical: 6, alignItems: 'flex-start' }}><AchBadge cat={a.cat} status="locked" size={32} /><View style={{ flex: 1 }}><T v="small" style={{ fontWeight: '600' }}>{a.title}</T><T v="xs" muted>{a.criterion}</T><T v="xs" muted>{`Source : ${a.source}`}</T></View></Row>)}</View> : null; })}
       </Disclosure> : null}
-      <SectionHeader title="Records running" />
+      <T v="title" style={{ fontSize: 28, lineHeight: 34, marginTop: space.s6, marginBottom: space.s2 }}>Records personnels</T>
+      <T muted style={{ marginBottom: space.s2 }}>Tes meilleures marques de tous les temps, Strava et imports compris. Ils sont à part : ils ne valident aucun jalon du programme.</T>
+      <SectionHeader title="Running" />
       <View style={{ marginBottom: layout.gap }}>{run.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{run.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Tes records arrivent avec tes premières sorties et courses.</T>}</View>
-      <SectionHeader title="Records de renforcement" />
+      <SectionHeader title="Renforcement" />
       <View style={{ marginBottom: layout.gap }}>{str.length ? <Row gap={space.s3} style={{ flexWrap: 'wrap' }}>{str.map(r => <Rec key={r.id} label={r.label} value={r.value} date={r.date} />)}</Row> : <T v="small" muted>Note tes charges et coche tes séries : tes meilleures apparaîtront ici.</T>}</View>
       <T v="xs" muted style={{ marginTop: space.s2 }}>Les records de vitesse ne viennent que de courses ou de tests sur la bonne distance, avec une allure plausible. Une activité corrigée ou supprimée est réévaluée automatiquement.</T>
     </>

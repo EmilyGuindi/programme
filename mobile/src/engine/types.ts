@@ -59,7 +59,9 @@ export interface StrengthLog { ex: Record<string, ExerciseLog>; warm?: Record<st
 export interface RunLog { km?: string; min?: string; elev?: string; hr?: string; rpe?: number | null; test?: string; steps?: Record<string, boolean> }
 
 export interface Adjustment { kind: 'easy' | 'reduced' | 'rest' | 'shoulder'; reason: string; proposalId: string }
-export interface Override { noHyrox?: boolean; level?: Level; skip?: boolean; /** Garder la séance prévue malgré le check-in. */ keep?: boolean; adj?: Adjustment }
+/** Séance remplacée par une autre, sur proposition du coach acceptée (contenu structuré, jamais du code). */
+export interface CustomSession { type: 'run' | 'box' | 'hyrox' | 'renfo' | 'recup' | 'rest'; title: string; dur?: string; goal?: string; steps?: string[]; intensity?: 'facile' | 'qualite'; reason?: string; at: number }
+export interface Override { noHyrox?: boolean; level?: Level; skip?: boolean; /** Garder la séance prévue malgré le check-in. */ keep?: boolean; adj?: Adjustment; custom?: CustomSession }
 
 export interface AppState {
   v: number; updatedAt: number;
@@ -109,6 +111,7 @@ export interface Plan {
   run?: RunSession; event?: SportEvent; hyrox?: boolean; alt?: boolean; short?: boolean;
   optional: boolean; mandatory: boolean; skipped?: boolean; week: number;
   /** Séance déplacée : date d'origine (identifiant de la séance) ou nouvelle date pour le jour quitté. */ movedFrom?: ISODate; movedTo?: ISODate;
+  /** Séance remplacée avec le coach : ses étapes, telles qu'acceptées. */ custom?: boolean; details?: string[];
 }
 export interface AdaptedPlan extends Plan { level: Level; reason: string | null; replaced?: { type: 'recup'; title: string; goal: string; dur?: string } }
 
@@ -163,4 +166,4 @@ export interface CoachMsg { id: string; role: 'user' | 'coach'; at: number; text
 export interface CoachThread { id: string; title: string; at: number; messages: CoachMsg[] }
 export interface CoachDecision { id: string; at: number; text: string; outcome: 'accepted' | 'refused' }
 export interface CoachNote { id: string; at: number; text: string }
-export interface CoachMemory { perms: Partial<Record<DataScope, boolean>>; threads: CoachThread[]; decisions: CoachDecision[]; provider?: 'local' | 'chatgpt' | 'claude'; /** Modèle Claude : haiku (rapide) ou sonnet (plus fin). */ model?: 'haiku' | 'sonnet'; /** Ce que le coach a retenu (visible, supprimable). */ notes?: CoachNote[]; /** « Tout oublier » : rien d'antérieur ne revient par la synchro. */ clearedAt?: number }
+export interface CoachMemory { perms: Partial<Record<DataScope, boolean>>; threads: CoachThread[]; decisions: CoachDecision[]; provider?: 'local' | 'chatgpt' | 'claude'; /** Modèle Claude : haiku (rapide) ou sonnet (plus fin). */ model?: 'haiku' | 'sonnet'; /** Ce que le coach a retenu (visible, supprimable). */ notes?: CoachNote[]; /** « Tout oublier » : rien d'antérieur ne revient par la synchro. */ clearedAt?: number; /** Mot du coach du jour (accueil). */ daily?: { date: ISODate; text: string } }

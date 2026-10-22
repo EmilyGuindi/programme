@@ -85,6 +85,7 @@ export function basePlan(s0: AppState, d: ISODate): Plan {
   let p: Omit<Plan, 'optional' | 'mandatory' | 'date' | 'week'> & Partial<Plan>;
   const fx = FIXED[d];
   if (ev) p = { type: 'event', title: ev.name, dur: ev.distanceKm ? `${ev.distanceKm} km` : '', goal: ev.goal, event: ev };
+  else if (ov.custom) p = customPlan(ov.custom);
   else if (d < s.user.startDate) p = { type: 'rest', title: 'Avant le début', goal: 'Le programme a commencé le 14 octobre.' };
   else if (fx && P.template !== 'custom') {
     if (fx.type === 'run') p = { type: 'run', title: fx.run.title, dur: fx.run.dur, goal: fx.run.goal, run: fx.run, note: fx.note, optional: !!fx.optional };
@@ -106,6 +107,14 @@ export function basePlan(s0: AppState, d: ISODate): Plan {
   const optional = p.type === 'renfo' || p.type === 'recup' || !!p.optional;
   const mandatory = !optional && (p.type === 'box' || p.type === 'run' || p.type === 'event');
   return { ...p, date: d, week: w, optional, mandatory, skipped: !!ov.skip } as Plan;
+}
+/** Séance définie avec le coach : remplace celle du programme ce jour-là (une compétition reste prioritaire). */
+function customPlan(c: NonNullable<AppState['overrides'][string]['custom']>) {
+  const base = { title: c.title, dur: c.dur, goal: c.goal, note: c.reason ? `Changée avec le coach : ${c.reason}` : 'Changée avec le coach', custom: true, details: c.steps };
+  if (c.type === 'run') return { ...base, type: 'run' as const, run: { kind: c.intensity === 'qualite' ? 'qualite' as const : 'facile' as const, title: c.title, dur: c.dur || '', goal: c.goal || '', steps: (c.steps || []).map(text => ({ text, zone: null })) } };
+  if (c.type === 'box' || c.type === 'hyrox') return { ...base, type: 'box' as const, hyrox: c.type === 'hyrox' };
+  if (c.type === 'renfo') return { ...base, type: 'renfo' as const, optional: false };
+  return { ...base, type: c.type };
 }
 function strength(short: boolean) {
   return { type: 'renfo' as const, title: short ? 'Renforcement, version courte' : 'Renforcement full body', dur: short ? '25–30 min' : '35–45 min',

@@ -10,7 +10,7 @@ import { movable } from '@/engine/reschedule';
 import { BOX_GUIDE, MOBILITY, REST_GUIDE } from '@/engine/guides';
 import { RECUP } from '@/engine/library';
 import { SessionProgressLine, useSession } from '@/components/session-progress';
-import { useApp } from '@/store/store';
+import { update, useApp } from '@/store/store';
 import { space, useTheme } from '@/theme/tokens';
 
 /** Fiche d'un jour : ce qui est prévu, pourquoi, comment le faire. Accessible depuis n'importe quel jour du programme. */
@@ -28,17 +28,21 @@ export default function DayScreen() {
       {a.note ? <T style={{ marginTop: 6 }}><T v="label">À savoir : </T>{a.note}</T> : null}
       {a.movedFrom ? <T v="small" color={c.accent} style={{ marginTop: 6 }}>{`Séance déplacée, prévue à l'origine ${fmtDay(a.movedFrom)}.`}</T> : null}
       {a.reason ? <><Gap /><Coach>{a.reason}</Coach></> : <Gap />}
+      {a.custom && a.details?.length && !a.replaced ? <><T v="h3" style={{ marginBottom: space.s2 }}>Le contenu</T><Card><Bullets items={a.details} /></Card></> : null}
+      {a.custom && date >= sportDay() ? <Button small kind="ghost" style={{ alignSelf: 'flex-start', paddingHorizontal: 0, marginBottom: space.s2 }} label="Revenir à la séance du programme"
+        onPress={() => update(st => { const { custom, ...rest } = st.overrides[date] || {}; st.overrides[date] = rest; })} /> : null}
 
       {shown.type === 'run' ? <Button kind="primary" block label="Ouvrir la séance guidée" onPress={() => router.push({ pathname: '/run/[date]', params: { date } })} /> : null}
-      {shown.type === 'renfo' ? <Button kind="primary" block label="Ouvrir la séance" onPress={() => router.push({ pathname: '/renfo/[date]', params: { date } })} /> : null}
+      {shown.type === 'renfo' && !(a.custom && a.details?.length) ? <Button kind="primary" block label="Ouvrir la séance" onPress={() => router.push({ pathname: '/renfo/[date]', params: { date } })} /> : null}
       {a.type === 'event' && a.event ? <Button kind="primary" block label="Voir l'événement" onPress={() => router.push({ pathname: '/event', params: { id: a.event!.id } })} /> : null}
 
       {shown.type === 'box' ? <>
-        <T v="h3" style={{ marginBottom: space.s2 }}>{a.hyrox ? 'Ton cours HYROX' : 'Ton cours de CrossFit'}</T>
-        <Card><Bullets items={BOX_GUIDE} /></Card>
+        {!a.custom ? <><T v="h3" style={{ marginBottom: space.s2 }}>{a.hyrox ? 'Ton cours HYROX' : 'Ton cours de CrossFit'}</T>
+        <Card><Bullets items={BOX_GUIDE} /></Card></> : null}
         {!done ? <Button kind="primary" block label="Marquer comme fait" onPress={() => markDone(a)} /> : null}
       </> : null}
 
+      {shown.type === 'renfo' && a.custom && a.details?.length && !done ? <Button kind="primary" block label="Marquer comme fait" onPress={() => markDone(a)} /> : null}
       {shown.type === 'recup' ? <>
         <T v="h3" style={{ marginBottom: 4 }}>Ta routine de récupération</T>
         <T v="small" muted style={{ marginBottom: space.s3 }}>{`${RECUP.dur} au total : ${RECUP.walkMin} min de marche, puis ${RECUP.mobilityMin} min de mobilité. Coche au fur et à mesure.`}</T>

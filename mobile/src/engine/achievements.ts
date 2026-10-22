@@ -59,7 +59,17 @@ export function achievementsFor(s: AppState, today: ISODate): Achievement[] {
   }
   return out;
 }
-function achievementsIn(s: AppState, today: ISODate): Achievement[] {
+/** Données vues par les jalons d'un programme : uniquement ce qui s'est passé PENDANT ce programme (de son début à sa fin ou à aujourd'hui).
+ *  L'historique d'avant (anciennes sorties Strava, imports) ne valide jamais un jalon ; il reste visible dans les records personnels. */
+export function programWindow(s: AppState, today: ISODate): AppState {
+  const from = s.program.start, to = [programEnd(s.program), today].sort()[0];
+  const inW = (d: ISODate) => d >= from && d <= to;
+  const pick = <T,>(m: Record<ISODate, T> | undefined) => (m ? Object.fromEntries(Object.entries(m).filter(([d]) => inW(d))) as Record<ISODate, T> : m);
+  return { ...s, activities: s.activities.filter(a => inW(a.date)), events: s.events.filter(e => e.date >= from).map(e => (e.date <= to ? e : { ...e, result: undefined })),
+    strength: pick(s.strength)!, checkins: pick(s.checkins)!, runs: pick(s.runs)!, checks: pick(s.checks), measurements: s.measurements.filter(m => m.date >= from) };
+}
+function achievementsIn(s0: AppState, today: ISODate): Achievement[] {
+  const s = programWindow(s0, today);
   const out: Achievement[] = [];
   const add = (a: Omit<Achievement, 'status'> & { status?: AchStatus }) => out.push({ ...a, status: a.date ? 'unlocked' : a.progress && a.progress.value > 0 ? 'progress' : 'locked' });
   const runs = runsOf(s, today).filter(plausible);
