@@ -4,9 +4,10 @@ import { ScrollView, View } from 'react-native';
 import { CompareTable, Issues, PhaseStrip, slotOptions, WeekGrid } from '@/components/program-ui';
 import { Sheet } from '@/components/sheet';
 import { Button, Choices, Field, Input, Row, Segmented, T, Toggle } from '@/components/ui';
-import { addDays, DAYS_SHORT, fmtShort, sportDay } from '@/engine/dates';
-import { FOCUS_LABEL } from '@/engine/generator';
-import { nameOf, nextMonday, activate, activationConsequences, analyzeCycle, blocking, compare, findProgram, makeDraft, parseSpec, previousProgram, saveDraft, specOf, suggestedStart, suggestWeeks, validateProgram } from '@/engine/programs';
+import { addDays, DAYS_SHORT, daysBetween, fmtDay, fmtShort, sportDay } from '@/engine/dates';
+import { DateField } from '@/components/date-field';
+import { FOCUS_LABEL, programEnd } from '@/engine/generator';
+import { nameOf, nextMonday, activate, activationConsequences, analyzeCycle, blocking, compare, findProgram, makeDraft, parseSpec, previousProgram, saveDraft, specOf, suggestedStart, suggestWeeks, validateProgram, weeksBetween } from '@/engine/programs';
 import type { ProgramSpec, RunFocus, Slot } from '@/engine/types';
 import { haptic } from '@/feedback';
 import { update, useApp } from '@/store/store';
@@ -17,23 +18,28 @@ const STEPS = ['Bilan', 'Ce qui change', 'Brouillon', 'Vérification', 'Aperçu'
 /** Créer le programme suivant en 5 étapes. Rien n'est enregistré avant « Enregistrer le brouillon », rien n'est activé sans confirmation.
  *  `id` : reprendre un brouillon. `spec` : proposition du coach (JSON), toujours revalidée champ par champ. */
 export default function NewProgram() {
-  const { id, spec: specParam, weeks: weeksParam, start: startParam } = useLocalSearchParams<{ id?: string; spec?: string; weeks?: string; start?: string }>();
+  const { id, spec: specParam, weeks: weeksParam, start: startParam, end: endParam } = useLocalSearchParams<{ id?: string; spec?: string; weeks?: string; start?: string; end?: string }>();
   const s = useApp(); const { c } = useTheme(); const today = sportDay();
   const existing = id ? findProgram(s, id) : null; const prev = previousProgram(s, today);
   const analysis = useMemo(() => analyzeCycle(s, prev, today), [prev.id]);
   const [step, setStep] = useState(existing ? 1 : 0);
   const init: ProgramSpec = existing ? specOf(existing) : (() => { try { return parseSpec(specParam ? JSON.parse(specParam) : null, { ...specOf(prev), deloadEvery: specOf(prev).deloadEvery || 4 }); } catch { return { ...specOf(prev), deloadEvery: 4 }; } })();
   const [spec, setSpec] = useState<ProgramSpec>(init);
-  const futureEvents = s.events.filter(e => e.status !== 'annulé' && e.date > today && e.date >= start).sort((a, b) => a.date.localeCompare(b.date));
-  // Début : dès lundi prochain (changement de plan en cours de cycle : l'actuel s'arrête la veille, son historique est gardé) ou après le programme en cours.
+  // Raccourcis de début : aujourd'hui, lundi prochain ou après le programme en cours (l'actuel s'arrête la veille, son historique est gardé).
   const startOpts = useMemo(() => { const a = suggestedStart(s, today), n = nextMonday(today); return [...new Set([n, addDays(n, 7), a, addDays(a, 7)])].sort().slice(0, 4); }, [today]);
-  const [start, setStart] = useState(existing?.start || (startParam && /^\d{4}-\d{2}-\d{2}$/.test(startParam) ? startParam : suggestedStart(s, today)));
+  const [start, setStartRaw] = useState(existing?.start || (startParam && /^\d{4}-\d{2}-\d{2}$/.test(startParam) ? startParam : suggestedStart(s, today)));
+  const futureEvents = s.events.filter(e => e.status !== 'annulé' && e.date > today && e.date >= start).sort((a, b) => a.date.localeCompare(b.date));
   const goal = futureEvents.find(e => e.id === spec.goalEventId);
-  const [weeks, setWeeks] = useState(existing?.weeks || (weeksParam ? Math.max(4, Math.min(30, +weeksParam || 12)) : suggestWeeks(start, goal?.date)));
+  // Plage précise : date de début et date de fin (incluse). La durée en semaines en découle.
+  const [end, setEnd] = useState<string>(existing ? programEnd(existing) : endParam && /^\d{4}-\d{2}-\d{2}$/.test(endParam) && endParam > start ? endParam : addDays(start, (weeksParam ? Math.max(4, Math.min(30, +weeksParam || 12)) : suggestWeeks(start, goal?.date)) * 7 - 1));
+  const weeks = weeksBetween(start, end);
+  const setWeeks = (n: number) => setEnd(addDays(start, n * 7 - 1));
+  /** Changer le début garde la même durée. */
+  const setStart = (d: string) => { setEnd(e => addDays(e, daysBetween(start, d))); setStartRaw(d); };
   const [name, setName] = useState(existing?.name || ''); const [editDays, setEditDays] = useState(!!existing);
   const [week, setWeek] = useState(1); const [confirming, setConfirming] = useState(false); const [done, setDone] = useState('');
 
-  const draft = useMemo(() => ({ ...makeDraft({ name, start, weeks, spec, basedOn: prev.id }), ...(existing ? { id: existing.id, createdAt: existing.createdAt } : {}) }), [name, start, weeks, spec, existing?.id]);
+  const draft = useMemo(() => ({ ...makeDraft({ name, start, end, weeks, spec, basedOn: prev.id }), ...(existing ? { id: existing.id, createdAt: existing.createdAt } : {}) }), [name, start, end, weeks, spec, existing?.id]);
   const issues = useMemo(() => validateProgram(s, draft, today), [draft, s.programs, s.program]);
   const set = (patch: Partial<ProgramSpec>) => setSpec(x => ({ ...x, ...patch }));
   const setDay = (i: number, sl: Slot | null) => { if (!sl) return; const d = [...spec.days]; d[i] = sl; set({ days: d }); };
@@ -77,10 +83,14 @@ export default function NewProgram() {
         <Field label="Compétition objectif" hint="Pour caler l'affûtage. Facultatif.">
           <Choices options={[['', 'Aucune'], ...futureEvents.map(e => [e.id, `${e.name}, ${fmtShort(e.date)}`] as [string, string])]} value={spec.goalEventId || ''} onChange={v => { set({ goalEventId: v || null }); const ev = futureEvents.find(e => e.id === v); if (ev) setWeeks(suggestWeeks(start, ev.date)); }} />
         </Field>
-        <Field label="Début"><Choices options={startOpts.map(d => [d, `Lundi ${fmtShort(d)}`] as [string, string])} value={start} onChange={v => v && setStart(v)} /></Field>
-        <Field label="Durée" hint={goal ? `Jusqu'à ${goal.name}, plus une semaine de bilan.` : 'Entre 4 et 30 semaines.'}>
-          <Row gap={space.s3}><Button small label="−" onPress={() => setWeeks(Math.max(4, weeks - 1))} /><T v="num" style={{ minWidth: 110, textAlign: 'center', fontSize: 20 }}>{`${weeks} semaines`}</T><Button small label="+" onPress={() => setWeeks(Math.min(30, weeks + 1))} /></Row>
-          <T v="xs" muted style={{ marginTop: 6 }}>{`Du ${fmtShort(start)} au ${fmtShort(addDays(start, weeks * 7 - 1))}.`}</T>
+        <Field label="Début" hint="N'importe quel jour, à partir d'aujourd'hui.">
+          <DateField label="Début du programme" value={start} min={today} onChange={setStart} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: space.s2 }}><Choices options={[[today, 'Aujourd\'hui'] as [string, string], ...startOpts.map(d => [d, `Lundi ${fmtShort(d)}`] as [string, string])]} value={start} onChange={v => v && setStart(v)} /></ScrollView>
+        </Field>
+        <Field label="Fin" hint={goal ? `Conseil : jusqu'à ${goal.name}, plus une semaine de bilan.` : 'Entre 3 et 30 semaines après le début.'}>
+          <DateField label="Fin du programme" value={end} min={addDays(start, 20)} max={addDays(start, 30 * 7 - 1)} onChange={setEnd} />
+          <Row gap={space.s3} style={{ marginTop: space.s2, alignItems: 'center' }}><Button small label="− 1 sem." onPress={() => setWeeks(Math.max(3, weeks - 1))} /><T v="label" style={{ flex: 1, textAlign: 'center' }}>{`${daysBetween(start, end) + 1} jours, ${weeks} sem.`}</T><Button small label="+ 1 sem." onPress={() => setWeeks(Math.min(30, weeks + 1))} /></Row>
+          <T v="xs" muted style={{ marginTop: 6 }}>{`Du ${fmtDay(start)} au ${fmtDay(end)}.`}</T>
         </Field>
         <Field label="Semaine type">
           <Row between style={{ marginBottom: space.s2 }}><T v="small" muted style={{ flex: 1 }}>{editDays ? 'Choisis le contenu de chaque jour.' : 'Identique à ton programme actuel.'}</T><Toggle label="Changer la semaine type" value={editDays} onChange={setEditDays} /></Row>
@@ -95,7 +105,7 @@ export default function NewProgram() {
 
       {step === 2 ? <>
         <T v="h3" style={{ marginBottom: 4 }}>{draft.name}</T>
-        <T v="small" muted style={{ marginBottom: space.s4 }}>{`${FOCUS_LABEL[spec.focus]}. ${weeks} semaines, du ${fmtShort(start)} au ${fmtShort(addDays(start, weeks * 7 - 1))}.`}</T>
+        <T v="small" muted style={{ marginBottom: space.s4 }}>{`${FOCUS_LABEL[spec.focus]}. ${weeks} semaines, du ${fmtShort(start)} au ${fmtShort(end)}.`}</T>
         <PhaseStrip p={draft} />
         <Row between style={{ marginBottom: space.s2 }}><T v="label">{`Semaine ${week}`}</T><Row gap={space.s2}><Button small label="‹" onPress={() => setWeek(Math.max(1, week - 1))} /><Button small label="›" onPress={() => setWeek(Math.min(weeks, week + 1))} /></Row></Row>
         <WeekGrid p={draft} week={week} />

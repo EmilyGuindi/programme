@@ -34,9 +34,9 @@ export const TOOLS: ToolDef[] = [
   { name: 'set_session', description: 'Remplace la séance d\'un jour par une autre (type, titre, durée, étapes), après confirmation.', scopes: ['programs'], write: true,
     params: { date: { type: 'date', required: true }, type: { type: 'enum', values: ['run', 'box', 'hyrox', 'renfo', 'recup', 'rest'], required: true }, title: { type: 'string', required: true, max_len: 60 }, dur: { type: 'string', max_len: 40 }, goal: { type: 'string', max_len: 200 }, steps: { type: 'list', max_items: 12, max_len: 160 }, intensity: { type: 'enum', values: ['facile', 'qualite'] }, reason: { type: 'string', max_len: 160 } } },
   { name: 'restore_session', description: 'Remet la séance prévue par le programme un jour donné (annule un changement).', scopes: ['programs'], write: true, params: { date: { type: 'date', required: true } } },
-  { name: 'create_program_draft', description: 'Crée un brouillon de programme (jamais activé).', scopes: ['programs'], write: true, params: { spec: { type: 'object', required: true }, start: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
-  { name: 'update_program_draft', description: 'Modifie un brouillon existant (semaine type, objectif, dates, nom). Reste un brouillon.', scopes: ['programs'], write: true, params: { id: { type: 'string', required: true, max_len: 40 }, spec: { type: 'object' }, start: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
-  { name: 'change_current_program', description: 'Change le programme en cours à partir d\'un lundi à venir : l\'historique est gardé, la suite suit la nouvelle semaine type (après confirmation).', scopes: ['programs'], write: true, params: { spec: { type: 'object', required: true }, from: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
+  { name: 'create_program_draft', description: 'Crée un brouillon de programme (jamais activé).', scopes: ['programs'], write: true, params: { spec: { type: 'object', required: true }, start: { type: 'date' }, end: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
+  { name: 'update_program_draft', description: 'Modifie un brouillon existant (semaine type, objectif, dates, nom). Reste un brouillon.', scopes: ['programs'], write: true, params: { id: { type: 'string', required: true, max_len: 40 }, spec: { type: 'object' }, start: { type: 'date' }, end: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
+  { name: 'change_current_program', description: 'Change le programme en cours à partir d\'un lundi à venir : l\'historique est gardé, la suite suit la nouvelle semaine type (après confirmation).', scopes: ['programs'], write: true, params: { spec: { type: 'object', required: true }, from: { type: 'date' }, end: { type: 'date' }, weeks: { type: 'int', min: 4, max: 30 }, name: { type: 'string', max_len: 60 } } },
   { name: 'preview_program', description: 'Aperçu et vérification d\'un programme.', scopes: ['programs'], write: false, params: { id: { type: 'string', required: true, max_len: 40 } } },
   { name: 'confirm_program_activation', description: 'Active un brouillon (après confirmation explicite).', scopes: ['programs'], write: true, params: { id: { type: 'string', required: true, max_len: 40 } } },
 ];
@@ -134,7 +134,7 @@ export function prepare(s: AppState, name: string, a: Record<string, unknown>, t
       const prev = previousProgram(s, today); const spec = parseSpec(a.spec, { ...specOf(prev), deloadEvery: specOf(prev).deloadEvery || 4 });
       const start = (a.start as ISODate) || suggestedStart(s, today); const goal = spec.goalEventId ? s.events.find(e => e.id === spec.goalEventId) : null;
       const weeks = (a.weeks as number) || suggestWeeks(start, goal?.date);
-      const draft = makeDraft({ start, weeks, spec, name: a.name as string | undefined, basedOn: prev.id });
+      const draft = makeDraft({ start, end: a.end as ISODate | undefined, weeks, spec, name: a.name as string | undefined, basedOn: prev.id });
       const issues = validateProgram(s, draft, today);
       return { title: nameOf(draft), summary: `${FOCUS_LABEL[spec.focus]}, ${weeks} semaines à partir du ${fmtShort(start)}.`, consequences: ['Enregistré comme brouillon : ton planning ne change pas.', 'Tu pourras le modifier, le comparer, puis l\'activer.'],
         issues: issues.map(i => ({ severity: i.severity, text: i.text })), executable: !blocking(issues), draft };
@@ -143,7 +143,8 @@ export function prepare(s: AppState, name: string, a: Record<string, unknown>, t
       const cur = findProgram(s, a.id as string);
       if (!cur || cur.status !== 'draft') return { title: 'Brouillon introuvable', summary: '', consequences: [], issues: [{ severity: 'block', text: 'Seul un brouillon se modifie ainsi. Pour le programme en cours, propose un changement à partir d\'un lundi à venir.' }], executable: false };
       const spec = parseSpec({ ...specOf(cur), ...(a.spec as object || {}) }, specOf(cur)); const start = (a.start as ISODate) || cur.start; const weeks = (a.weeks as number) || cur.weeks;
-      const draft = { ...makeDraft({ start, weeks, spec, name: (a.name as string) || cur.name, basedOn: cur.basedOn }), id: cur.id, createdAt: cur.createdAt };
+      const end = (a.end as ISODate) || (a.start || a.weeks ? undefined : cur.end);
+      const draft = { ...makeDraft({ start, end, weeks, spec, name: (a.name as string) || cur.name, basedOn: cur.basedOn }), id: cur.id, createdAt: cur.createdAt };
       const issues = validateProgram(s, draft, today); const diff = compare(cur, draft).filter(r => r.a !== r.b).map(r => `${r.label} : ${r.a} → ${r.b}`);
       return { title: `Modifier « ${nameOf(cur)} »`, summary: diff.length ? diff.join(' ; ') : 'Aucun changement de structure.', consequences: [...(diff.length ? diff : ['Aucun changement de structure.']), 'Reste un brouillon : ton planning ne change pas.'], issues: issues.map(i => ({ severity: i.severity, text: i.text })), executable: !blocking(issues), draft };
     }
@@ -152,7 +153,7 @@ export function prepare(s: AppState, name: string, a: Record<string, unknown>, t
       const left = Math.ceil((Date.parse(programEnd(cur)) - Date.parse(from)) / 6048e5 + 1 / 7);
       const weeks = (a.weeks as number) || Math.max(4, Math.min(30, left));
       const spec = parseSpec({ ...specOf(cur), deloadEvery: specOf(cur).deloadEvery || 4, ...(a.spec as object || {}) }, { ...specOf(cur), deloadEvery: specOf(cur).deloadEvery || 4 });
-      const draft = makeDraft({ start: from, weeks, spec, name: (a.name as string) || `${nameOf(cur).replace(/ \(ajusté.*\)$/, '')} (ajusté le ${fmtShort(from)})`, basedOn: cur.id });
+      const draft = makeDraft({ start: from, end: a.end as ISODate | undefined, weeks, spec, name: (a.name as string) || `${nameOf(cur).replace(/ \(ajusté.*\)$/, '')} (ajusté le ${fmtShort(from)})`, basedOn: cur.id });
       const issues = validateProgram(s, draft, today); const diff = compare(cur, draft).filter(r => r.a !== r.b && r.label !== 'Durée' && r.label !== 'Phases').map(r => `${r.label} : ${r.a} → ${r.b}`);
       return { title: `Changer de plan à partir du ${fmtShort(from)}`, summary: `${FOCUS_LABEL[spec.focus]}, ${weeks} semaines.`,
         consequences: [...diff, ...activationConsequences(s, draft, today)], issues: issues.map(i => ({ severity: i.severity, text: i.text })), executable: !blocking(issues), draft };
