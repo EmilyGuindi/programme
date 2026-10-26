@@ -44,13 +44,14 @@ export async function ask(s: AppState, input: string, today: ISODate, history: C
       if ((c.tool.name === 'create_program_draft' || c.tool.name === 'update_program_draft' || c.tool.name === 'change_current_program') && p.draft) {
         drafts[cardId] = p.draft;
         // La proposition est figée dans l'appel : « Accepter » applique exactement ce qui a été montré, revalidé à ce moment-là.
-        const args = c.tool.name === 'change_current_program' ? { spec: p.draft.spec, from: p.draft.start, weeks: p.draft.weeks, name: p.draft.name }
-          : c.tool.name === 'update_program_draft' ? { id: c.args.id, spec: p.draft.spec, start: p.draft.start, weeks: p.draft.weeks, name: p.draft.name }
-          : { spec: p.draft.spec, start: p.draft.start, weeks: p.draft.weeks, name: p.draft.name };
+        const end = p.draft.end ? { end: p.draft.end } : {};
+        const args = c.tool.name === 'change_current_program' ? { spec: p.draft.spec, from: p.draft.start, weeks: p.draft.weeks, name: p.draft.name, ...end }
+          : c.tool.name === 'update_program_draft' ? { id: c.args.id, spec: p.draft.spec, start: p.draft.start, weeks: p.draft.weeks, name: p.draft.name, ...end }
+          : { spec: p.draft.spec, start: p.draft.start, weeks: p.draft.weeks, name: p.draft.name, ...end };
         const accept = c.tool.name === 'change_current_program' ? 'Appliquer ce changement' : c.tool.name === 'update_program_draft' ? 'Mettre à jour le brouillon' : 'Enregistrer le brouillon';
         return { kind: 'program', id: cardId, accept, title: p.title, summary: c.tool.name === 'create_program_draft' ? p.summary : p.consequences.slice(0, -1).join(' ') || p.summary, phases: phasesOf(p.draft).map(x => `${x.name}, S${x.from}${x.to !== x.from ? `–S${x.to}` : ''}`),
           week: weekPreview(p.draft, 1).map(d => ({ label: DAYS_SHORT[d.dow], detail: d.detail ? `${d.label} : ${d.detail}` : d.label })), issues: p.issues.length ? p.issues : [{ severity: 'ok', text: 'Règles de sécurité BYYND respectées.' }],
-          call: { name: c.tool.name, args }, modify: c.tool.name === 'update_program_draft' ? { pathname: '/programs/new', params: { id: String(c.args.id) } } : { pathname: '/programs/new', params: { spec: JSON.stringify(p.draft.spec), weeks: String(p.draft.weeks), start: p.draft.start } } };
+          call: { name: c.tool.name, args }, modify: c.tool.name === 'update_program_draft' ? { pathname: '/programs/new', params: { id: String(c.args.id) } } : { pathname: '/programs/new', params: { spec: JSON.stringify(p.draft.spec), weeks: String(p.draft.weeks), start: p.draft.start, ...(p.draft.end ? { end: p.draft.end } : {}) } } };
       }
       return { kind: 'action', id: cardId, title: p.title, summary: p.summary, consequences: p.consequences, issues: p.executable ? p.issues : p.issues.length ? p.issues : [{ severity: 'block', text: 'Action refusée par les règles BYYND.' }], call: { name: c.tool.name, args: c.args },
         modify: c.tool.name === 'apply_workout_reschedule' ? { pathname: '/move/[date]', params: { date: String(c.args.from) } } : undefined };

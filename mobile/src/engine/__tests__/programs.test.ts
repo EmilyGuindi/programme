@@ -1,4 +1,5 @@
 /// <reference types="node" />
+import { programEnd } from '../generator';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { planFor, programAt } from '../coach';
@@ -30,7 +31,12 @@ test('validation : règles de sécurité bloquantes', () => {
   const noRest = makeDraft({ start: '2027-03-01', weeks: 10, spec: { ...SPEC, days: ['crossfit', 'crossfit', 'run', 'crossfit', 'hyrox', 'hyrox', 'long'] } });
   assert.ok(blocking(validateProgram(s, noRest, '2026-10-18')));
   const tuesday = makeDraft({ start: '2027-03-02', weeks: 10, spec: SPEC });
-  assert.ok(validateProgram(s, tuesday, '2026-10-18').some(i => i.code === 'start-monday'));
+  assert.ok(validateProgram(s, tuesday, '2026-10-18').some(i => i.code === 'start-day' && i.severity === 'info'), 'un début en milieu de semaine est permis, signalé');
+  const range = makeDraft({ start: '2027-03-03', end: '2027-05-16', weeks: 4, spec: SPEC });
+  assert.equal(range.end, '2027-05-16'); assert.equal(range.weeks, 11); assert.equal(programEnd(range), '2027-05-16');
+  assert.ok(!validateProgram(s, range, '2026-10-18').some(i => i.code === 'end' || i.code === 'weeks'));
+  assert.ok(validateProgram(s, makeDraft({ start: '2027-03-03', end: '2027-03-10', weeks: 4, spec: SPEC }), '2026-10-18').some(i => i.code === 'end'));
+  assert.ok(!validateProgram(s, makeDraft({ start: '2026-10-18', weeks: 10, spec: SPEC }), '2026-10-18').some(i => i.code === 'start-past'), 'commencer aujourd\'hui est permis');
   const past = makeDraft({ start: '2026-10-12', weeks: 10, spec: SPEC });
   assert.ok(validateProgram(s, past, '2026-10-18').some(i => i.code === 'start-past'));
   const ok = makeDraft({ start: '2027-03-01', weeks: 10, spec: SPEC });

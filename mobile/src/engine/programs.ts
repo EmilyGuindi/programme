@@ -62,12 +62,15 @@ export function analyzeCycle(s: AppState, p: ProgramDef, today: ISODate): CycleA
 }
 
 /* ---------- Brouillon ---------- */
-export interface DraftInput { name?: string; start: ISODate; weeks: number; spec: ProgramSpec; goal?: string; basedOn?: string }
+export interface DraftInput { name?: string; start: ISODate; /** Fin précise (incluse) : prioritaire sur weeks. */ end?: ISODate | null; weeks: number; spec: ProgramSpec; goal?: string; basedOn?: string }
 export function makeDraft(x: DraftInput): ProgramDef {
-  const now = Date.now();
-  return { id: 'p-' + uid(), name: x.name?.trim() || `Programme du ${fmtShort(x.start)}`, start: x.start, weeks: Math.round(x.weeks), status: 'draft', template: 'custom',
-    spec: { ...x.spec, days: [...x.spec.days] }, phases: generatePhases(Math.round(x.weeks), x.spec.focus), goal: x.goal || FOCUS_LABEL[x.spec.focus], basedOn: x.basedOn, createdAt: now, updatedAt: now };
+  const now = Date.now(); const end = x.end && x.end > x.start ? x.end : null;
+  const weeks = end ? weeksBetween(x.start, end) : Math.round(x.weeks);
+  return { id: 'p-' + uid(), name: x.name?.trim() || `Programme du ${fmtShort(x.start)}`, start: x.start, ...(end ? { end } : {}), weeks, status: 'draft', template: 'custom',
+    spec: { ...x.spec, days: [...x.spec.days] }, phases: generatePhases(weeks, x.spec.focus), goal: x.goal || FOCUS_LABEL[x.spec.focus], basedOn: x.basedOn, createdAt: now, updatedAt: now };
 }
+/** Nombre de semaines (entamées) entre deux dates incluses. */
+export const weeksBetween = (start: ISODate, end: ISODate) => Math.ceil((daysBetween(start, end) + 1) / 7);
 /** Durée suggérée : jusqu'à la compétition objectif (plus une semaine de bilan), sinon 12 semaines. Jamais 20 par défaut. */
 export function suggestWeeks(start: ISODate, eventDate?: ISODate | null): number {
   if (!eventDate || eventDate <= start) return 12;
@@ -80,9 +83,11 @@ export interface Issue { code: string; severity: Severity; text: string }
 export function validateProgram(s: AppState, p: ProgramDef, today: ISODate): Issue[] {
   const out: Issue[] = []; const add = (code: string, severity: Severity, text: string) => out.push({ code, severity, text });
   const sp = specOf(p); const days = sp.days;
-  if (!Number.isInteger(p.weeks) || p.weeks < 4 || p.weeks > 30) add('weeks', 'block', 'La durée doit être comprise entre 4 et 30 semaines.');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(p.start) || dow(p.start) !== 0) add('start-monday', 'block', 'Un programme commence un lundi.');
-  else if (p.start <= today) add('start-past', 'block', 'La date de début doit être dans le futur : un programme ne réécrit pas les semaines passées.');
+  if (!Number.isInteger(p.weeks) || p.weeks < (p.end ? 3 : 4) || p.weeks > 30) add('weeks', 'block', 'La durée doit être comprise entre 4 et 30 semaines.');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(p.start)) add('start-date', 'block', 'Date de début invalide.');
+  else if (p.start < today) add('start-past', 'block', 'La date de début ne peut pas être passée : un programme ne réécrit pas l\'historique.');
+  else if (dow(p.start) !== 0) add('start-day', 'info', `Ton programme démarre un ${['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'][dow(p.start)]} : ses semaines vont de ce jour-là au suivant, la semaine type reste calée sur les jours de la semaine.`);
+  if (p.end && (p.end <= p.start || daysBetween(p.start, p.end) + 1 < 21)) add('end', 'block', 'La date de fin doit laisser au moins 3 semaines de programme.');
   if (!Array.isArray(days) || days.length !== 7 || days.some(d => !(d in SLOT_LABEL))) { add('days', 'block', 'La semaine type doit décrire les 7 jours.'); return out; }
   const rest = days.filter(d => d === 'rest' || d === 'recup').length;
   if (rest < 1) add('rest', 'block', 'Au moins un jour de repos ou de récupération par semaine.');
